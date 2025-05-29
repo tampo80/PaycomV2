@@ -40,7 +40,7 @@
                                  AdornmentColor="Color.Primary"
                                  HelperText="Sélectionnez l'obligation fiscale à payer"
                                  HelperTextOnFocus="true"
-                                 OnSelectedItemChanged="@(o => UpdateMontant(o))">
+                                 OnSelectedItemChanged="@((ObligationDto o) => UpdateMontant(o))">
                             @foreach (var obligation in _obligations)
                             {
                                 <MudSelectItem Value="@obligation">@obligation.Libelle</MudSelectItem>
@@ -168,6 +168,7 @@
                     
                     <MudItem xs="12">
                         <MudCheckBox @bind-Checked="@_paiement.AccepteConditions" 
+                                   T="bool"
                                    Label="J'accepte les conditions générales de paiement" 
                                    Required="true"
                                    RequiredError="Vous devez accepter les conditions générales" />

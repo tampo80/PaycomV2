@@ -57,7 +57,7 @@
         }
         else
         {
-            <MudList Clickable="true" Dense="false">
+            <MudList T="NotificationDto" Clickable="true" Dense="false">
                 @foreach (var notification in _filteredNotifications)
                 {
                     <MudListItem T="string" OnClick="@(() => ShowNotificationDetails(notification))" 

@@ -25,7 +25,7 @@
                          @bind-Value="_periodeFiltre"
                          AdornmentIcon="@Icons.Material.Filled.FilterList"
                          AdornmentColor="Color.Primary"
-                         OnSelectedItemChanged="@(_ => FilterEcheances())"
+                         OnSelectedItemChanged="@((string value) => FilterEcheances())"
                          Style="width: 200px;">
                     <MudSelectItem Value="@("all")">Toutes les échéances</MudSelectItem>
                     <MudSelectItem Value="@("week")">7 prochains jours</MudSelectItem>
@@ -33,7 +33,8 @@
                     <MudSelectItem Value="@("quarter")">3 prochains mois</MudSelectItem>
                 </MudSelect>
                 
-                <MudTextField @bind-Value="_searchString" 
+                <MudTextField T="string"
+                             @bind-Value="_searchString" 
                              Placeholder="Rechercher..." 
                              Adornment="Adornment.Start" 
                              AdornmentIcon="@Icons.Material.Filled.Search" 
@@ -131,8 +132,8 @@
 </MudContainer>
 
 @code {
-    private List<EcheanceDto> _echeances;
-    private List<EcheanceDto> _filteredEcheances;
+    private List<EcheanceDto> _echeances = new List<EcheanceDto>();
+    private List<EcheanceDto> _filteredEcheances = new List<EcheanceDto>();
     private bool _loading = true;
     private string _userId;
     private Guid? _contribuableId;
@@ -331,8 +332,8 @@
         
         return daysRemaining switch
         {
-            < 0 => Icons.Material.Filled.EventBusy,
-            <= 7 => Icons.Material.Filled.EventAvailable,
+            (< 0) => Icons.Material.Filled.EventBusy,
+            (<= 7) => Icons.Material.Filled.EventAvailable,
             _ => Icons.Material.Filled.Event
         };
     }
@@ -343,8 +344,8 @@
         
         return daysRemaining switch
         {
-            < 0 => Color.Error,
-            <= 7 => Color.Warning,
+            (< 0) => Color.Error,
+            (<= 7) => Color.Warning,
             _ => Color.Info
         };
     }
