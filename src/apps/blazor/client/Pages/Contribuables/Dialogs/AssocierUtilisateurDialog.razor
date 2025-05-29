@@ -1,0 +1,208 @@
+@using MudBlazor
+@using PayCom.Blazor.Infrastructure.Api
+
+@inject IApiClient ApiClient
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Link" Class="mr-2" />
+            Associer un utilisateur au contribuable
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudContainer Style="max-height: 400px; overflow-y: auto;">
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Class="my-2" ShowCloseIcon="true" CloseIconClicked="() => _errorMessage = string.Empty">
+                    <div class="d-flex align-center">
+                        
+                        <MudText>@_errorMessage</MudText>
+                    </div>
+                </MudAlert>
+            }
+
+            <MudText Class="mb-4">Sélectionnez un utilisateur à associer au contribuable <strong>@ContribuableNom</strong>.</MudText>
+
+            @if (_loading)
+            {
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            }
+            else if (_utilisateurs.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info">
+                    Aucun utilisateur disponible pour l'association.
+                </MudAlert>
+            }
+            else
+            {
+                <MudTextField T="string" 
+                             Label="Rechercher un utilisateur" 
+                             Variant="Variant.Outlined" 
+                             Adornment="Adornment.Start" 
+                             AdornmentIcon="@Icons.Material.Filled.Search"
+                             @bind-Value="_searchString"
+                             Immediate="true"
+                             Class="mb-4" />
+
+                <MudList Clickable="true" Dense="true" T="UserDetail" Class="pa-0">
+                    @foreach (var utilisateur in FilteredUtilisateurs)
+                    {
+                        <MudListItem @key="utilisateur.Id" 
+                                    Icon="@Icons.Material.Filled.Person" 
+                                    OnClick="() => SelectUser(utilisateur)" 
+                                    Selected="utilisateur.Id == _selectedUserId">
+                            <div class="d-flex flex-column">
+                                <MudText Typo="Typo.body1">@utilisateur.FirstName @utilisateur.LastName</MudText>
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">@utilisateur.Email</MudText>
+                            </div>
+                        </MudListItem>
+                    }
+                </MudList>
+            }
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Outlined" Color="Color.Default">Annuler</MudButton>
+        <MudButton OnClick="Submit" 
+                  Variant="Variant.Filled" 
+                  Color="Color.Primary" 
+                  Disabled="!_selectedUserId.HasValue || _processing">
+            @if (_processing)
+            {
+                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                <span class="ms-2">Association...</span>
+            }
+            else
+            {
+                <span>Associer</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    public IMudDialogInstance MudDialog { get; set; } = default!;
+    
+    [Parameter] public Guid ContribuableId { get; set; }
+    [Parameter] public string ContribuableNom { get; set; } = string.Empty;
+    
+    private List<UserDetail> _utilisateurs = new();
+    private bool _loading = true;
+    private bool _processing = false;
+    private string _errorMessage = string.Empty;
+    private string _searchString = string.Empty;
+    private Guid? _selectedUserId;
+    private const string ApiVersion = "1.0";
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+    }
+    
+    private async Task LoadUsers()
+    {
+        try
+        {
+            _loading = true;
+            
+            // Récupérer la liste des utilisateurs
+            var users = await ApiClient.GetUsersListEndpointAsync();
+            
+            if (users != null)
+            {
+                _utilisateurs = users.ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Erreur lors du chargement des utilisateurs: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+    
+    private IEnumerable<UserDetail> FilteredUtilisateurs
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(_searchString))
+                return _utilisateurs;
+                
+            return _utilisateurs.Where(u => 
+                (u.FirstName?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (u.LastName?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (u.Email?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (u.UserName?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ?? false));
+        }
+    }
+    
+    private void SelectUser(UserDetail user)
+    {
+        _selectedUserId = user.Id;
+    }
+    
+    private async Task Submit()
+    {
+        if (!_selectedUserId.HasValue)
+            return;
+            
+        try
+        {
+            _processing = true;
+            
+            // Associer l'utilisateur au contribuable
+            await ApiClient.AssocierUtilisateurContribuableEndPointsAsync(ApiVersion, ContribuableId, _selectedUserId.Value);
+            
+            MudDialog.Close(DialogResult.Ok(_selectedUserId.Value));
+        }
+        catch (ApiException ex)
+        {
+            _processing = false;
+            
+            // Extraire le message d'erreur de la réponse JSON
+            string errorMessage = "Erreur lors de l'association";
+            
+            try
+            {
+                if (!string.IsNullOrEmpty(ex.Response))
+                {
+                    // Vérifier si la réponse contient le message sur l'utilisateur déjà associé
+                    if (ex.Response.Contains("déjà associé à un autre contribuable"))
+                    {
+                        // Extraire le message détaillé de la réponse JSON
+                        var startIndex = ex.Response.IndexOf("\"detail\":\"");
+                        if (startIndex >= 0)
+                        {
+                            startIndex += 10; // Longueur de "\"detail\":\""
+                            var endIndex = ex.Response.IndexOf("\"", startIndex);
+                            if (endIndex > startIndex)
+                            {
+                                errorMessage = ex.Response.Substring(startIndex, endIndex - startIndex);
+                            }
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // En cas d'erreur lors de l'extraction du message, utiliser le message par défaut
+            }
+            
+            _errorMessage = errorMessage;
+            Console.WriteLine($"ApiException dans AssocierUtilisateurDialog: {ex.Message}, StatusCode: {ex.StatusCode}, Response: {ex.Response}");
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Erreur lors de l'association: {ex.Message}";
+            _processing = false;
+            Console.WriteLine($"Exception dans AssocierUtilisateurDialog: {ex.Message}");
+        }
+    }
+    
+    private void Cancel() => MudDialog.Cancel();
+} 

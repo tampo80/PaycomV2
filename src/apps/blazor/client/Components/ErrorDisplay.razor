@@ -1,0 +1,130 @@
+@using MudBlazor
+
+<div class="@Class">
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <MudAlert Severity="Severity.Error" 
+                  Variant="Variant.Filled" 
+                  Class="my-2" 
+                  ShowCloseIcon="@ShowCloseButton" 
+                  CloseIconClicked="OnCloseClicked">
+            <div class="d-flex align-center">
+                <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Class="mr-2" />
+                <div>
+                    @if (!string.IsNullOrEmpty(Title))
+                    {
+                        <MudText Typo="Typo.subtitle1" Class="mb-1 font-weight-bold">@Title</MudText>
+                    }
+                    <MudText>@ErrorMessage</MudText>
+                </div>
+            </div>
+        </MudAlert>
+    }
+    
+    @if (Errors != null && Errors.Count > 0)
+    {
+        <MudAlert Severity="Severity.Error" 
+                  Variant="Variant.Filled" 
+                  Class="my-2" 
+                  ShowCloseIcon="@ShowCloseButton" 
+                  CloseIconClicked="OnCloseClicked">
+            <div class="d-flex align-center">
+                <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Class="mr-2" />
+                <div class="flex-grow-1">
+                    @if (!string.IsNullOrEmpty(Title))
+                    {
+                        <MudText Typo="Typo.subtitle1" Class="mb-1 font-weight-bold">@Title</MudText>
+                    }
+                    <MudList T="string" Dense="true" Clickable="false" DisablePadding="true">
+                        @foreach (var error in Errors)
+                        {
+                            <MudListItem T="string" Icon="@Icons.Material.Filled.ArrowRight" 
+                                         IconColor="Color.Error" 
+                                         Dense="true" 
+                                         DisableGutters="true">
+                                @error
+                            </MudListItem>
+                        }
+                    </MudList>
+                </div>
+            </div>
+        </MudAlert>
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// Message d'erreur principal à afficher
+    /// </summary>
+    [Parameter] public string ErrorMessage { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Liste d'erreurs à afficher
+    /// </summary>
+    [Parameter] public List<string> Errors { get; set; } = new();
+    
+    /// <summary>
+    /// Titre optionnel pour le message d'erreur
+    /// </summary>
+    [Parameter] public string Title { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Indique si le bouton de fermeture doit être affiché
+    /// </summary>
+    [Parameter] public bool ShowCloseButton { get; set; } = true;
+    
+    /// <summary>
+    /// Classes CSS additionnelles
+    /// </summary>
+    [Parameter] public string Class { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Événement déclenché lorsque l'utilisateur clique sur le bouton de fermeture
+    /// </summary>
+    [Parameter] public EventCallback OnClose { get; set; }
+    
+    /// <summary>
+    /// Méthode appelée lorsque l'utilisateur clique sur le bouton de fermeture
+    /// </summary>
+    private async Task OnCloseClicked()
+    {
+        ErrorMessage = string.Empty;
+        Errors.Clear();
+        
+        if (OnClose.HasDelegate)
+        {
+            await OnClose.InvokeAsync();
+        }
+    }
+    
+    /// <summary>
+    /// Efface toutes les erreurs
+    /// </summary>
+    public void ClearErrors()
+    {
+        ErrorMessage = string.Empty;
+        Errors.Clear();
+        StateHasChanged();
+    }
+    
+    /// <summary>
+    /// Ajoute une erreur à la liste
+    /// </summary>
+    public void AddError(string error)
+    {
+        if (!string.IsNullOrEmpty(error) && !Errors.Contains(error))
+        {
+            Errors.Add(error);
+            StateHasChanged();
+        }
+    }
+    
+    /// <summary>
+    /// Définit le message d'erreur principal
+    /// </summary>
+    public void SetErrorMessage(string message)
+    {
+        ErrorMessage = message;
+        StateHasChanged();
+    }
+} 

@@ -1,0 +1,319 @@
+@page "/parametres/localisation/villes"
+@using MudBlazor
+@using PayCom.Blazor.Client.Shared
+@using PayCom.Blazor.Client.Pages.Parametres.Localisation.Dialogs
+
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Villes - PayCom</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudPaper Class="pa-4">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" Class="mb-4">
+            <MudText Typo="Typo.h5">Gestion des Villes</MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => OpenDialog())">
+                Nouvelle Ville
+            </MudButton>
+        </MudStack>
+
+        <MudTable Items="@_villes" Dense="true" Hover="true" Bordered="true" Striped="true" Loading="@_loading"
+                 LoadingProgressColor="Color.Info" Filter="new Func<VilleDto,bool>(FilterFunc)">
+            <ToolBarContent>
+                <MudText Typo="Typo.h6">Liste des Villes</MudText>
+                <MudSpacer />
+                <MudSelect T="int?" Label="Filtrer par préfecture" @bind-Value="_selectedPrefectureId" Class="ml-auto mr-2" Style="min-width: 200px;">
+                    <MudSelectItem Value="@((int?)null)">Toutes les préfectures</MudSelectItem>
+                    @foreach (var prefecture in _prefectures)
+                    {
+                        <MudSelectItem Value="@prefecture.Id">@prefecture.Nom</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudTextField @bind-Value="_searchString" Placeholder="Rechercher" Adornment="Adornment.Start"
+                            AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+            </ToolBarContent>
+            <HeaderContent>
+                <MudTh>Nom</MudTh>
+                <MudTh>Préfecture</MudTh>
+                <MudTh>Région</MudTh>
+                <MudTh>Population</MudTh>
+                <MudTh>Statut</MudTh>
+                <MudTh>Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Nom">@context.Nom</MudTd>
+                <MudTd DataLabel="Préfecture">@context.PrefectureNom</MudTd>
+                <MudTd DataLabel="Région">@context.RegionNom</MudTd>
+                <MudTd DataLabel="Population">@context.Population.ToString("N0")</MudTd>
+                <MudTd DataLabel="Statut">
+                    <MudChip T="string" Color="@GetStatutColor(context.Statut)" Size="Size.Small">@context.Statut</MudChip>
+                </MudTd>
+                <MudTd>
+                    <MudStack Row="true">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => EditVille(context))" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => DeleteVille(context))" />
+                    </MudStack>
+                </MudTd>
+            </RowTemplate>
+            <PagerContent>
+                <MudTablePager />
+            </PagerContent>
+        </MudTable>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private List<VilleDto> _villes = new();
+    private List<PrefectureDto> _prefectures = new();
+    private bool _loading = true;
+    private string _searchString = "";
+    private int? _selectedPrefectureId = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPrefectures();
+        await LoadVilles();
+    }
+
+    private async Task LoadPrefectures()
+    {
+        try
+        {
+            // TODO: Implémenter l'appel API pour charger les préfectures
+            // Données de test en attendant l'implémentation de l'API
+            _prefectures = new List<PrefectureDto>
+            {
+                new PrefectureDto { Id = 1, Nom = "Golfe", RegionId = 1, RegionNom = "Maritime" },
+                new PrefectureDto { Id = 2, Nom = "Lacs", RegionId = 1, RegionNom = "Maritime" },
+                new PrefectureDto { Id = 3, Nom = "Yoto", RegionId = 1, RegionNom = "Maritime" },
+                new PrefectureDto { Id = 4, Nom = "Kloto", RegionId = 2, RegionNom = "Plateaux" },
+                new PrefectureDto { Id = 5, Nom = "Agou", RegionId = 2, RegionNom = "Plateaux" },
+                new PrefectureDto { Id = 6, Nom = "Tchaoudjo", RegionId = 3, RegionNom = "Centrale" },
+                new PrefectureDto { Id = 7, Nom = "Kozah", RegionId = 4, RegionNom = "Kara" },
+                new PrefectureDto { Id = 8, Nom = "Tone", RegionId = 5, RegionNom = "Savanes" }
+            };
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Erreur lors du chargement des préfectures", Severity.Error);
+        }
+    }
+
+    private async Task LoadVilles()
+    {
+        try
+        {
+            _loading = true;
+            // TODO: Implémenter l'appel API pour charger les villes
+            // Données de test en attendant l'implémentation de l'API
+            _villes = new List<VilleDto>
+            {
+                new VilleDto { Id = 1, Nom = "Lomé", PrefectureId = 1, PrefectureNom = "Golfe", RegionNom = "Maritime", Population = 1500000, Statut = "Capitale" },
+                new VilleDto { Id = 2, Nom = "Aného", PrefectureId = 2, PrefectureNom = "Lacs", RegionNom = "Maritime", Population = 50000, Statut = "Chef-lieu" },
+                new VilleDto { Id = 3, Nom = "Tsévié", PrefectureId = 3, PrefectureNom = "Zio", RegionNom = "Maritime", Population = 55000, Statut = "Chef-lieu" },
+                new VilleDto { Id = 4, Nom = "Kpalimé", PrefectureId = 4, PrefectureNom = "Kloto", RegionNom = "Plateaux", Population = 75000, Statut = "Chef-lieu" },
+                new VilleDto { Id = 5, Nom = "Atakpamé", PrefectureId = 5, PrefectureNom = "Ogou", RegionNom = "Plateaux", Population = 80000, Statut = "Chef-lieu" },
+                new VilleDto { Id = 6, Nom = "Sokodé", PrefectureId = 6, PrefectureNom = "Tchaoudjo", RegionNom = "Centrale", Population = 120000, Statut = "Chef-lieu" },
+                new VilleDto { Id = 7, Nom = "Kara", PrefectureId = 7, PrefectureNom = "Kozah", RegionNom = "Kara", Population = 110000, Statut = "Chef-lieu" },
+                new VilleDto { Id = 8, Nom = "Dapaong", PrefectureId = 8, PrefectureNom = "Tone", RegionNom = "Savanes", Population = 65000, Statut = "Chef-lieu" },
+                new VilleDto { Id = 9, Nom = "Badou", PrefectureId = 4, PrefectureNom = "Wawa", RegionNom = "Plateaux", Population = 25000, Statut = "Chef-lieu" },
+                new VilleDto { Id = 10, Nom = "Mango", PrefectureId = 8, PrefectureNom = "Oti", RegionNom = "Savanes", Population = 40000, Statut = "Chef-lieu" }
+            };
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Erreur lors du chargement des villes", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private bool FilterFunc(VilleDto ville)
+    {
+        // Filtre par préfecture si une préfecture est sélectionnée
+        if (_selectedPrefectureId.HasValue && ville.PrefectureId != _selectedPrefectureId.Value)
+            return false;
+
+        if (string.IsNullOrWhiteSpace(_searchString))
+            return true;
+
+        return ville.Nom?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) == true
+            || ville.PrefectureNom?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) == true
+            || ville.RegionNom?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) == true
+            || ville.Statut?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) == true;
+    }
+
+    private Color GetStatutColor(string statut)
+    {
+        return statut switch
+        {
+            "Capitale" => Color.Error,
+            "Chef-lieu" => Color.Primary,
+            _ => Color.Default
+        };
+    }
+
+    private async Task OpenDialog()
+    {
+        var parameters = new DialogParameters
+        {
+            { "Model", new VilleDialog.VilleDto() },
+            { "Prefectures", _prefectures.Select(p => new VilleDialog.PrefectureDto
+                {
+                    Id = p.Id,
+                    Nom = p.Nom,
+                    RegionNom = p.RegionNom
+                }).ToList() },
+            { "ButtonText", "Ajouter" },
+            { "DialogTitle", "Nouvelle Ville" }
+        };
+
+        var dialog = await DialogService.ShowAsync<VilleDialog>("Nouvelle Ville", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            try
+            {
+                var newVille = (VilleDialog.VilleDto)result.Data;
+                // TODO: Implémenter l'appel API pour créer la ville
+                
+                // Trouver le nom de la préfecture
+                var prefecture = _prefectures.FirstOrDefault(p => p.Id == newVille.PrefectureId);
+                string prefectureNom = prefecture?.Nom ?? "Inconnue";
+                string regionNom = prefecture?.RegionNom ?? "Inconnue";
+                
+                // Ajouter temporairement à la liste locale
+                var ville = new VilleDto
+                {
+                    Id = _villes.Count + 1,
+                    Nom = newVille.Nom,
+                    PrefectureId = newVille.PrefectureId,
+                    PrefectureNom = prefectureNom,
+                    RegionNom = regionNom,
+                    Population = newVille.Population,
+                    Statut = newVille.Statut
+                };
+                
+                _villes.Add(ville);
+                StateHasChanged();
+                
+                Snackbar.Add("Ville ajoutée avec succès", Severity.Success);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add("Erreur lors de l'ajout de la ville", Severity.Error);
+            }
+        }
+    }
+
+    private async Task EditVille(VilleDto ville)
+    {
+        var parameters = new DialogParameters
+        {
+            { "Model", new VilleDialog.VilleDto
+                {
+                    Id = ville.Id,
+                    Nom = ville.Nom,
+                    PrefectureId = ville.PrefectureId,
+                    PrefectureNom = ville.PrefectureNom,
+                    RegionNom = ville.RegionNom,
+                    Population = ville.Population,
+                    Statut = ville.Statut
+                }
+            },
+            { "Prefectures", _prefectures.Select(p => new VilleDialog.PrefectureDto
+                {
+                    Id = p.Id,
+                    Nom = p.Nom,
+                    RegionNom = p.RegionNom
+                }).ToList() },
+            { "ButtonText", "Modifier" },
+            { "DialogTitle", "Modifier la Ville" }
+        };
+
+        var dialog = await DialogService.ShowAsync<VilleDialog>("Modifier la Ville", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            try
+            {
+                var updatedVille = (VilleDialog.VilleDto)result.Data;
+                // TODO: Implémenter l'appel API pour modifier la ville
+                
+                // Trouver le nom de la préfecture
+                var prefecture = _prefectures.FirstOrDefault(p => p.Id == updatedVille.PrefectureId);
+                string prefectureNom = prefecture?.Nom ?? "Inconnue";
+                string regionNom = prefecture?.RegionNom ?? "Inconnue";
+                
+                // Mettre à jour temporairement dans la liste locale
+                var index = _villes.FindIndex(v => v.Id == ville.Id);
+                if (index >= 0)
+                {
+                    _villes[index].Nom = updatedVille.Nom;
+                    _villes[index].PrefectureId = updatedVille.PrefectureId;
+                    _villes[index].PrefectureNom = prefectureNom;
+                    _villes[index].RegionNom = regionNom;
+                    _villes[index].Population = updatedVille.Population;
+                    _villes[index].Statut = updatedVille.Statut;
+                    StateHasChanged();
+                }
+                
+                Snackbar.Add("Ville modifiée avec succès", Severity.Success);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add("Erreur lors de la modification de la ville", Severity.Error);
+            }
+        }
+    }
+
+    private async Task DeleteVille(VilleDto ville)
+    {
+        var parameters = new DialogParameters
+        {
+            { "ContentText", $"Êtes-vous sûr de vouloir supprimer la ville '{ville.Nom}' ?" },
+            { "ButtonText", "Supprimer" },
+            { "Color", Color.Error }
+        };
+
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>("Confirmation", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            try
+            {
+                // TODO: Implémenter la suppression
+                await LoadVilles();
+                Snackbar.Add("Ville supprimée avec succès", Severity.Success);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add("Erreur lors de la suppression", Severity.Error);
+            }
+        }
+    }
+
+    public class PrefectureDto
+    {
+        public int Id { get; set; }
+        public string Nom { get; set; } = string.Empty;
+        public int RegionId { get; set; }
+        public string RegionNom { get; set; } = string.Empty;
+    }
+
+    public class VilleDto
+    {
+        public int Id { get; set; }
+        public string Nom { get; set; } = string.Empty;
+        public int PrefectureId { get; set; }
+        public string PrefectureNom { get; set; } = string.Empty;
+        public string RegionNom { get; set; } = string.Empty;
+        public int Population { get; set; }
+        public string Statut { get; set; } = string.Empty;
+    }
+}

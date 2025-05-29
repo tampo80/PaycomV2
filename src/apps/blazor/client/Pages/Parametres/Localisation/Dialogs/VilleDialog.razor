@@ -1,0 +1,103 @@
+@using MudBlazor
+@using System.ComponentModel.DataAnnotations
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="form" Model="@Model" @bind-IsValid="@_isValid">
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="Model.Nom" Label="Nom" Required="true" RequiredError="Le nom est requis" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="int" @bind-Value="Model.PrefectureId" Label="Préfecture" Required="true" RequiredError="La préfecture est requise"
+                               SelectedValuesChanged="PrefectureChanged">
+                        @foreach (var prefecture in Prefectures)
+                        {
+                            <MudSelectItem Value="@prefecture.Id">@prefecture.Nom (@prefecture.RegionNom)</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField @bind-Value="Model.Population" Label="Population" Min="0" Required="true" RequiredError="La population est requise" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" @bind-Value="Model.Statut" Label="Statut" Required="true" RequiredError="Le statut est requis">
+                        <MudSelectItem Value="@("Capitale")">Capitale</MudSelectItem>
+                        <MudSelectItem Value="@("Chef-lieu")">Chef-lieu</MudSelectItem>
+                        <MudSelectItem Value="@("Ville")">Ville</MudSelectItem>
+                        <MudSelectItem Value="@("Village")">Village</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Annuler</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit" Disabled="@(!_isValid)">@ButtonText</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private MudBlazor.IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public VilleDto Model { get; set; } = new();
+    [Parameter] public List<PrefectureDto> Prefectures { get; set; } = new();
+    [Parameter] public string ButtonText { get; set; } = "Enregistrer";
+    [Parameter] public string DialogTitle { get; set; } = "Ville";
+
+    private MudForm form = null!;
+    private bool _isValid = false;
+
+    private void PrefectureChanged(IEnumerable<int> selectedValues)
+    {
+        if (selectedValues.Any())
+        {
+            var selectedPrefecture = Prefectures.FirstOrDefault(p => p.Id == Model.PrefectureId);
+            if (selectedPrefecture != null)
+            {
+                // Mettre à jour automatiquement la région associée
+                Model.RegionNom = selectedPrefecture.RegionNom;
+            }
+        }
+    }
+
+    private void Submit()
+    {
+        form.Validate();
+        if (_isValid)
+        {
+            MudDialog.Close(DialogResult.Ok(Model));
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    public class PrefectureDto
+    {
+        public int Id { get; set; }
+        public string Nom { get; set; } = string.Empty;
+        public string RegionNom { get; set; } = string.Empty;
+    }
+
+    public class VilleDto
+    {
+        public int Id { get; set; }
+        
+        [Required(ErrorMessage = "Le nom est requis")]
+        public string Nom { get; set; } = string.Empty;
+        
+        [Required(ErrorMessage = "La préfecture est requise")]
+        [Range(1, int.MaxValue, ErrorMessage = "Veuillez sélectionner une préfecture")]
+        public int PrefectureId { get; set; }
+        
+        public string PrefectureNom { get; set; } = string.Empty;
+        
+        public string RegionNom { get; set; } = string.Empty;
+        
+        [Required(ErrorMessage = "La population est requise")]
+        [Range(0, int.MaxValue, ErrorMessage = "La population doit être un nombre positif")]
+        public int Population { get; set; }
+        
+        [Required(ErrorMessage = "Le statut est requis")]
+        public string Statut { get; set; } = "Ville";
+    }
+}

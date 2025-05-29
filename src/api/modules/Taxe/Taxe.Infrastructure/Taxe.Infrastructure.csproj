@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>PayCom.WebApi.Taxe.Infrastructure</RootNamespace>
+    <AssemblyName>PayCom.WebApi.Taxe.Infrastructure</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="Persistence\Repositories\**" />
+    <EmbeddedResource Remove="Persistence\Repositories\**" />
+    <None Remove="Persistence\Repositories\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\framework\Infrastructure\Infrastructure.csproj" />
+    <ProjectReference Include="..\Taxe.Application\Taxe.Application.csproj" />
+    <ProjectReference Include="..\Taxe.Domain\Taxe.Domain.csproj" />
+  </ItemGroup>
+</Project>

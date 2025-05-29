@@ -1,0 +1,131 @@
+@using MudBlazor
+@using System.ComponentModel.DataAnnotations
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">@DialogTitle</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="form" Model="@Model" @bind-IsValid="@_isValid">
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="Model.Code" Label="Code" Required="true" RequiredError="Le code est requis"
+                                 Validation="@(new Func<string, IEnumerable<string>>(ValidateCode))"
+                                 Immediate="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="Model.Nom" Label="Nom" Required="true" RequiredError="Le nom est requis" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="Guid" @bind-Value="Model.RegionId" Label="Région" Required="true" RequiredError="La région est requise">
+                        @foreach (var region in Regions)
+                        {
+                            <MudSelectItem Value="@region.Id">@region.Nom</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="Model.ChefLieu" Label="Chef-lieu" Required="true" RequiredError="Le chef-lieu est requis" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField @bind-Value="Model.Population" Label="Population" Min="0" Required="true" RequiredError="La population est requise" />
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Annuler</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit" Disabled="@(!_isValid || _processing)" Class="ml-2">
+            @if (_processing)
+            {
+                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                <span class="ms-2">Traitement en cours...</span>
+            }
+            else
+            {
+                @ButtonText
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private MudBlazor.IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public PrefectureDto Model { get; set; } = new();
+    [Parameter] public List<RegionDto> Regions { get; set; } = new();
+    [Parameter] public string ButtonText { get; set; } = "Enregistrer";
+    [Parameter] public string DialogTitle { get; set; } = "Préfecture";
+    [Parameter] public EventCallback<PrefectureDto> OnValidSubmit { get; set; }
+
+    private MudForm form = null!;
+    private bool _isValid = false;
+    private bool _processing = false;
+    private string _errorMessage = string.Empty;
+
+    private IEnumerable<string> ValidateCode(string code)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+            yield return "Le code est requis";
+        else if (code.Length < 2 || code.Length > 5)
+            yield return "Le code doit contenir entre 2 et 5 caractères";
+    }
+
+    private async Task Submit()
+    {
+        form.Validate();
+        if (_isValid)
+        {
+            try
+            {
+                _processing = true;
+                _errorMessage = string.Empty;
+                
+                // Déléguer la validation au composant parent
+                if (OnValidSubmit.HasDelegate)
+                {
+                    await OnValidSubmit.InvokeAsync(Model);
+                }
+                
+                MudDialog.Close(DialogResult.Ok(Model));
+            }
+            catch (Exception ex)
+            {
+                _errorMessage = ex.Message;
+            }
+            finally
+            {
+                _processing = false;
+            }
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    public class RegionDto
+    {
+        public Guid Id { get; set; }
+        public string Nom { get; set; } = string.Empty;
+    }
+
+    public class PrefectureDto
+    {
+        public Guid Id { get; set; }
+        
+        [Required(ErrorMessage = "Le code est requis")]
+        [StringLength(5, MinimumLength = 2, ErrorMessage = "Le code doit contenir entre 2 et 5 caractères")]
+        public string Code { get; set; } = string.Empty;
+        
+        [Required(ErrorMessage = "Le nom est requis")]
+        public string Nom { get; set; } = string.Empty;
+        
+        [Required(ErrorMessage = "La région est requise")]
+        public Guid RegionId { get; set; }
+        
+        [Required(ErrorMessage = "Le chef-lieu est requis")]
+        public string ChefLieu { get; set; } = string.Empty;
+        
+        [Required(ErrorMessage = "La population est requise")]
+        [Range(0, int.MaxValue, ErrorMessage = "La population doit être un nombre positif")]
+        public int Population { get; set; }
+    }
+}

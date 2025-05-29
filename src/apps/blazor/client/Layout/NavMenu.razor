@@ -1,0 +1,285 @@
+@using MudBlazor
+<PersonCard Style="background-color: var(--mud-palette-drawer-background);color: var(--mud-palette-drawer-text); margin-bottom:0px!important" />
+<MudNavMenu OpenMiniOnHover="false" Bordered="false">
+    <!-- Section Accueil - visible pour tous -->
+    <MudNavLink Href="/" Match="NavLinkMatch.All" IconColor="Color.Primary" Icon="@Icons.Material.Filled.Dashboard">
+        Tableau de bord
+    </MudNavLink>
+    
+    <!-- === ESPACE CONTRIBUABLE === -->
+    @if (CanViewEspaceContribuableGroup)
+    {
+        <MudNavGroup Title="Espace Contribuable" Icon="@Icons.Material.Filled.Person" IconColor="Color.Primary" Expanded="false">
+            <!-- Mes informations -->
+            <MudNavLink IconColor="Color.Primary" Href="/contribuable/mon-profil" Icon="@Icons.Material.Filled.AccountCircle" Class="fsh-nav-child">
+                Mon profil
+            </MudNavLink>
+            
+            <!-- Mes obligations fiscales -->
+            @if (_canViewObligationsFiscales)
+            {
+                <MudNavLink IconColor="Color.Primary" Href="/contribuable/mes-obligations" Icon="@Icons.Material.Filled.Assignment" Class="fsh-nav-child">
+                    Mes obligations fiscales
+                </MudNavLink>
+            }
+            
+            <!-- Mes paiements -->
+            <MudNavGroup Title="Mes paiements" IconColor="Color.Primary" Icon="@Icons.Material.Filled.Payments" Class="fsh-nav-child">
+                <MudNavLink IconColor="Color.Primary" Href="/contribuable/mes-paiements/historique" Icon="@Icons.Material.Filled.History" Class="fsh-nav-child">
+                    Historique
+                </MudNavLink>
+                <MudNavLink IconColor="Color.Primary" Href="/contribuable/mes-paiements/effectuer" Icon="@Icons.Material.Filled.Payment" Class="fsh-nav-child">
+                    Effectuer un paiement
+                </MudNavLink>
+                <MudNavLink IconColor="Color.Primary" Href="/contribuable/mes-paiements/echeances" Icon="@Icons.Material.Filled.DateRange" Class="fsh-nav-child">
+                    Échéances à venir
+                </MudNavLink>
+            </MudNavGroup>
+            
+            <!-- Mes notifications -->
+            <MudNavLink IconColor="Color.Primary" Href="/contribuable/mes-notifications" Icon="@Icons.Material.Filled.Notifications" Class="fsh-nav-child">
+                Mes notifications
+            </MudNavLink>
+        </MudNavGroup>
+    }
+    
+    <!-- === ESPACE AGENT FISCAL === -->
+    @if (CanViewEspaceAgentFiscalGroup)
+    {
+        <MudNavGroup Title="Espace Agent Fiscal" Icon="@Icons.Material.Filled.SupervisorAccount" IconColor="Color.Primary" Expanded="false">
+            <!-- Mon profil agent -->
+            <MudNavLink IconColor="Color.Primary" Href="/agent/mon-profil" Icon="@Icons.Material.Filled.Badge" Class="fsh-nav-child">
+                Mon profil
+            </MudNavLink>
+            
+            <!-- Gestion des contribuables -->
+            @if (_canViewContribuables)
+            {
+                <MudNavGroup Title="Contribuables" IconColor="Color.Primary" Icon="@Icons.Material.Filled.People" Class="fsh-nav-child">
+                    <MudNavLink IconColor="Color.Primary" Href="/contribuables/personnes-physiques" Icon="@Icons.Material.Filled.Person" Class="fsh-nav-child">
+                        Personnes physiques
+                    </MudNavLink>
+                    <MudNavLink IconColor="Color.Primary" Href="/contribuables/personnes-morales" Icon="@Icons.Material.Filled.Business" Class="fsh-nav-child">
+                        Personnes morales
+                    </MudNavLink>
+                    <MudNavLink IconColor="Color.Primary" Href="/contribuables/liste" Icon="@Icons.Material.Filled.FormatListBulleted" Class="fsh-nav-child">
+                        Tous les contribuables
+                    </MudNavLink>
+                    <MudNavLink IconColor="Color.Primary" Href="/contribuables/nouveau" Icon="@Icons.Material.Filled.PersonAdd" Class="fsh-nav-child">
+                        Nouveau contribuable
+                    </MudNavLink>
+                    <MudNavLink IconColor="Color.Primary" Href="/contribuables/associations" Icon="@Icons.Material.Filled.Link" Class="fsh-nav-child">
+                        Gérer les associations
+                    </MudNavLink>
+                </MudNavGroup>
+            }
+            
+            <!-- Collecte sur le terrain -->
+            <MudNavGroup Title="Collecte terrain" IconColor="Color.Primary" Icon="@Icons.Material.Filled.Terrain" Class="fsh-nav-child">
+                <MudNavLink IconColor="Color.Primary" Href="/collecte/sessions" Icon="@Icons.Material.Filled.Event" Class="fsh-nav-child">
+                    Mes sessions
+                </MudNavLink>
+                <MudNavLink IconColor="Color.Primary" Href="/collecte/nouvelle-session" Icon="@Icons.Material.Filled.AddCircle" Class="fsh-nav-child">
+                    Nouvelle session
+                </MudNavLink>
+                <MudNavLink IconColor="Color.Primary" Href="/collecte/paiements-terrain" Icon="@Icons.Material.Filled.PointOfSale" Class="fsh-nav-child">
+                    Paiements terrain
+                </MudNavLink>
+            </MudNavGroup>
+            
+            <!-- Paiements et transactions -->
+            <MudNavGroup Title="Paiements" IconColor="Color.Primary" Icon="@Icons.Material.Filled.Payments" Class="fsh-nav-child">
+                <MudNavLink IconColor="Color.Primary" Href="/paiements/historique" Icon="@Icons.Material.Filled.ReceiptLong" Class="fsh-nav-child">
+                    Historique des paiements
+                </MudNavLink>
+                <MudNavLink IconColor="Color.Primary" Href="/paiements/nouveau" Icon="@Icons.Material.Filled.AddCard" Class="fsh-nav-child">
+                    Enregistrer un paiement
+                </MudNavLink>
+                <MudNavLink IconColor="Color.Primary" Href="/paiements/transactions" Icon="@Icons.Material.Filled.AccountBalanceWallet" Class="fsh-nav-child">
+                    Transactions
+                </MudNavLink>
+            </MudNavGroup>
+        </MudNavGroup>
+    }
+    
+    <!-- === ADMINISTRATION FISCALE === -->
+    @if (CanViewAdministrationFiscaleGroup)
+    {
+        <MudNavGroup Title="Administration Fiscale" Icon="@Icons.Material.Filled.AccountBalance" IconColor="Color.Primary" Expanded="false">
+            <!-- Gestion des taxes -->
+            @if (_canViewTaxes)
+            {
+                <MudNavGroup Title="Taxes" IconColor="Color.Primary" Icon="@Icons.Material.Filled.Receipt" Class="fsh-nav-child">
+                    <MudNavLink IconColor="Color.Primary" Href="/taxes/tableau-de-bord" Icon="@Icons.Material.Filled.Dashboard" Class="fsh-nav-child">
+                        Tableau de bord des taxes
+                    </MudNavLink>
+                    <MudNavLink IconColor="Color.Primary" Href="/taxes/liste" Icon="@Icons.Material.Filled.ListAlt" Class="fsh-nav-child">
+                        Liste des taxes
+                    </MudNavLink>
+                    <MudNavLink IconColor="Color.Primary" Href="/taxes/types-taxes" Icon="@Icons.Material.Filled.Category" Class="fsh-nav-child">
+                        Types de taxes
+                    </MudNavLink>
+                    <MudNavLink IconColor="Color.Primary" Href="/taxes/obligations-fiscales" Icon="@Icons.Material.Filled.Assignment" Class="fsh-nav-child">
+                        Obligations fiscales
+                    </MudNavLink>
+                </MudNavGroup>
+            }
+            
+            <!-- Gestion des agents fiscaux -->
+            @if (_canViewAgentFiscals)
+            {
+                <MudNavGroup Title="Agents fiscaux" IconColor="Color.Primary" Icon="@Icons.Material.Filled.Group" Class="fsh-nav-child">
+                    <MudNavLink IconColor="Color.Primary" Href="/agents/liste" Icon="@Icons.Material.Filled.FormatListBulleted" Class="fsh-nav-child">
+                        Liste des agents
+                    </MudNavLink>
+                    
+                    <MudNavLink IconColor="Color.Primary" Href="/agents/performance" Icon="@Icons.Material.Filled.TrendingUp" Class="fsh-nav-child">
+                        Performance
+                    </MudNavLink>
+                </MudNavGroup>
+            }
+            
+            <!-- Gestion des zones de collecte -->
+            @if (HasRoleAgentFiscal)
+            {
+                <MudNavLink IconColor="Color.Primary" Href="/collecte/zones" Icon="@Icons.Material.Filled.Map" Class="fsh-nav-child">
+                    Zones de collecte
+                </MudNavLink>
+            }
+            
+            <!-- Échéances et pénalités -->
+            <MudNavGroup Title="Échéances et pénalités" IconColor="Color.Primary" Icon="@Icons.Material.Filled.EventNote" Class="fsh-nav-child">
+                <MudNavLink IconColor="Color.Primary" Href="/echeances" Icon="@Icons.Material.Filled.DateRange" Class="fsh-nav-child">
+                    Échéances
+                </MudNavLink>
+                <MudNavLink IconColor="Color.Primary" Href="/penalites" Icon="@Icons.Material.Filled.ErrorOutline" Class="fsh-nav-child">
+                    Pénalités
+                </MudNavLink>
+            </MudNavGroup>
+            
+            <!-- Rapports et analyses -->
+            @if (HasRoleAgentFiscal)
+            {
+                <MudNavGroup Title="Rapports" IconColor="Color.Primary" Icon="@Icons.Material.Filled.Assessment" Class="fsh-nav-child">
+                    <MudNavLink IconColor="Color.Primary" Href="/rapports/performance" Icon="@Icons.Material.Filled.TrendingUp" Class="fsh-nav-child">
+                        Performance
+                    </MudNavLink>
+                    <MudNavLink IconColor="Color.Primary" Href="/rapports/recouvrement" Icon="@Icons.Material.Filled.MonetizationOn" Class="fsh-nav-child">
+                        Taux de recouvrement
+                    </MudNavLink>
+                    <MudNavLink IconColor="Color.Primary" Href="/rapports/journaliers" Icon="@Icons.Material.Filled.Today" Class="fsh-nav-child">
+                        Journaliers
+                    </MudNavLink>
+                    <MudNavLink IconColor="Color.Primary" Href="/rapports/mensuels" Icon="@Icons.Material.Filled.DateRange" Class="fsh-nav-child">
+                        Mensuels
+                    </MudNavLink>
+                    <MudNavLink IconColor="Color.Primary" Href="/rapports/annuels" Icon="@Icons.Material.Filled.EventNote" Class="fsh-nav-child">
+                        Annuels
+                    </MudNavLink>
+                    <MudNavLink IconColor="Color.Primary" Href="/rapports/personnalises" Icon="@Icons.Material.Filled.Build" Class="fsh-nav-child">
+                        Rapports personnalisés
+                    </MudNavLink>
+                </MudNavGroup>
+            }
+        </MudNavGroup>
+    }
+    
+    <!-- === CONFIGURATION SYSTÈME === -->
+    @if (CanViewParametresSystemeGroup)
+    {
+        <MudNavGroup Title="Paramètres système" Icon="@Icons.Material.Filled.Settings" IconColor="Color.Primary" Expanded="false">
+            <!-- Paramètres de localisation -->
+            <MudNavGroup Title="Localisation" IconColor="Color.Primary" Icon="@Icons.Material.Filled.LocationOn" Class="fsh-nav-child">
+                @if (_canViewRegions)
+                {
+                    <MudNavLink IconColor="Color.Primary" Href="/parametres/localisation/regions" Icon="@Icons.Material.Filled.Terrain" Class="fsh-nav-child">
+                        Régions
+                    </MudNavLink>
+                }
+                
+                @if (_canViewCommunes)
+                {
+                    <MudNavLink IconColor="Color.Primary" Href="/parametres/localisation/communes" Icon="@Icons.Material.Filled.LocationCity" Class="fsh-nav-child">
+                        Communes
+                    </MudNavLink>
+                }
+                
+                
+            </MudNavGroup>
+            
+            <!-- Paramètres des notifications -->
+            @if (_isAdmin)
+            {
+                <MudNavGroup Title="Notifications" IconColor="Color.Primary" Icon="@Icons.Material.Filled.Notifications" Class="fsh-nav-child">
+                    <MudNavLink IconColor="Color.Primary" Href="/notifications/configuration" Icon="@Icons.Material.Filled.Settings" Class="fsh-nav-child">
+                        Configuration
+                    </MudNavLink>
+                    <MudNavLink IconColor="Color.Primary" Href="/notifications/modeles" Icon="@Icons.Material.Filled.Email" Class="fsh-nav-child">
+                        Modèles
+                    </MudNavLink>
+                </MudNavGroup>
+            }
+            
+            <!-- Paramètres généraux -->
+            @if (_isAdmin)
+            {
+                <MudNavLink IconColor="Color.Primary" Href="/parametres/commune" Icon="@Icons.Material.Filled.Domain" Class="fsh-nav-child">
+                    Paramètres de la commune
+                </MudNavLink>
+                <MudNavLink IconColor="Color.Primary" Href="/parametres/fiscalite" Icon="@Icons.Material.Filled.Calculate" Class="fsh-nav-child">
+                    Configuration fiscale
+                </MudNavLink>
+            }
+            
+            @if (_canViewAuditTrails && _isAdmin)
+            {
+                <MudNavLink IconColor="Color.Primary" Match="NavLinkMatch.Prefix" Href="/audit-trail" Icon="@Icons.Material.Filled.FindInPage" Class="fsh-nav-child">
+                    Audit Trail
+                </MudNavLink>
+            }
+        </MudNavGroup>
+    }
+    
+    <!-- === ADMINISTRATION SYSTÈME === -->
+    @if (CanViewAdministrationGroup)
+    {
+        <MudNavGroup Title="Administration Système" Icon="@Icons.Material.Filled.AdminPanelSettings" IconColor="Color.Primary" Expanded="false">
+            @if (_canViewUsers || _isAdmin)
+            {
+                <MudNavLink IconColor="Color.Primary" Match="NavLinkMatch.Prefix" Href="/identity/users" Icon="@Icons.Material.Filled.ManageAccounts" Class="fsh-nav-child">
+                    Utilisateurs
+                </MudNavLink>
+            }
+            
+            @if (_canViewRoles || _isAdmin)
+            {
+                <MudNavLink IconColor="Color.Primary" Href="/identity/roles" Icon="@Icons.Material.Filled.AdminPanelSettings" Class="fsh-nav-child">
+                    Rôles
+                </MudNavLink>
+            }
+            
+            @if ((_canViewTenants && _isRootTenant) || _isAdmin)
+            {
+                <MudNavLink IconColor="Color.Primary" Href="/tenants" Icon="@Icons.Material.Filled.Business" Class="fsh-nav-child">
+                    Communes (Tenants)
+                </MudNavLink>
+            }
+        </MudNavGroup>
+    }
+    
+    <!-- Module Catalogue (si utilisé) -->
+    @if (_showCatalogueModule)
+    {
+        <MudNavGroup Title="Catalogue" Icon="@Icons.Material.Filled.Category" IconColor="Color.Primary" Expanded="false">
+            <!-- Marques -->
+            <MudNavLink IconColor="Color.Primary" Href="/catalogue/marques" Icon="@Icons.Material.Filled.Bookmark" Class="fsh-nav-child">
+                Marques
+            </MudNavLink>
+            
+            <!-- Produits -->
+            <MudNavLink IconColor="Color.Primary" Href="/catalogue/produits" Icon="@Icons.Material.Filled.Inventory" Class="fsh-nav-child">
+                Produits
+            </MudNavLink>
+        </MudNavGroup>
+    }
+</MudNavMenu>

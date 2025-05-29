@@ -1,0 +1,234 @@
+@page "/debug/enums"
+@using PayCom.Blazor.Client.Pages.Contribuables.Models
+@using PayCom.Blazor.Infrastructure.Api
+@using System.Text.Json
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudCard>
+        <MudCardHeader>
+            <MudText Typo="Typo.h5">Débogage des énumérations</MudText>
+        </MudCardHeader>
+        <MudCardContent>
+            <MudText Typo="Typo.subtitle1" Class="mb-4">Ce composant permet de tester la conversion entre les énumérations client et API</MudText>
+            
+            <MudDivider Class="my-4" />
+            
+            <MudText Typo="Typo.h6" Class="mb-2">TypeContribuable</MudText>
+            <MudTable Items="@_typeContribuableValues" Hover="true" Striped="true" Dense="true">
+                <HeaderContent>
+                    <MudTh>Enum Client</MudTh>
+                    <MudTh>Valeur</MudTh>
+                    <MudTh>Enum API</MudTh>
+                    <MudTh>Valeur</MudTh>
+                    <MudTh>Test Conversion</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.ClientEnum</MudTd>
+                    <MudTd>@context.ClientValue</MudTd>
+                    <MudTd>@context.ApiEnum</MudTd>
+                    <MudTd>@context.ApiValue</MudTd>
+                    <MudTd>
+                        <MudChip T="string" Color="@(context.ConversionOk ? Color.Success : Color.Error)">
+                            @(context.ConversionOk ? "OK" : "ERREUR")
+                        </MudChip>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+            
+            <MudDivider Class="my-4" />
+            
+            <MudText Typo="Typo.h6" Class="mb-2">StatutContribuable</MudText>
+            <MudTable Items="@_statutContribuableValues" Hover="true" Striped="true" Dense="true">
+                <HeaderContent>
+                    <MudTh>Enum Client</MudTh>
+                    <MudTh>Valeur</MudTh>
+                    <MudTh>Enum API</MudTh>
+                    <MudTh>Valeur</MudTh>
+                    <MudTh>Test Conversion</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.ClientEnum</MudTd>
+                    <MudTd>@context.ClientValue</MudTd>
+                    <MudTd>@context.ApiEnum</MudTd>
+                    <MudTd>@context.ApiValue</MudTd>
+                    <MudTd>
+                        <MudChip T="string" Color="@(context.ConversionOk ? Color.Success : Color.Error)">
+                            @(context.ConversionOk ? "OK" : "ERREUR")
+                        </MudChip>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+            
+            <MudDivider Class="my-4" />
+            
+            <MudText Typo="Typo.h6" Class="mb-2">Genre</MudText>
+            <MudTable Items="@_genreValues" Hover="true" Striped="true" Dense="true">
+                <HeaderContent>
+                    <MudTh>Enum Client</MudTh>
+                    <MudTh>Valeur</MudTh>
+                    <MudTh>Enum API</MudTh>
+                    <MudTh>Valeur</MudTh>
+                    <MudTh>Test Conversion</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.ClientEnum</MudTd>
+                    <MudTd>@context.ClientValue</MudTd>
+                    <MudTd>@context.ApiEnum</MudTd>
+                    <MudTd>@context.ApiValue</MudTd>
+                    <MudTd>
+                        <MudChip T="string" Color="@(context.ConversionOk ? Color.Success : Color.Error)">
+                            @(context.ConversionOk ? "OK" : "ERREUR")
+                        </MudChip>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+            
+            <MudDivider Class="my-4" />
+            
+            <MudText Typo="Typo.h6" Class="mb-2">Test de sérialisation</MudText>
+            <MudButton OnClick="TestSerialization" Variant="Variant.Filled" Color="Color.Primary" Class="mb-4">
+                Tester la sérialisation
+            </MudButton>
+            
+            @if (!string.IsNullOrEmpty(_serializationResult))
+            {
+                <MudPaper Class="pa-4" Elevation="3">
+                    <MudText Typo="Typo.subtitle1" Class="mb-2">Résultat de la sérialisation</MudText>
+                    <MudTextField T="string" Value="@_serializationResult" Lines="10" ReadOnly="true" FullWidth="true" />
+                </MudPaper>
+            }
+        </MudCardContent>
+    </MudCard>
+</MudContainer>
+
+@code {
+    private class EnumMappingInfo
+    {
+        public string ClientEnum { get; set; }
+        public int ClientValue { get; set; }
+        public string ApiEnum { get; set; }
+        public int ApiValue { get; set; }
+        public bool ConversionOk { get; set; }
+    }
+    
+    private List<EnumMappingInfo> _typeContribuableValues = new();
+    private List<EnumMappingInfo> _statutContribuableValues = new();
+    private List<EnumMappingInfo> _genreValues = new();
+    private string _serializationResult = string.Empty;
+    
+    protected override void OnInitialized()
+    {
+        // Initialiser les valeurs de TypeContribuable
+        _typeContribuableValues.Add(new EnumMappingInfo 
+        { 
+            ClientEnum = "PersonnePhysique", 
+            ClientValue = (int)TypeContribuableType.PersonnePhysique,
+            ApiEnum = "_0",
+            ApiValue = (int)TypeContribuable._0,
+            ConversionOk = (int)TypeContribuableType.PersonnePhysique == (int)TypeContribuable._0
+        });
+        
+        _typeContribuableValues.Add(new EnumMappingInfo 
+        { 
+            ClientEnum = "PersonneMorale", 
+            ClientValue = (int)TypeContribuableType.PersonneMorale,
+            ApiEnum = "_1",
+            ApiValue = (int)TypeContribuable._1,
+            ConversionOk = (int)TypeContribuableType.PersonneMorale == (int)TypeContribuable._1
+        });
+        
+        // Initialiser les valeurs de StatutContribuable
+        _statutContribuableValues.Add(new EnumMappingInfo 
+        { 
+            ClientEnum = "Actif", 
+            ClientValue = (int)StatutContribuableType.Actif,
+            ApiEnum = "_0",
+            ApiValue = (int)StatutContribuable._0,
+            ConversionOk = (int)StatutContribuableType.Actif == (int)StatutContribuable._0
+        });
+        
+        _statutContribuableValues.Add(new EnumMappingInfo 
+        { 
+            ClientEnum = "Inactif", 
+            ClientValue = (int)StatutContribuableType.Inactif,
+            ApiEnum = "_1",
+            ApiValue = (int)StatutContribuable._1,
+            ConversionOk = (int)StatutContribuableType.Inactif == (int)StatutContribuable._1
+        });
+        
+        _statutContribuableValues.Add(new EnumMappingInfo 
+        { 
+            ClientEnum = "EnAttente", 
+            ClientValue = (int)StatutContribuableType.EnAttente,
+            ApiEnum = "_2",
+            ApiValue = (int)StatutContribuable._2,
+            ConversionOk = (int)StatutContribuableType.EnAttente == (int)StatutContribuable._2
+        });
+        
+        // Initialiser les valeurs de Genre
+        _genreValues.Add(new EnumMappingInfo 
+        { 
+            ClientEnum = "Homme", 
+            ClientValue = (int)GenreType.Homme,
+            ApiEnum = "_0",
+            ApiValue = (int)Genre._0,
+            ConversionOk = (int)GenreType.Homme == (int)Genre._0
+        });
+        
+        _genreValues.Add(new EnumMappingInfo 
+        { 
+            ClientEnum = "Femme", 
+            ClientValue = (int)GenreType.Femme,
+            ApiEnum = "_1",
+            ApiValue = (int)Genre._1,
+            ConversionOk = (int)GenreType.Femme == (int)Genre._1
+        });
+    }
+    
+    private void TestSerialization()
+    {
+        try
+        {
+            // Créer un objet CreateContribuableCommand avec des valeurs explicites
+            var command = new CreateContribuableCommand
+            {
+                Nom = "Test",
+                Prenom = "Test",
+                DateNaissance = DateTime.Now.AddYears(-30),
+                Genre = Genre._0, // Homme
+                NumeroIdentification = "TEST123",
+                Adresse = "Adresse de test",
+                TypeActivite = "Activité de test",
+                ContactPrincipal = "123456789",
+                DateEnregistrement = DateTime.Now,
+                Statut = StatutContribuable._0, // Actif
+                TypeContribuable = TypeContribuable._0 // PersonnePhysique
+            };
+            
+            // Sérialiser l'objet en JSON
+            var options = new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
+            
+            var json = JsonSerializer.Serialize(command, options);
+            
+            // Afficher le résultat
+            _serializationResult = json;
+            
+            // Désérialiser pour vérifier
+            var deserializedCommand = JsonSerializer.Deserialize<CreateContribuableCommand>(json, options);
+            
+            // Ajouter des informations sur les valeurs désérialisées
+            _serializationResult += "\n\n-- Valeurs désérialisées --\n";
+            _serializationResult += $"TypeContribuable: {deserializedCommand.TypeContribuable} (valeur: {(int)deserializedCommand.TypeContribuable})\n";
+            _serializationResult += $"Statut: {deserializedCommand.Statut} (valeur: {(int)deserializedCommand.Statut})\n";
+            _serializationResult += $"Genre: {deserializedCommand.Genre} (valeur: {(int)deserializedCommand.Genre})\n";
+        }
+        catch (Exception ex)
+        {
+            _serializationResult = $"Erreur: {ex.Message}";
+        }
+    }
+} 

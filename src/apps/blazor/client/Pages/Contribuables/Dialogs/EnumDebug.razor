@@ -1,0 +1,162 @@
+@page "/contribuables/enum-debug"
+@using MudBlazor
+@using PayCom.Blazor.Client.Pages.Contribuables.Models
+@using PayCom.Blazor.Infrastructure.Api
+@using static PayCom.Blazor.Client.Pages.Contribuables.Models.EnumExtensions
+
+<PageTitle>Débogage des énumérations - PayCom</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+    <MudPaper Elevation="3" Class="pa-4 mb-4 rounded-lg">
+        <MudText Typo="Typo.h4" Color="Color.Primary" Class="mb-4">Débogage des énumérations</MudText>
+        
+        <MudDivider Class="mb-4" />
+        
+        <MudText Typo="Typo.h6" Class="mb-2">TypeContribuable</MudText>
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudSelect Value="selectedTypeContribuable" 
+                          ValueChanged="@((TypeContribuableType val) => UpdateTypeContribuable(val))"
+                          Label="Type de contribuable" 
+                          Variant="Variant.Outlined">
+                    <MudSelectItem Value="@TypeContribuableType.PersonnePhysique">Personne physique</MudSelectItem>
+                    <MudSelectItem Value="@TypeContribuableType.PersonneMorale">Personne morale</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField Value="@_typeContribuableValue" Label="Valeur" ReadOnly="true" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField Value="@_apiTypeContribuable" Label="Valeur API" ReadOnly="true" Variant="Variant.Outlined" />
+            </MudItem>
+        </MudGrid>
+        
+        <MudDivider Class="my-4" />
+        
+        <MudText Typo="Typo.h6" Class="mb-2">StatutContribuable</MudText>
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudSelect Value="selectedStatut" 
+                          ValueChanged="@((StatutContribuableType val) => UpdateStatut(val))"
+                          Label="Statut du contribuable" 
+                          Variant="Variant.Outlined">
+                    <MudSelectItem Value="@StatutContribuableType.Actif">Actif</MudSelectItem>
+                    <MudSelectItem Value="@StatutContribuableType.Inactif">Inactif</MudSelectItem>
+                    <MudSelectItem Value="@StatutContribuableType.EnAttente">En attente</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField Value="@_statutValue" Label="Valeur" ReadOnly="true" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField Value="@_apiStatut" Label="Valeur API" ReadOnly="true" Variant="Variant.Outlined" />
+            </MudItem>
+        </MudGrid>
+        
+        <MudDivider Class="my-4" />
+        
+        <MudText Typo="Typo.h6" Class="mb-2">Genre</MudText>
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudSelect Value="selectedGenre" 
+                          ValueChanged="@((GenreType val) => UpdateGenre(val))"
+                          Label="Genre" 
+                          Variant="Variant.Outlined">
+                    <MudSelectItem Value="@GenreType.Homme">Homme</MudSelectItem>
+                    <MudSelectItem Value="@GenreType.Femme">Femme</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField Value="@_genreValue" Label="Valeur" ReadOnly="true" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField Value="@_apiGenre" Label="Valeur API" ReadOnly="true" Variant="Variant.Outlined" />
+            </MudItem>
+        </MudGrid>
+        
+        <MudDivider Class="my-4" />
+        
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="TestApiConversion" Class="mt-4">
+            Tester la conversion API
+        </MudButton>
+        
+        @if (!string.IsNullOrEmpty(_resultMessage))
+        {
+            <MudAlert Severity="@_severity" Class="mt-4">@_resultMessage</MudAlert>
+        }
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private TypeContribuableType selectedTypeContribuable = TypeContribuableType.PersonnePhysique;
+    private StatutContribuableType selectedStatut = StatutContribuableType.Actif;
+    private GenreType selectedGenre = GenreType.Homme;
+    
+    private string _typeContribuableValue = "0";
+    private string _statutValue = "0";
+    private string _genreValue = "0";
+    
+    private string _apiTypeContribuable = "_0";
+    private string _apiStatut = "_0";
+    private string _apiGenre = "_0";
+    
+    private string _resultMessage = string.Empty;
+    private Severity _severity = Severity.Info;
+    
+    protected override void OnInitialized()
+    {
+        UpdateTypeContribuable(selectedTypeContribuable);
+        UpdateStatut(selectedStatut);
+        UpdateGenre(selectedGenre);
+    }
+    
+    private void UpdateTypeContribuable(TypeContribuableType value)
+    {
+        selectedTypeContribuable = value;
+        _typeContribuableValue = ((int)value).ToString();
+        _apiTypeContribuable = MapToApiTypeContribuable(value).ToString();
+    }
+    
+    private void UpdateStatut(StatutContribuableType value)
+    {
+        selectedStatut = value;
+        _statutValue = ((int)value).ToString();
+        _apiStatut = MapToApiStatut(value).ToString();
+    }
+    
+    private void UpdateGenre(GenreType value)
+    {
+        selectedGenre = value;
+        _genreValue = ((int)value).ToString();
+        _apiGenre = MapToApiGenre(value).ToString();
+    }
+    
+    private void TestApiConversion()
+    {
+        try
+        {
+            // Tester la conversion aller-retour pour TypeContribuable
+            var apiType = MapToApiTypeContribuable(selectedTypeContribuable);
+            var backToLocalType = MapTypeContribuable(apiType);
+            
+            // Tester la conversion aller-retour pour Statut
+            var apiStatutVal = MapToApiStatut(selectedStatut);
+            var backToLocalStatut = MapStatut(apiStatutVal);
+            
+            // Tester la conversion aller-retour pour Genre
+            var apiGenreVal = MapToApiGenre(selectedGenre);
+            var backToLocalGenre = MapGenre(apiGenreVal);
+            
+            _resultMessage = $"Conversion réussie!\n" +
+                           $"TypeContribuable: {selectedTypeContribuable} -> {apiType} -> {backToLocalType}\n" +
+                           $"Statut: {selectedStatut} -> {apiStatutVal} -> {backToLocalStatut}\n" +
+                           $"Genre: {selectedGenre} -> {apiGenreVal} -> {backToLocalGenre}";
+            _severity = Severity.Success;
+        }
+        catch (Exception ex)
+        {
+            _resultMessage = $"Erreur lors de la conversion: {ex.Message}";
+            _severity = Severity.Error;
+        }
+    }
+} 

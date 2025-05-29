@@ -1,0 +1,323 @@
+@page "/contribuable/mon-profil"
+@using MudBlazor
+@using PayCom.Blazor.Infrastructure.Auth
+@using PayCom.Blazor.Infrastructure.Api
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using PayCom.Blazor.Client.Pages.Contribuables.Models
+@using static PayCom.Blazor.Client.Pages.Contribuables.Models.EnumExtensions
+
+@inject ISnackbar Snackbar
+@inject IApiClient ApiClient
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+
+<PageTitle>Mon Profil Contribuable - PayCom</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudPaper Elevation="3" Class="pa-4 mb-4 rounded-lg">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.Person" Color="Color.Primary" Size="Size.Large" Class="mr-2" />
+                <MudText Typo="Typo.h4" Color="Color.Primary">Mon Profil Contribuable</MudText>
+            </MudStack>
+        </MudStack>
+
+        <MudDivider Class="mb-4" />
+
+        @if (_loading)
+        {
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        }
+        else if (_contribuable == null)
+        {
+            <MudAlert Severity="Severity.Warning" Class="mb-4">
+                Votre profil contribuable n'a pas été trouvé. Veuillez contacter l'administration fiscale.
+            </MudAlert>
+        }
+        else
+        {
+            <MudGrid>
+                <MudItem xs="12" md="4">
+                    <MudCard Elevation="0" Class="rounded-lg border pa-4">
+                        <MudCardContent>
+                            <div class="d-flex flex-column align-center">
+                                <MudAvatar Color="Color.Primary" Size="Size.Large" Class="mb-3">
+                                    @if (_contribuable.TypeContribuable == TypeContribuable._0) // Personne physique
+                                    {
+                                        @(_contribuable.Prenom?.Substring(0, 1))@(_contribuable.Nom?.Substring(0, 1))
+                                    }
+                                    else // Personne morale
+                                    {
+                                        @(_contribuable.Nom?.Substring(0, 1))
+                                    }
+                                </MudAvatar>
+                                
+                                @if (_contribuable.TypeContribuable == TypeContribuable._0) // Personne physique
+                                {
+                                    <MudText Typo="Typo.h5" Class="mt-2">@_contribuable.Prenom @_contribuable.Nom</MudText>
+                                    <MudText Typo="Typo.subtitle1" Color="Color.Primary">Contribuable - Personne Physique</MudText>
+                                }
+                                else // Personne morale
+                                {
+                                    <MudText Typo="Typo.h5" Class="mt-2">@_contribuable.Nom</MudText>
+                                    <MudText Typo="Typo.subtitle1" Color="Color.Primary">Contribuable - Personne Morale</MudText>
+                                }
+                                
+                                <MudChip T="string" Color="GetStatutColor(_contribuable.Statut)" Size="Size.Small" Class="mt-2">
+                                    @GetStatutLabel(_contribuable.Statut)
+                                </MudChip>
+                            </div>
+
+                            <MudDivider Class="my-4" />
+
+                            <MudList T="string" Dense="true">
+                                <MudListItem T="string" Icon="@Icons.Material.Filled.Badge" IconColor="Color.Primary">
+                                    <MudText Typo="Typo.body2"><b>Numéro d'identification:</b> @_contribuable.NumeroIdentification</MudText>
+                                </MudListItem>
+                                
+                                @if (!string.IsNullOrEmpty(_contribuable.Email))
+                                {
+                                    <MudListItem T="string" Icon="@Icons.Material.Filled.Email" IconColor="Color.Primary">
+                                        <MudText Typo="Typo.body2"><b>Email:</b> @_contribuable.Email</MudText>
+                                    </MudListItem>
+                                }
+                                
+                                <MudListItem T="string" Icon="@Icons.Material.Filled.Phone" IconColor="Color.Primary">
+                                    <MudText Typo="Typo.body2"><b>Contact principal:</b> @_contribuable.ContactPrincipal</MudText>
+                                </MudListItem>
+                                
+                                @if (!string.IsNullOrEmpty(_contribuable.ContactSecondaire))
+                                {
+                                    <MudListItem T="string" Icon="@Icons.Material.Filled.Phone" IconColor="Color.Primary">
+                                        <MudText Typo="Typo.body2"><b>Contact secondaire:</b> @_contribuable.ContactSecondaire</MudText>
+                                    </MudListItem>
+                                }
+                                
+                                <MudListItem T="string" Icon="@Icons.Material.Filled.CalendarToday" IconColor="Color.Primary">
+                                    <MudText Typo="Typo.body2"><b>Date d'enregistrement:</b> @_contribuable.DateEnregistrement?.ToString("dd/MM/yyyy")</MudText>
+                                </MudListItem>
+                            </MudList>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+
+                <MudItem xs="12" md="8">
+                    <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4 border rounded-lg">
+                        <MudTabPanel Text="Informations" Icon="@Icons.Material.Filled.Info">
+                            <MudText Typo="Typo.h6" Class="mb-4">Informations détaillées</MudText>
+                            
+                            @if (_contribuable.TypeContribuable == TypeContribuable._0) // Personne physique
+                            {
+                                <MudGrid>
+                                    <MudItem xs="12" md="6">
+                                        <MudTextField Label="Nom" Value="@_contribuable.Nom" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                    </MudItem>
+                                    <MudItem xs="12" md="6">
+                                        <MudTextField Label="Prénom" Value="@_contribuable.Prenom" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                    </MudItem>
+                                    <MudItem xs="12" md="6">
+                                        <MudTextField Label="Date de naissance" Value="@_contribuable.DateNaissance?.ToString("dd/MM/yyyy")" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                    </MudItem>
+                                    <MudItem xs="12" md="6">
+                                        <MudTextField Label="Genre" Value="@GetGenreLabel(_contribuable.Genre)" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                    </MudItem>
+                                    <MudItem xs="12" md="6">
+                                        <MudTextField Label="Adresse" Value="@_contribuable.Adresse" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                    </MudItem>
+                                    <MudItem xs="12" md="6">
+                                        <MudTextField Label="Type d'activité" Value="@_contribuable.TypeActivite" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                    </MudItem>
+                                    <MudItem xs="12" md="6">
+                                        <MudTextField Label="Email" Value="@_contribuable.Email" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                    </MudItem>
+                                    <MudItem xs="12" md="6">
+                                        <MudTextField Label="Numéro d'identification" Value="@_contribuable.NumeroIdentification" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                    </MudItem>
+                                </MudGrid>
+                            }
+                            else // Personne morale
+                            {
+                                <MudGrid>
+                                    <MudItem xs="12" md="6">
+                                        <MudTextField Label="Raison sociale" Value="@_contribuable.Nom" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                    </MudItem>
+                                    <MudItem xs="12" md="6">
+                                        <MudTextField Label="Nom commercial" Value="@_contribuable.NomCommercial" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                    </MudItem>
+                                    <MudItem xs="12" md="6">
+                                        <MudTextField Label="RCCM" Value="@_contribuable.NumeroRegistreCommerce" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                    </MudItem>
+                                    <MudItem xs="12" md="6">
+                                        <MudTextField Label="NIF" Value="@_contribuable.Nif" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                    </MudItem>
+                                    <MudItem xs="12" md="6">
+                                        <MudTextField Label="Date de création" Value="@_contribuable.DateCreationEntreprise?.ToString("dd/MM/yyyy")" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                    </MudItem>
+                                    <MudItem xs="12" md="6">
+                                        <MudTextField Label="Secteur d'activité" Value="@_contribuable.SecteurActivite" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                    </MudItem>
+                                    <MudItem xs="12" md="6">
+                                        <MudTextField Label="Forme juridique" Value="@_contribuable.FormeJuridique" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                    </MudItem>
+                                    <MudItem xs="12" md="6">
+                                        <MudTextField Label="Représentant légal" Value="@_contribuable.RepresentantLegal" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                    </MudItem>
+                                    <MudItem xs="12" md="6">
+                                        <MudTextField Label="Capital social" Value="@(_contribuable.CapitalSocial.HasValue ? $"{_contribuable.CapitalSocial.Value:N0} FCFA" : "-")" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                    </MudItem>
+                                    <MudItem xs="12" md="6">
+                                        <MudTextField Label="Adresse" Value="@_contribuable.Adresse" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                    </MudItem>
+                                </MudGrid>
+                            }
+                        </MudTabPanel>
+                        
+                        <MudTabPanel Text="Obligations fiscales" Icon="@Icons.Material.Filled.Receipt">
+                            <MudText Typo="Typo.h6" Class="mb-4">Mes obligations fiscales</MudText>
+                            
+                            <MudPaper Elevation="0" Class="pa-4 mb-4" Style="background-color: var(--mud-palette-background-grey);">
+                                <MudStack Row="true" AlignItems="AlignItems.Center">
+                                    <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Info" Class="mr-2" />
+                                    <MudText Typo="Typo.body2">
+                                        Cette section affiche vos obligations fiscales et leur statut.
+                                    </MudText>
+                                </MudStack>
+                            </MudPaper>
+                            
+                            @if (_loading)
+                            {
+                                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                            }
+                            else
+                            {
+                                <MudButton Variant="Variant.Filled" 
+                                          Color="Color.Primary" 
+                                          StartIcon="@Icons.Material.Filled.Receipt"
+                                          Href="/obligations/liste">
+                                    Voir toutes mes obligations fiscales
+                                </MudButton>
+                            }
+                        </MudTabPanel>
+                        
+                        <MudTabPanel Text="Paiements" Icon="@Icons.Material.Filled.Payment">
+                            <MudText Typo="Typo.h6" Class="mb-4">Historique des paiements</MudText>
+                            
+                            <MudPaper Elevation="0" Class="pa-4 mb-4" Style="background-color: var(--mud-palette-background-grey);">
+                                <MudStack Row="true" AlignItems="AlignItems.Center">
+                                    <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Info" Class="mr-2" />
+                                    <MudText Typo="Typo.body2">
+                                        Cette section affiche l'historique de vos paiements fiscaux.
+                                    </MudText>
+                                </MudStack>
+                            </MudPaper>
+                            
+                            @if (_loading)
+                            {
+                                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                            }
+                            else
+                            {
+                                <MudButton Variant="Variant.Filled" 
+                                          Color="Color.Primary" 
+                                          StartIcon="@Icons.Material.Filled.Payment"
+                                          Href="/paiements/historique">
+                                    Voir l'historique des paiements
+                                </MudButton>
+                            }
+                        </MudTabPanel>
+                    </MudTabs>
+                </MudItem>
+            </MudGrid>
+        }
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private ContribuableResponse _contribuable;
+    private bool _loading = true;
+    private string _userId;
+    private const string ApiVersion = "1.0";
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserData();
+        await LoadContribuableData();
+    }
+    
+    private async Task LoadUserData()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        
+        if (user.Identity.IsAuthenticated)
+        {
+            // Utiliser la méthode LINQ pour extraire l'ID utilisateur
+            _userId = user.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+        }
+    }
+    
+    private async Task LoadContribuableData()
+    {
+        try
+        {
+            _loading = true;
+            
+            // Rechercher le contribuable par son utilisateurId
+            var searchCommand = new SearchContribuableCommand
+            {
+                PageNumber = 1,
+                PageSize = 1,
+                Keyword = _userId // Utiliser le Keyword pour filtrer par ID utilisateur
+            };
+            
+            var result = await ApiClient.SearchContribuableEndPointsAsync(ApiVersion, searchCommand);
+            
+            if (result?.Items != null && result.Items.Any())
+            {
+                // Récupérer les détails du contribuable
+                _contribuable = result.Items.First();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erreur lors du chargement des données: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+    
+    private Color GetStatutColor(StatutContribuable statut)
+    {
+        return statut switch
+        {
+            StatutContribuable._0 => Color.Success, // Actif
+            StatutContribuable._1 => Color.Error,   // Inactif
+            StatutContribuable._2 => Color.Warning, // En attente
+            _ => Color.Default
+        };
+    }
+    
+    private string GetStatutLabel(StatutContribuable statut)
+    {
+        return statut switch
+        {
+            StatutContribuable._0 => "Actif",
+            StatutContribuable._1 => "Inactif",
+            StatutContribuable._2 => "En attente",
+            _ => "Inconnu"
+        };
+    }
+    
+    private string GetGenreLabel(Genre genre)
+    {
+        return genre switch
+        {
+            Genre._0 => "Homme",
+            Genre._1 => "Femme",
+            _ => "Non spécifié"
+        };
+    }
+} 

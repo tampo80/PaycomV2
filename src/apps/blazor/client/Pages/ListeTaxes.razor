@@ -1,0 +1,299 @@
+@page "/taxes/liste"
+@using MudBlazor
+@using PayCom.Blazor.Client.Shared
+@using PayCom.Blazor.Client.Components
+@using PayCom.Blazor.Infrastructure.Api
+@using Microsoft.AspNetCore.Components
+@using PayCom.Blazor.Client.Pages.Taxes.Models
+@using PayCom.Blazor.Client.Pages.Taxes.Dialogs
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using PayCom.Blazor.Client.Services
+
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject IApiClient ApiClient
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Liste des Taxes - PayCom</PageTitle>
+
+<AuthorizeView>
+    <Authorized>
+        <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+            <MudPaper Elevation="3" Class="pa-4 mb-4 rounded-lg">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.ListAlt" Color="Color.Primary" Size="Size.Large" Class="mr-2" />
+                        <MudText Typo="Typo.h4" Color="Color.Primary">Liste des taxes</MudText>
+                    </MudStack>
+                    <MudButton OnClick="OpenCreateDialog" 
+                              Variant="Variant.Filled" 
+                              Color="Color.Primary" 
+                              StartIcon="@Icons.Material.Filled.Add" 
+                              Size="Size.Medium" 
+                              Class="rounded-lg px-4">
+                        Nouvelle taxe
+                    </MudButton>
+                </MudStack>
+
+                <MudDivider Class="mb-4" />
+
+                <MudPaper Elevation="0" Class="pa-4 rounded-lg" Style="background-color: var(--mud-palette-background-grey)">
+                    <MudTable ServerData="@(new Func<TableState, CancellationToken, Task<TableData<TaxeResponse>>>(ServerReload))"
+                             Dense="true"
+                             Hover="true"
+                             Striped="true"
+                             Loading="@_loading"
+                             LoadingProgressColor="Color.Primary"
+                             Breakpoint="Breakpoint.Sm"
+                             T="TaxeResponse"
+                             @ref="_table">
+                        <ToolBarContent>
+                            <MudText Typo="Typo.h6" Class="mud-text-secondary">Taxes enregistrées</MudText>
+                            <MudSpacer />
+                            <MudTextField T="string" 
+                                        ValueChanged="@(s => OnSearch(s))" 
+                                        Placeholder="Rechercher..." 
+                                        Adornment="Adornment.Start"
+                                        AdornmentIcon="@Icons.Material.Filled.Search" 
+                                        IconSize="Size.Medium" 
+                                        Class="mt-0 ml-2"
+                                        Style="width: 300px"></MudTextField>
+                        </ToolBarContent>
+                        <HeaderContent>
+                            <MudTh><MudTableSortLabel SortLabel="anneeImposition" T="TaxeResponse">Année</MudTableSortLabel></MudTh>
+                            <MudTh><MudTableSortLabel SortLabel="montantDu" T="TaxeResponse">Montant dû</MudTableSortLabel></MudTh>
+                            <MudTh><MudTableSortLabel SortLabel="montantPaye" T="TaxeResponse">Montant payé</MudTableSortLabel></MudTh>
+                            <MudTh><MudTableSortLabel SortLabel="soldeRestant" T="TaxeResponse">Solde restant</MudTableSortLabel></MudTh>
+                            <MudTh><MudTableSortLabel SortLabel="dateEcheance" T="TaxeResponse">Échéance</MudTableSortLabel></MudTh>
+                            <MudTh><MudTableSortLabel SortLabel="uniteMesure" T="TaxeResponse">Unité</MudTableSortLabel></MudTh>
+                            <MudTh Style="text-align: center">Actions</MudTh>
+                        </HeaderContent>
+                        <RowTemplate Context="taxeItem">
+                            <MudTd DataLabel="Année">@taxeItem.AnneeImposition</MudTd>
+                            <MudTd DataLabel="Montant dû">@taxeItem.MontantDu.ToString("N0") XOF</MudTd>
+                            <MudTd DataLabel="Montant payé">@taxeItem.MontantPaye.ToString("N0") XOF</MudTd>
+                            <MudTd DataLabel="Solde restant">@taxeItem.SoldeRestant.ToString("N0") XOF</MudTd>
+                            <MudTd DataLabel="Échéance">@taxeItem.DateEcheance.ToString("dd/MM/yyyy")</MudTd>
+                            <MudTd DataLabel="Unité">@taxeItem.UniteMesure</MudTd>
+                            <MudTd Style="text-align: center">
+                                <MudStack Row="true" Justify="Justify.Center" AlignItems="AlignItems.Center">
+                                    <MudTooltip Text="Voir détails">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Visibility" 
+                                                      Color="Color.Info" 
+                                                      Size="Size.Small" 
+                                                      OnClick="@(() => ViewDetails(taxeItem))" 
+                                                      Class="ma-1" />
+                                    </MudTooltip>
+                                    <MudTooltip Text="Modifier">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                                      Color="Color.Primary" 
+                                                      Size="Size.Small" 
+                                                      OnClick="@(() => EditTaxe(taxeItem))" 
+                                                      Class="ma-1" />
+                                    </MudTooltip>
+                                    <MudTooltip Text="Supprimer">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                                      Color="Color.Error" 
+                                                      Size="Size.Small" 
+                                                      OnClick="@(() => DeleteTaxe(taxeItem))" 
+                                                      Class="ma-1" />
+                                    </MudTooltip>
+                                </MudStack>
+                            </MudTd>
+                        </RowTemplate>
+                        <NoRecordsContent>
+                            <MudStack AlignItems="AlignItems.Center" Class="pa-4">
+                                <MudIcon Icon="@Icons.Material.Filled.SearchOff" Color="Color.Secondary" Size="Size.Large" />
+                                <MudText Typo="Typo.subtitle1">Aucune taxe trouvée</MudText>
+                                <MudText Typo="Typo.body2" Class="mud-text-secondary">Essayez de modifier vos critères de recherche ou ajoutez une nouvelle taxe.</MudText>
+                            </MudStack>
+                        </NoRecordsContent>
+                        <LoadingContent>
+                            <MudStack AlignItems="AlignItems.Center" Class="pa-4">
+                                <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+                                <MudText Typo="Typo.subtitle1">Chargement des taxes...</MudText>
+                            </MudStack>
+                        </LoadingContent>
+                        <PagerContent>
+                            <MudTablePager />
+                        </PagerContent>
+                    </MudTable>
+                </MudPaper>
+            </MudPaper>
+        </MudContainer>
+    </Authorized>
+    <NotAuthorized>
+        <MudContainer MaxWidth="MaxWidth.Small" Class="d-flex align-center justify-center mud-height-full">
+            <MudPaper Elevation="3" Class="pa-8 rounded-lg">
+                <MudStack AlignItems="AlignItems.Center" Spacing="4">
+                    <MudIcon Icon="@Icons.Material.Filled.Lock" Color="Color.Error" Size="Size.Large" />
+                    <MudText Typo="Typo.h5" Color="Color.Error">Accès non autorisé</MudText>
+                    <MudText Typo="Typo.body1" Class="text-center">Vous n'avez pas les permissions nécessaires pour accéder à cette page.</MudText>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => NavigationManager.NavigateTo("/"))" Class="mt-4">
+                        Retour à l'accueil
+                    </MudButton>
+                </MudStack>
+            </MudPaper>
+        </MudContainer>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private MudTable<TaxeResponse> _table;
+    private bool _loading = false;
+    private string _searchString = "";
+    private const string ApiVersion = "1.0";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated != true)
+        {
+            NavigationManager.NavigateTo("/login", true);
+        }
+    }
+
+    private async Task<TableData<TaxeResponse>> ServerReload(TableState state, CancellationToken cancellationToken)
+    {
+        _loading = true;
+        try
+        {
+            // Créer la commande de recherche
+            var command = new SearchTaxeCommand
+            {
+                PageNumber = state.Page + 1,
+                PageSize = state.PageSize,
+                Keyword = _searchString
+            };
+
+            // Ajouter le tri si spécifié
+            if (!string.IsNullOrEmpty(state.SortLabel))
+            {
+                command.OrderBy = new List<string> { $"{state.SortLabel} {(state.SortDirection == SortDirection.Descending ? "desc" : "asc")}" };
+            }
+            else
+            {
+                command.OrderBy = new List<string> { "dateCreation desc" };
+            }
+
+            // Appel à l'API
+            var result = await ApiClient.SearchTaxeEndPointsAsync(ApiVersion, command);
+
+            return new TableData<TaxeResponse>
+            {
+                Items = result.Items ?? new List<TaxeResponse>(),
+                TotalItems = result.TotalCount
+            };
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erreur lors du chargement des taxes: {ex.Message}", Severity.Error);
+            return new TableData<TaxeResponse> { Items = new List<TaxeResponse>(), TotalItems = 0 };
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task OnSearch(string text)
+    {
+        _searchString = text;
+        await _table.ReloadServerData();
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var options = new DialogOptions
+        {
+            CloseButton = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+           
+        };
+
+        var dialog = await DialogService.ShowAsync<TaxeDialog>("Nouvelle taxe", options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await _table.ReloadServerData();
+        }
+    }
+
+    private async Task ViewDetails(TaxeResponse taxe)
+    {
+        var parameters = new DialogParameters
+        {
+            ["TaxeId"] = taxe.Id
+        };
+
+        var options = new DialogOptions
+        {
+            CloseButton = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
+        };
+
+        await DialogService.ShowAsync<TaxeDetailsDialog>("Détails de la taxe", parameters, options);
+    }
+
+    private async Task EditTaxe(TaxeResponse taxe)
+    {
+        var parameters = new DialogParameters
+        {
+            ["TaxeId"] = taxe.Id
+        };
+
+        var options = new DialogOptions
+        {
+            CloseButton = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+          
+        };
+
+        var dialog = await DialogService.ShowAsync<TaxeDialog>("Modifier la taxe", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await _table.ReloadServerData();
+        }
+    }
+
+    private async Task DeleteTaxe(TaxeResponse taxe)
+    {
+        var parameters = new DialogParameters
+        {
+            ["ContentText"] = $"Êtes-vous sûr de vouloir supprimer cette taxe de {taxe.AnneeImposition} ?",
+            ["ButtonText"] = "Supprimer",
+            ["Color"] = Color.Error
+        };
+
+        var options = new DialogOptions
+        {
+            CloseButton = true,
+            MaxWidth = MaxWidth.ExtraSmall
+        };
+
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>("Confirmation", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is bool confirmed && confirmed)
+        {
+            try
+            {
+                await ApiClient.DeleteTaxeEndPointsAsync(ApiVersion, taxe.Id);
+                Snackbar.Add("Taxe supprimée avec succès", Severity.Success);
+                await _table.ReloadServerData();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Erreur lors de la suppression: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+} 

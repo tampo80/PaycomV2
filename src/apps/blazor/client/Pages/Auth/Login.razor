@@ -1,0 +1,70 @@
+﻿@page "/login"
+@attribute [AllowAnonymous]
+@inject IAuthenticationService authService
+<PageTitle>Connexion</PageTitle>
+
+<div style="display: flex; justify-content: center; align-items: center; flex-direction: column; margin-top: 50px;">
+    <MudImage Width="120" Src="/full-stack-hero-logo.png" Style="margin-bottom: 30px;" />
+    
+    <MudText Typo="Typo.h4" GutterBottom="true" Class="fsh-center-text">Se connecter</MudText>
+    <MudText Typo="Typo.body1" Class="fsh-center-text" Color="Color.Default">
+        Entrez vos identifiants pour accéder à votre compte.
+    </MudText>
+</div>
+
+<br />
+
+<EditForm Model="@_tokenRequest" OnValidSubmit="SubmitAsync">
+    <MudGrid>
+        <DataAnnotationsValidator />
+        <FshValidation @ref="_customValidation" />
+
+        <!-- E-mail -->
+        <MudItem xs="12">
+            <MudTextField T="string" Label="E-mail" Variant="Variant.Outlined" @bind-Value="_tokenRequest.Email"
+                          For="@(() => _tokenRequest.Email)" Required Color="Color.Primary" />
+        </MudItem>
+
+        <!-- Mot de passe -->
+        <MudItem xs="12">
+            <MudTextField Label="Mot de passe" Variant="Variant.Outlined" @bind-Value="_tokenRequest.Password"
+                          For="@(() => _tokenRequest.Password)" InputType="@_passwordInput" Adornment="Adornment.End"
+                          AdornmentIcon="@_passwordInputIcon" OnAdornmentClick="TogglePasswordVisibility" Required Color="Color.Primary" />
+        </MudItem>
+
+        <!-- Identifiant locataire -->
+        <MudItem xs="12">
+            <MudTextField T="string" Label="Identifiant du locataire" Variant="Variant.Outlined" @bind-Value="TenantId"
+                          For="@(() => TenantId)" Required Color="Color.Primary" />
+        </MudItem>
+
+        <!-- Boutons -->
+        <MudItem xs="12" md="6">
+            <MudButton StartIcon="@Icons.Material.Filled.AppRegistration" Href="/register" FullWidth Variant="Variant.Text" Color="Color.Secondary">
+                S'inscrire
+            </MudButton>
+        </MudItem>
+        
+        <MudItem xs="12" md="6">
+            <MudButton StartIcon="@Icons.Material.Filled.LockReset" Href="/forgot-password" FullWidth Variant="Variant.Text" Color="Color.Secondary">
+                Mot de passe oublié ?
+            </MudButton>
+        </MudItem>
+
+        <!-- Bouton de connexion -->
+        <MudItem xs="12" Class="d-flex justify-center">
+            <MudButton ButtonType="ButtonType.Submit" Disabled="BusySubmitting" Variant="Variant.Filled"
+                       Color="Color.Primary" DropShadow="true" Size="Size.Large" StartIcon="@Icons.Material.Filled.Login" FullWidth>
+                Se connecter
+            </MudButton>
+        </MudItem>
+
+        <!-- Remplir les identifiants administrateur -->
+        <MudItem xs="12" Class="d-flex justify-center" style="margin-top: 20px;">
+            <MudButton DropShadow="false" StartIcon="@Icons.Material.Filled.Password" OnClick="FillAdministratorCredentials" Variant="Variant.Text" Color="Color.Default">
+                Remplir les identifiants administrateur
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</EditForm>
+

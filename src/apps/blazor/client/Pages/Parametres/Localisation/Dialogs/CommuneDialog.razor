@@ -1,0 +1,700 @@
+@using MudBlazor
+@using System.ComponentModel.DataAnnotations
+@using PayCom.Blazor.Infrastructure.Api
+@using Microsoft.AspNetCore.Components
+@using PayCom.Blazor.Client.Components
+@using System.Text.Json
+
+@inject IApiClient ApiClient
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+<MudDialog DisableSidePadding="true">
+    <TitleContent>
+        <div style="background-color: var(--mud-palette-primary); margin: -16px -24px -16px -24px; padding: 16px 24px;">
+            <div class="d-flex flex-row align-center">
+                <MudIcon Icon="@Icons.Material.Filled.LocationCity" Class="mr-2" Style="color: white;" />
+                <MudText Typo="Typo.h6" Style="color: white;">@DialogTitle</MudText>
+            </div>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="form" Model="@Model" @bind-IsValid="@_isValid">
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Class="my-2" ShowCloseIcon="true" CloseIconClicked="() => _errorMessage = string.Empty">
+                    <div class="d-flex align-center">
+                        <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Class="mr-2" />
+                        <MudText>@_errorMessage</MudText>
+                    </div>
+                </MudAlert>
+            }
+            
+            @if (_fieldErrors.Count > 0)
+            {
+                <MudAlert Severity="Severity.Warning" Class="my-2" ShowCloseIcon="true" CloseIconClicked="() => _fieldErrors.Clear()">
+                    <div class="d-flex flex-column">
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">Veuillez corriger les erreurs suivantes :</MudText>
+                        <div class="pl-2">
+                            @foreach (var error in _fieldErrors)
+                            {
+                                <div class="d-flex align-center mb-1">
+                                    <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Class="mr-2" Color="Color.Warning" />
+                                    <div>
+                                        <strong>@error.Key</strong>: @string.Join(", ", error.Value)
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </MudAlert>
+            }
+            
+            <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-3" @bind-ActivePanelIndex="_activeTabIndex">
+                <MudTabPanel Text="Informations générales">
+                    <MudGrid Spacing="2">
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="Model.Nom" 
+                                        Label="Nom de la commune" 
+                                        Variant="Variant.Outlined"
+                                        Adornment="Adornment.Start" 
+                                        AdornmentIcon="@Icons.Material.Filled.LocationCity" 
+                                        AdornmentColor="Color.Primary"
+                                        Required="true" 
+                                        RequiredError="Le nom est requis"
+                                        HelperText="Entrez le nom complet de la commune"
+                                        Counter="100"
+                                        Immediate="true"
+                                        Error="@(_fieldErrors.ContainsKey("Nom"))"
+                                        ErrorText="@(GetFieldErrorText("Nom"))"
+                                        Validation="@(new Func<string, IEnumerable<string>>(ValidateNom))" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="Model.Code" 
+                                        Label="Code de la commune" 
+                                        Variant="Variant.Outlined"
+                                        Adornment="Adornment.Start" 
+                                        AdornmentIcon="@Icons.Material.Filled.Place" 
+                                        AdornmentColor="Color.Secondary"
+                                        HelperText="Entrez un code court pour la commune"
+                                        Counter="50"
+                                        Immediate="true"
+                                        Error="@(_fieldErrors.ContainsKey("Code"))"
+                                        ErrorText="@(GetFieldErrorText("Code"))"
+                                        Validation="@(new Func<string, IEnumerable<string>>(ValidateCode))" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudSelect @bind-Value="Model.Type" 
+                                    Label="Type de commune" 
+                                    Variant="Variant.Outlined"
+                                    AnchorOrigin="Origin.BottomCenter"
+                                    Required="true"
+                                    RequiredError="Le type est requis"
+                                    Error="@(_fieldErrors.ContainsKey("Type"))"
+                                    ErrorText="@(GetFieldErrorText("Type"))"
+                                    Adornment="Adornment.Start"
+                                    AdornmentIcon="@Icons.Material.Filled.Category"
+                                    AdornmentColor="Color.Primary">
+                                <MudSelectItem Value="@TypeCommune._0">Standard</MudSelectItem>
+                                <MudSelectItem Value="@TypeCommune._1">Urbaine</MudSelectItem>
+                                <MudSelectItem Value="@TypeCommune._2">Rurale</MudSelectItem>
+                                <MudSelectItem Value="@TypeCommune._3">Arrondissement</MudSelectItem>
+                                <MudSelectItem Value="@TypeCommune._4">Municipalité</MudSelectItem>
+                                <MudSelectItem Value="@TypeCommune._5">Statut Spécial</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudAutocomplete T="RegionDto" 
+                                          Label="Région" 
+                                          Value="_selectedRegion"
+                                          ValueChanged="@RegionChanged"
+                                          SearchFunc="SearchRegions"
+                                          ResetValueOnEmptyText="true"
+                                          CoerceText="true"
+                                          CoerceValue="true"
+                                          AdornmentIcon="@Icons.Material.Filled.Public"
+                                          AdornmentColor="Color.Primary"
+                                          Required="true"
+                                          RequiredError="La région est requise"
+                                          Error="@(_fieldErrors.ContainsKey("RegionId"))"
+                                          ErrorText="@(GetFieldErrorText("RegionId"))"
+                                          Immediate="true"
+                                          Variant="Variant.Outlined"
+                                          ToStringFunc="@(r => r?.Nom ?? string.Empty)"
+                                          HelperText="Sélectionner la région de cette commune" />
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+                <MudTabPanel Text="Informations complémentaires">
+                    <MudGrid Spacing="2">
+                        <MudItem xs="12" sm="6">
+                            <MudNumericField @bind-Value="Model.NombreSecteurs" 
+                                         Label="Nombre de secteurs" 
+                                         Variant="Variant.Outlined"
+                                         Adornment="Adornment.Start" 
+                                         AdornmentIcon="@Icons.Material.Filled.Adjust" 
+                                         Min="0" 
+                                         HelperText="Entrez le nombre de secteurs dans cette commune" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudNumericField @bind-Value="Model.NombreArrondissements" 
+                                         Label="Nombre d'arrondissements" 
+                                         Variant="Variant.Outlined"
+                                         Adornment="Adornment.Start" 
+                                         AdornmentIcon="@Icons.Material.Filled.Apartment" 
+                                         Min="0" 
+                                         HelperText="Entrez le nombre d'arrondissements dans cette commune" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudSelect @bind-Value="Model.TypeChefLieu" 
+                                    Label="Type de chef-lieu" 
+                                    Variant="Variant.Outlined"
+                                    AnchorOrigin="Origin.BottomCenter"
+                                    Adornment="Adornment.Start"
+                                    AdornmentIcon="@Icons.Material.Filled.LocationOn"
+                                    AdornmentColor="Color.Secondary">
+                                <MudSelectItem Value="@TypeChefLieu._0">Aucun</MudSelectItem>
+                                <MudSelectItem Value="@TypeChefLieu._1">Chef-lieu de région</MudSelectItem>
+                                <MudSelectItem Value="@TypeChefLieu._2">Chef-lieu de commune</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="Model.LogoUrl" 
+                                        Label="URL du logo" 
+                                        Variant="Variant.Outlined"
+                                        Adornment="Adornment.Start" 
+                                        AdornmentIcon="@Icons.Material.Filled.Image" 
+                                        HelperText="Entrez l'URL du logo de la commune" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="Model.AdresseSiege" 
+                                       Label="Adresse du siège" 
+                                       Variant="Variant.Outlined"
+                                       Adornment="Adornment.Start" 
+                                       AdornmentIcon="@Icons.Material.Filled.Home" 
+                                       HelperText="Entrez l'adresse du siège de la commune" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="Model.Contact" 
+                                       Label="Contact" 
+                                       Variant="Variant.Outlined"
+                                       Adornment="Adornment.Start" 
+                                       AdornmentIcon="@Icons.Material.Filled.Phone" 
+                                       HelperText="Entrez le numéro de téléphone principal" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="Model.Email" 
+                                       Label="Email" 
+                                       Variant="Variant.Outlined"
+                                       Adornment="Adornment.Start" 
+                                       AdornmentIcon="@Icons.Material.Filled.Email" 
+                                       HelperText="Entrez l'adresse email de contact" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="Model.SiteWeb" 
+                                       Label="Site web" 
+                                       Variant="Variant.Outlined"
+                                       Adornment="Adornment.Start" 
+                                       AdornmentIcon="@Icons.Material.Filled.Web" 
+                                       HelperText="Entrez l'URL du site web" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="Model.CodeTenant" 
+                                        Label="Code Tenant" 
+                                        Variant="Variant.Outlined"
+                                        Adornment="Adornment.Start" 
+                                        AdornmentIcon="@Icons.Material.Filled.Key" 
+                                        AdornmentColor="Color.Primary"
+                                        Required="true"
+                                        RequiredError="Le code tenant est requis"
+                                        Error="@(_fieldErrors.ContainsKey("CodeTenant"))"
+                                        ErrorText="@(GetFieldErrorText("CodeTenant"))"
+                                        HelperText="Code tenant (obligatoire)" />
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+                <MudTabPanel Text="Centre administratif">
+                    <MudGrid Spacing="2">
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="Model.NomCentreAdmin" 
+                                       Label="Nom du centre administratif" 
+                                       Variant="Variant.Outlined"
+                                       Adornment="Adornment.Start" 
+                                       AdornmentIcon="@Icons.Material.Filled.Business" 
+                                       HelperText="Entrez le nom du centre administratif" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="Model.AdresseCentreAdmin" 
+                                       Label="Adresse du centre administratif" 
+                                       Variant="Variant.Outlined"
+                                       Adornment="Adornment.Start" 
+                                       AdornmentIcon="@Icons.Material.Filled.Home" 
+                                       HelperText="Entrez l'adresse du centre administratif" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="Model.ContactCentreAdmin" 
+                                       Label="Contact du centre administratif" 
+                                       Variant="Variant.Outlined"
+                                       Adornment="Adornment.Start" 
+                                       AdornmentIcon="@Icons.Material.Filled.Phone" 
+                                       HelperText="Entrez le numéro de téléphone du centre administratif" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="Model.EmailCentreAdmin" 
+                                       Label="Email du centre administratif" 
+                                       Variant="Variant.Outlined"
+                                       Adornment="Adornment.Start" 
+                                       AdornmentIcon="@Icons.Material.Filled.Email" 
+                                       HelperText="Entrez l'adresse email du centre administratif" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="Model.ResponsableCentreAdmin" 
+                                       Label="Responsable du centre administratif" 
+                                       Variant="Variant.Outlined"
+                                       Adornment="Adornment.Start" 
+                                       AdornmentIcon="@Icons.Material.Filled.Person" 
+                                       HelperText="Entrez le nom du responsable du centre administratif" />
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+            </MudTabs>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudTooltip Text="Annuler les modifications">
+            <MudButton Variant="Variant.Outlined" OnClick="Cancel" StartIcon="@Icons.Material.Filled.Cancel" Color="Color.Error">Annuler</MudButton>
+        </MudTooltip>
+        <MudTooltip Text="@((_isValid) ? $"{ButtonText} la commune" : "Veuillez remplir correctement tous les champs requis")">
+            <MudButton Variant="Variant.Filled" OnClick="Submit" StartIcon="@Icons.Material.Filled.Save" Color="Color.Primary" Disabled="@(!_isValid || _processing)">
+                @if (_processing)
+                {
+                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                    <span class="ms-2">Traitement...</span>
+                }
+                else
+                {
+                    @ButtonText
+                }
+            </MudButton>
+        </MudTooltip>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    public IMudDialogInstance MudDialog { get; set; } = default!;
+    
+    [Parameter] public CommuneDto Model { get; set; } = new();
+    [Parameter] public string ButtonText { get; set; } = "Enregistrer";
+    [Parameter] public string DialogTitle { get; set; } = "Commune";
+    [Parameter] public EventCallback<CommuneDto> OnValidSubmit { get; set; }
+
+    private MudForm form;
+    private bool _isValid;
+    private RegionDto _selectedRegion;
+    private List<RegionDto> _regions = new();
+    private const string ApiVersion = "1.0";
+    private string _errorMessage = string.Empty;
+    private Dictionary<string, List<string>> _fieldErrors = new();
+    private bool _processing = false;
+    private int _activeTabIndex = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRegions();
+        
+        // Initialiser la région sélectionnée si elle existe déjà
+        if (Model != null && Model.RegionId != Guid.Empty)
+        {
+            _selectedRegion = _regions.FirstOrDefault(r => r.Id == Model.RegionId);
+            
+            // Si la région n'est pas trouvée dans la liste mais qu'on a son ID et son nom, créer un objet temporaire
+            if (_selectedRegion == null && !string.IsNullOrEmpty(Model.NomRegion))
+            {
+                _selectedRegion = new RegionDto { Id = Model.RegionId, Nom = Model.NomRegion };
+            }
+        }
+        
+        // Valider le formulaire au démarrage pour s'assurer que _isValid est correctement initialisé
+        _isValid = !string.IsNullOrWhiteSpace(Model.Nom) && _selectedRegion != null;
+    }
+
+    private async Task LoadRegions()
+    {
+        try
+        {
+            // Créer la commande en dehors de la lambda
+            var searchCommand = new SearchRegionsCommand
+            {
+                PageNumber = 1,
+                PageSize = 100,
+                OrderBy = new List<string> { "Nom" }
+            };
+            
+            // Appel à l'API pour récupérer les régions avec ApiHelper
+            var result = await ApiHelper.ExecuteCallGuardedAsync<RegionResponsePagedList>(
+                async () => await ApiClient.SearchRegionEndPointsAsync(ApiVersion, searchCommand),
+                null, // Ne pas utiliser Snackbar ici pour éviter d'afficher des messages d'erreur
+                null  // Ne pas utiliser NavigationManager ici
+            );
+
+            if (result != null && result.Items != null)
+            {
+                _regions = result.Items.Select(r => new RegionDto
+                {
+                    Id = r.Id,
+                    Code = r.Code ?? string.Empty,
+                    Nom = r.Nom ?? string.Empty
+                }).ToList();
+                
+                // Réinitialiser la région sélectionnée si elle existe dans la liste chargée
+                if (Model != null && Model.RegionId != Guid.Empty)
+                {
+                    _selectedRegion = _regions.FirstOrDefault(r => r.Id == Model.RegionId);
+                    
+                    // Si la région n'est pas trouvée dans la liste mais qu'on a son ID et son nom, créer un objet temporaire
+                    if (_selectedRegion == null && !string.IsNullOrEmpty(Model.NomRegion))
+                    {
+                        _selectedRegion = new RegionDto { Id = Model.RegionId, Nom = Model.NomRegion };
+                        // Ajouter cette région à la liste pour qu'elle soit disponible dans l'autocomplete
+                        _regions.Add(_selectedRegion);
+                    }
+                }
+            }
+            else
+            {
+                _regions = new List<RegionDto>();
+                _errorMessage = "Aucune région disponible. Veuillez d'abord créer des régions.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Erreur lors du chargement des régions";
+            Snackbar.Add($"Erreur lors du chargement des régions: {ex.Message}", Severity.Error);
+            _regions = new List<RegionDto>();
+        }
+    }
+
+    private Task<IEnumerable<RegionDto>> SearchRegions(string value, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(value))
+            return Task.FromResult<IEnumerable<RegionDto>>(_regions);
+
+        return Task.FromResult<IEnumerable<RegionDto>>(_regions.Where(r => 
+            r.Nom.Contains(value, StringComparison.OrdinalIgnoreCase) ||
+            r.Code.Contains(value, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private IEnumerable<string> ValidateNom(string nom)
+    {
+        if (string.IsNullOrWhiteSpace(nom))
+            yield return "Le nom de la commune est requis";
+        else if (nom.Length < 2)
+            yield return "Le nom doit contenir au moins 2 caractères";
+        else if (nom.Length > 100)
+            yield return "Le nom ne doit pas dépasser 100 caractères";
+    }
+
+    private IEnumerable<string> ValidateCode(string code)
+    {
+        if (!string.IsNullOrWhiteSpace(code))
+        {
+            if (code.Length < 2)
+                yield return "Le code doit contenir au moins 2 caractères";
+            else if (code.Length > 50)
+                yield return "Le code ne doit pas dépasser 50 caractères";
+        }
+    }
+
+    private async Task Submit()
+    {
+        _errorMessage = string.Empty;
+        form.Validate();
+        
+        // Vérification supplémentaire pour la région
+        if (_selectedRegion == null)
+        {
+            _errorMessage = "Veuillez sélectionner une région";
+            _activeTabIndex = 0; // Retour à l'onglet des informations générales
+            return;
+        }
+        
+        if (_isValid)
+        {
+            try
+            {
+                _processing = true;
+                
+                // Mise à jour du modèle avec la région sélectionnée
+                Model.RegionId = _selectedRegion.Id;
+                Model.NomRegion = _selectedRegion.Nom;
+                
+                if (OnValidSubmit.HasDelegate)
+                {
+                    // Invoque le callback mais ne ferme pas automatiquement le dialogue
+                    // La fermeture sera gérée par le parent si l'opération réussit
+                    await OnValidSubmit.InvokeAsync(Model);
+                }
+                else
+                {
+                    MudDialog.Close(DialogResult.Ok(Model));
+                }
+            }
+            catch (Exception ex)
+            {
+                _errorMessage = ex.Message;
+                // En cas d'erreur, on reste sur le formulaire
+            }
+            finally
+            {
+                _processing = false;
+            }
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+    
+    public void SetError(string errorMessage)
+    {
+        _errorMessage = errorMessage;
+        StateHasChanged();
+    }
+
+    private void RegionChanged(RegionDto region)
+    {
+        _selectedRegion = region;
+        
+        if (region != null)
+        {
+            Model.RegionId = region.Id;
+            Model.NomRegion = region.Nom;
+        }
+        else
+        {
+            Model.RegionId = Guid.Empty;
+            Model.NomRegion = string.Empty;
+        }
+        
+        // Revalider le formulaire après changement de région
+        StateHasChanged();
+    }
+
+    // Méthode pour récupérer le texte d'erreur d'un champ spécifique
+    private string GetFieldErrorText(string fieldName)
+    {
+        if (_fieldErrors.TryGetValue(fieldName, out var errors) && errors.Count > 0)
+        {
+            return string.Join(", ", errors);
+        }
+        return string.Empty;
+    }
+    
+    // Méthode pour définir des erreurs spécifiques à des champs
+    public void SetFieldErrors(Dictionary<string, ICollection<string>> errors)
+    {
+        _fieldErrors.Clear();
+        
+        foreach (var error in errors)
+        {
+            _fieldErrors[error.Key] = error.Value.ToList();
+        }
+        
+        // Définir l'onglet actif en fonction du premier champ en erreur
+        SetActiveTabForFirstError();
+        
+        StateHasChanged();
+    }
+    
+    // Détermine quel onglet afficher en fonction des erreurs
+    private void SetActiveTabForFirstError()
+    {
+        if (_fieldErrors.Count == 0) return;
+        
+        // Liste des champs par onglet
+        var fieldsInTab0 = new[] { "Nom", "Code", "Type", "RegionId" };
+        var fieldsInTab1 = new[] { "NombreSecteurs", "NombreArrondissements", "TypeChefLieu", "LogoUrl", "AdresseSiege", "Contact", "Email", "SiteWeb", "CodeTenant" };
+        var fieldsInTab2 = new[] { "NomCentreAdmin", "AdresseCentreAdmin", "ContactCentreAdmin", "EmailCentreAdmin", "ResponsableCentreAdmin" };
+        
+        // Vérifier si une erreur concerne un champ du premier onglet
+        if (_fieldErrors.Keys.Any(k => fieldsInTab0.Contains(k)))
+        {
+            _activeTabIndex = 0;
+        }
+        // Vérifier si une erreur concerne un champ du deuxième onglet
+        else if (_fieldErrors.Keys.Any(k => fieldsInTab1.Contains(k)))
+        {
+            _activeTabIndex = 1;
+        }
+        // Vérifier si une erreur concerne un champ du troisième onglet
+        else if (_fieldErrors.Keys.Any(k => fieldsInTab2.Contains(k)))
+        {
+            _activeTabIndex = 2;
+        }
+    }
+
+    // Méthode pour analyser les erreurs JSON retournées par l'API
+    public void ParseApiErrors(string jsonResponse)
+    {
+        if (string.IsNullOrEmpty(jsonResponse))
+            return;
+            
+        try
+        {
+            var jsonDoc = JsonDocument.Parse(jsonResponse);
+            
+            // Vérifier s'il y a un message de détail
+            if (jsonDoc.RootElement.TryGetProperty("detail", out var detailElement) && 
+                detailElement.ValueKind == JsonValueKind.String)
+            {
+                _errorMessage = detailElement.GetString() ?? "Une erreur est survenue";
+            }
+            
+            // Extraire les erreurs spécifiques
+            if (jsonDoc.RootElement.TryGetProperty("errors", out var errorsElement))
+            {
+                _fieldErrors.Clear();
+                
+                // Si les erreurs sont dans un tableau simple
+                if (errorsElement.ValueKind == JsonValueKind.Array)
+                {
+                    var errorsList = new List<string>();
+                    foreach (var error in errorsElement.EnumerateArray())
+                    {
+                        if (error.ValueKind == JsonValueKind.String)
+                        {
+                            string errorMessage = error.GetString() ?? string.Empty;
+                            errorsList.Add(errorMessage);
+                            
+                            // Essayer de déterminer le champ concerné par l'erreur
+                            if (errorMessage.Contains("Code Tenant"))
+                            {
+                                _fieldErrors["CodeTenant"] = new List<string> { errorMessage };
+                            }
+                            else if (errorMessage.Contains("Nom"))
+                            {
+                                _fieldErrors["Nom"] = new List<string> { errorMessage };
+                            }
+                            else if (errorMessage.Contains("Code") && !errorMessage.Contains("Tenant"))
+                            {
+                                _fieldErrors["Code"] = new List<string> { errorMessage };
+                            }
+                            else if (errorMessage.Contains("Région") || errorMessage.Contains("Region"))
+                            {
+                                _fieldErrors["RegionId"] = new List<string> { errorMessage };
+                            }
+                            else
+                            {
+                                // Si on ne peut pas déterminer le champ, ajouter à "General"
+                                if (!_fieldErrors.ContainsKey("General"))
+                                {
+                                    _fieldErrors["General"] = new List<string>();
+                                }
+                                _fieldErrors["General"].Add(errorMessage);
+                            }
+                        }
+                    }
+                    
+                    if (errorsList.Count > 0 && _fieldErrors.Count == 0)
+                    {
+                        _fieldErrors["General"] = errorsList;
+                    }
+                }
+                // Si les erreurs sont dans un objet avec des clés par champ
+                else if (errorsElement.ValueKind == JsonValueKind.Object)
+                {
+                    foreach (var property in errorsElement.EnumerateObject())
+                    {
+                        var fieldName = property.Name;
+                        var fieldErrors = new List<string>();
+                        
+                        if (property.Value.ValueKind == JsonValueKind.Array)
+                        {
+                            foreach (var error in property.Value.EnumerateArray())
+                            {
+                                if (error.ValueKind == JsonValueKind.String)
+                                {
+                                    fieldErrors.Add(error.GetString() ?? string.Empty);
+                                }
+                            }
+                        }
+                        else if (property.Value.ValueKind == JsonValueKind.String)
+                        {
+                            fieldErrors.Add(property.Value.GetString() ?? string.Empty);
+                        }
+                        
+                        if (fieldErrors.Count > 0)
+                        {
+                            _fieldErrors[fieldName] = fieldErrors;
+                        }
+                    }
+                }
+            }
+            
+            // Définir l'onglet actif en fonction du premier champ en erreur
+            SetActiveTabForFirstError();
+            
+            // Forcer une mise à jour de l'interface
+            StateHasChanged();
+        }
+        catch (JsonException ex)
+        {
+            Console.WriteLine($"Erreur lors de l'analyse du JSON: {ex.Message}");
+            _errorMessage = "Une erreur est survenue lors de l'analyse de la réponse du serveur";
+        }
+    }
+
+    public class CommuneDto
+    {
+        public Guid Id { get; set; }
+        
+        [Required(ErrorMessage = "Le nom est requis")]
+        [StringLength(100, ErrorMessage = "Le nom ne doit pas dépasser 100 caractères")]
+        public string Nom { get; set; } = string.Empty;
+        
+        [StringLength(50, ErrorMessage = "Le code ne doit pas dépasser 50 caractères")]
+        public string Code { get; set; } = string.Empty;
+        
+        [Required(ErrorMessage = "Le type est requis")]
+        public TypeCommune Type { get; set; } = TypeCommune._0;
+        
+        public int NombreSecteurs { get; set; } = 0;
+        
+        public int NombreArrondissements { get; set; } = 0;
+        
+        public TypeChefLieu TypeChefLieu { get; set; } = TypeChefLieu._0;
+        
+        public string LogoUrl { get; set; } = string.Empty;
+        
+        public string AdresseSiege { get; set; } = string.Empty;
+        
+        public string Contact { get; set; } = string.Empty;
+        
+        public string Email { get; set; } = string.Empty;
+        
+        public string SiteWeb { get; set; } = string.Empty;
+        
+        [Required(ErrorMessage = "La région est requise")]
+        public Guid RegionId { get; set; }
+        
+        public string NomRegion { get; set; } = string.Empty;
+        
+        public string CodeTenant { get; set; } = string.Empty;
+        
+        public string NomCentreAdmin { get; set; } = string.Empty;
+        
+        public string AdresseCentreAdmin { get; set; } = string.Empty;
+        
+        public string ContactCentreAdmin { get; set; } = string.Empty;
+        
+        public string EmailCentreAdmin { get; set; } = string.Empty;
+        
+        public string ResponsableCentreAdmin { get; set; } = string.Empty;
+    }
+    
+    public class RegionDto
+    {
+        public Guid Id { get; set; }
+        public string Code { get; set; } = string.Empty;
+        public string Nom { get; set; } = string.Empty;
+    }
+} 

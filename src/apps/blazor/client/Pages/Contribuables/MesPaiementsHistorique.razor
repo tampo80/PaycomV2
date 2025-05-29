@@ -1,0 +1,425 @@
+@page "/contribuable/mes-paiements/historique"
+@using MudBlazor
+@using PayCom.Blazor.Infrastructure.Auth
+@using PayCom.Blazor.Infrastructure.Api
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+
+@inject ISnackbar Snackbar
+@inject IApiClient ApiClient
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+
+<PageTitle>Historique des Paiements - PayCom</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudPaper Elevation="3" Class="pa-4 mb-4 rounded-lg">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.History" Color="Color.Primary" Size="Size.Large" Class="mr-2" />
+                <MudText Typo="Typo.h4" Color="Color.Primary">Historique des Paiements</MudText>
+            </MudStack>
+            
+            <MudStack Row="true">
+                <MudDateRangePicker @bind-DateRange="_dateRange" 
+                                   Label="Filtrer par date" 
+                                   AdornmentColor="Color.Primary"
+                                   PickerVariant="PickerVariant.Dialog"
+                                   AutoClose="true"
+                                   OnClose="@(() => LoadPaiements())"
+                                   Class="mr-2" />
+                
+                <MudTextField @bind-Value="_searchString" 
+                             Placeholder="Rechercher..." 
+                             Adornment="Adornment.Start" 
+                             AdornmentIcon="@Icons.Material.Filled.Search" 
+                             IconSize="Size.Medium" 
+                             Immediate="true"
+                             Class="ml-2" />
+            </MudStack>
+        </MudStack>
+
+        <MudDivider Class="mb-4" />
+        
+        @if (_loading)
+        {
+            <div class="d-flex justify-center align-center">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            </div>
+        }
+        else if (_paiements == null || !_paiements.Any())
+        {
+            <MudAlert Severity="Severity.Info" Class="mb-4">
+                Aucun paiement trouvé. Vous n'avez pas encore effectué de paiements.
+            </MudAlert>
+            
+            <MudButton Href="/contribuable/mes-paiements/effectuer" 
+                      Variant="Variant.Filled" 
+                      Color="Color.Primary" 
+                      StartIcon="@Icons.Material.Filled.Payment" 
+                      Class="mt-4">
+                Effectuer un paiement
+            </MudButton>
+        }
+        else
+        {
+            <MudTable Items="@_filteredPaiements" 
+                     Dense="true" 
+                     Hover="true" 
+                     Bordered="false" 
+                     Striped="true" 
+                     Filter="new Func<PaiementDto, bool>(FilterPaiements)"
+                     @bind-SelectedItem="_selectedPaiement"
+                     OnRowClick="@((e) => ShowPaiementDetails(e.Item))"
+                     T="PaiementDto">
+                <HeaderContent>
+                    <MudTh><MudTableSortLabel SortBy="new Func<PaiementDto, object>(x => x.Date)">Date</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy="new Func<PaiementDto, object>(x => x.Reference)">Référence</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy="new Func<PaiementDto, object>(x => x.ObligationFiscale)">Obligation</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy="new Func<PaiementDto, object>(x => x.Montant)">Montant</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy="new Func<PaiementDto, object>(x => x.ModePaiement)">Mode</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy="new Func<PaiementDto, object>(x => x.Statut)">Statut</MudTableSortLabel></MudTh>
+                    <MudTh>Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Date">@context.Date.ToString("dd/MM/yyyy")</MudTd>
+                    <MudTd DataLabel="Référence">@context.Reference</MudTd>
+                    <MudTd DataLabel="Obligation">@context.ObligationFiscale</MudTd>
+                    <MudTd DataLabel="Montant">@context.Montant.ToString("N0") FCFA</MudTd>
+                    <MudTd DataLabel="Mode">@context.ModePaiement</MudTd>
+                    <MudTd DataLabel="Statut">
+                        <MudChip T="string" Color="@GetStatutColor(context.Statut)" Size="Size.Small">
+                            @context.Statut
+                        </MudChip>
+                    </MudTd>
+                    <MudTd>
+                        <MudIconButton Icon="@Icons.Material.Filled.Visibility" 
+                                      Color="Color.Primary" 
+                                      Size="Size.Small" 
+                                      OnClick="@(() => ShowPaiementDetails(context))" />
+                        
+                        @if (context.Statut == "Confirmé")
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.Receipt" 
+                                         Color="Color.Secondary" 
+                                         Size="Size.Small" 
+                                         OnClick="@(() => DownloadReceipt(context))" 
+                                         Title="Télécharger le reçu" />
+                        }
+                    </MudTd>
+                </RowTemplate>
+                <PagerContent>
+                    <MudTablePager PageSizeOptions="new int[] { 5, 10, 25, 50 }" />
+                </PagerContent>
+            </MudTable>
+            
+            <MudDivider Class="my-4" />
+            
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                <MudText Typo="Typo.subtitle1">
+                    <b>Total des paiements:</b> @_paiements.Sum(p => p.Montant).ToString("N0") FCFA
+                </MudText>
+                
+                <MudButton Href="/contribuable/mes-paiements/effectuer" 
+                          Variant="Variant.Filled" 
+                          Color="Color.Primary" 
+                          StartIcon="@Icons.Material.Filled.Payment">
+                    Effectuer un nouveau paiement
+                </MudButton>
+            </MudStack>
+        }
+    </MudPaper>
+</MudContainer>
+
+@if (_selectedPaiement != null && _showDetails)
+{
+    <MudDialog @bind-IsVisible="_showDetails" Options="new DialogOptions { FullWidth = true, MaxWidth = MaxWidth.Medium }">
+        <TitleContent>
+            <MudText Typo="Typo.h6">
+                <MudIcon Icon="@Icons.Material.Filled.Receipt" Class="mr-2" />
+                Détails du paiement
+            </MudText>
+        </TitleContent>
+        <DialogContent>
+            <MudGrid>
+                <MudItem xs="12" md="6">
+                    <MudText Typo="Typo.subtitle1"><b>Référence:</b></MudText>
+                    <MudText>@_selectedPaiement.Reference</MudText>
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudText Typo="Typo.subtitle1"><b>Date:</b></MudText>
+                    <MudText>@_selectedPaiement.Date.ToString("dd/MM/yyyy HH:mm")</MudText>
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudText Typo="Typo.subtitle1"><b>Obligation fiscale:</b></MudText>
+                    <MudText>@_selectedPaiement.ObligationFiscale</MudText>
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudText Typo="Typo.subtitle1"><b>Type de taxe:</b></MudText>
+                    <MudText>@_selectedPaiement.TypeTaxe</MudText>
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudText Typo="Typo.subtitle1"><b>Montant:</b></MudText>
+                    <MudText>@_selectedPaiement.Montant.ToString("N0") FCFA</MudText>
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudText Typo="Typo.subtitle1"><b>Mode de paiement:</b></MudText>
+                    <MudText>@_selectedPaiement.ModePaiement</MudText>
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudText Typo="Typo.subtitle1"><b>Statut:</b></MudText>
+                    <MudChip T="string" Color="@GetStatutColor(_selectedPaiement.Statut)" Size="Size.Small">
+                        @_selectedPaiement.Statut
+                    </MudChip>
+                </MudItem>
+                
+                @if (!string.IsNullOrEmpty(_selectedPaiement.CodeTransaction))
+                {
+                    <MudItem xs="12" md="6">
+                        <MudText Typo="Typo.subtitle1"><b>Code transaction:</b></MudText>
+                        <MudText>@_selectedPaiement.CodeTransaction</MudText>
+                    </MudItem>
+                }
+                
+                @if (_selectedPaiement.DateConfirmation.HasValue)
+                {
+                    <MudItem xs="12" md="6">
+                        <MudText Typo="Typo.subtitle1"><b>Date de confirmation:</b></MudText>
+                        <MudText>@_selectedPaiement.DateConfirmation.Value.ToString("dd/MM/yyyy HH:mm")</MudText>
+                    </MudItem>
+                }
+                
+                @if (!string.IsNullOrEmpty(_selectedPaiement.Notes))
+                {
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.subtitle1"><b>Notes:</b></MudText>
+                        <MudText>@_selectedPaiement.Notes</MudText>
+                    </MudItem>
+                }
+            </MudGrid>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="@(() => _showDetails = false)" Color="Color.Primary">Fermer</MudButton>
+            
+            @if (_selectedPaiement.Statut == "Confirmé")
+            {
+                <MudButton OnClick="@(() => DownloadReceipt(_selectedPaiement))" 
+                          Color="Color.Secondary" 
+                          Variant="Variant.Filled" 
+                          StartIcon="@Icons.Material.Filled.Receipt">
+                    Télécharger le reçu
+                </MudButton>
+            }
+        </DialogActions>
+    </MudDialog>
+}
+
+@code {
+    private List<PaiementDto> _paiements;
+    private List<PaiementDto> _filteredPaiements => _paiements;
+    private bool _loading = true;
+    private string _userId;
+    private Guid? _contribuableId;
+    private string _searchString = "";
+    private DateRange _dateRange = new DateRange(DateTime.Now.AddMonths(-3), DateTime.Now);
+    private bool _showDetails = false;
+    private PaiementDto _selectedPaiement;
+    private const string ApiVersion = "1.0";
+    
+    // Classe pour représenter les paiements
+    public class PaiementDto
+    {
+        public Guid Id { get; set; }
+        public string Reference { get; set; }
+        public DateTime Date { get; set; }
+        public string ObligationFiscale { get; set; }
+        public string TypeTaxe { get; set; }
+        public decimal Montant { get; set; }
+        public string ModePaiement { get; set; }
+        public string Statut { get; set; }
+        public string CodeTransaction { get; set; }
+        public DateTime? DateConfirmation { get; set; }
+        public string Notes { get; set; }
+    }
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserData();
+        await LoadPaiements();
+    }
+    
+    private async Task LoadUserData()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        
+        if (user.Identity.IsAuthenticated)
+        {
+            _userId = user.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            
+            // Rechercher le contribuable associé à l'utilisateur
+            var searchCommand = new SearchContribuableCommand
+            {
+                PageNumber = 1,
+                PageSize = 1,
+                Keyword = _userId
+            };
+            
+            try
+            {
+                var result = await ApiClient.SearchContribuableEndPointsAsync(ApiVersion, searchCommand);
+                if (result?.Items != null && result.Items.Any())
+                {
+                    _contribuableId = result.Items.First().Id;
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Erreur lors de la recherche du contribuable: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+    
+    private async Task LoadPaiements()
+    {
+        try
+        {
+            _loading = true;
+            
+            // Simuler les données de paiements car l'API n'est pas disponible
+            _paiements = new List<PaiementDto>
+            {
+                new PaiementDto
+                {
+                    Id = Guid.NewGuid(),
+                    Reference = "PAY-2023-001",
+                    Date = DateTime.Now.AddDays(-45),
+                    ObligationFiscale = "Taxe d'habitation 2023",
+                    TypeTaxe = "Taxe d'habitation",
+                    Montant = 25000,
+                    ModePaiement = "Mobile Money",
+                    Statut = "Confirmé",
+                    CodeTransaction = "MM-123456789",
+                    DateConfirmation = DateTime.Now.AddDays(-45).AddHours(1),
+                    Notes = "Paiement effectué à l'agence centrale"
+                },
+                new PaiementDto
+                {
+                    Id = Guid.NewGuid(),
+                    Reference = "PAY-2023-002",
+                    Date = DateTime.Now.AddDays(-30),
+                    ObligationFiscale = "Taxe foncière 2023",
+                    TypeTaxe = "Taxe foncière",
+                    Montant = 50000,
+                    ModePaiement = "Virement bancaire",
+                    Statut = "Confirmé",
+                    CodeTransaction = "VB-987654321",
+                    DateConfirmation = DateTime.Now.AddDays(-29),
+                    Notes = ""
+                },
+                new PaiementDto
+                {
+                    Id = Guid.NewGuid(),
+                    Reference = "PAY-2023-003",
+                    Date = DateTime.Now.AddDays(-15),
+                    ObligationFiscale = "Taxe professionnelle 2023",
+                    TypeTaxe = "Taxe professionnelle",
+                    Montant = 75000,
+                    ModePaiement = "Carte bancaire",
+                    Statut = "En attente",
+                    CodeTransaction = "CB-456789123",
+                    DateConfirmation = null,
+                    Notes = "Paiement en cours de traitement"
+                },
+                new PaiementDto
+                {
+                    Id = Guid.NewGuid(),
+                    Reference = "PAY-2023-004",
+                    Date = DateTime.Now.AddDays(-5),
+                    ObligationFiscale = "Taxe sur les enseignes 2023",
+                    TypeTaxe = "Taxe sur les enseignes",
+                    Montant = 15000,
+                    ModePaiement = "Espèces",
+                    Statut = "Confirmé",
+                    CodeTransaction = "ESP-789123456",
+                    DateConfirmation = DateTime.Now.AddDays(-5).AddHours(2),
+                    Notes = "Paiement effectué auprès d'un agent fiscal"
+                }
+            };
+            
+            // Filtrer par date si nécessaire
+            if (_dateRange.Start.HasValue && _dateRange.End.HasValue)
+            {
+                _paiements = _paiements
+                    .Where(p => p.Date.Date >= _dateRange.Start.Value.Date && p.Date.Date <= _dateRange.End.Value.Date)
+                    .ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erreur lors du chargement des paiements: {ex.Message}", Severity.Error);
+            _paiements = new List<PaiementDto>();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+    
+    private bool FilterPaiements(PaiementDto paiement)
+    {
+        if (string.IsNullOrWhiteSpace(_searchString))
+            return true;
+            
+        // Recherche par référence
+        if (paiement.Reference.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+            
+        // Recherche par obligation fiscale
+        if (paiement.ObligationFiscale.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+            
+        // Recherche par type de taxe
+        if (paiement.TypeTaxe.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+            
+        // Recherche par mode de paiement
+        if (paiement.ModePaiement.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+            
+        // Recherche par statut
+        if (paiement.Statut.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+            
+        // Recherche par montant
+        if (paiement.Montant.ToString().Contains(_searchString))
+            return true;
+            
+        return false;
+    }
+    
+    private Color GetStatutColor(string statut)
+    {
+        return statut switch
+        {
+            "Confirmé" => Color.Success,
+            "En attente" => Color.Warning,
+            "Annulé" => Color.Error,
+            _ => Color.Default
+        };
+    }
+    
+    private void ShowPaiementDetails(PaiementDto paiement)
+    {
+        _selectedPaiement = paiement;
+        _showDetails = true;
+    }
+    
+    private void DownloadReceipt(PaiementDto paiement)
+    {
+        // Simulation de téléchargement de reçu
+        Snackbar.Add("Le reçu est en cours de téléchargement...", Severity.Info);
+        
+        // Dans une implémentation réelle, on appellerait l'API pour générer et télécharger le reçu
+    }
+} 

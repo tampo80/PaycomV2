@@ -1,0 +1,23 @@
+@using Microsoft.AspNetCore.Components.Routing
+
+<Router AppAssembly="@typeof(Program).Assembly">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        <PageTitle>Page non trouvée</PageTitle>
+        <LayoutView Layout="@typeof(MainLayout)">
+            <MudContainer MaxWidth="MaxWidth.Small" Class="mt-16">
+                <MudPaper Class="pa-4">
+                    <MudStack>
+                        <MudText Typo="Typo.h4" Align="Align.Center">404</MudText>
+                        <MudText Typo="Typo.h5" Align="Align.Center">Page non trouvée</MudText>
+                        <MudText Align="Align.Center">La page que vous recherchez n'existe pas.</MudText>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Link="/" Class="mt-4">Retour à l'accueil</MudButton>
+                    </MudStack>
+                </MudPaper>
+            </MudContainer>
+        </LayoutView>
+    </NotFound>
+</Router> 

@@ -1,0 +1,214 @@
+@page "/debug/enum-test"
+@using PayCom.Blazor.Client.Pages.Contribuables.Models
+@using PayCom.Blazor.Infrastructure.Api
+@using System.Text.Json
+@inject IApiClient ApiClient
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudCard>
+        <MudCardHeader>
+            <MudText Typo="Typo.h5">Test de création de contribuable</MudText>
+        </MudCardHeader>
+        <MudCardContent>
+            <MudText Typo="Typo.subtitle1" Class="mb-4">Ce composant permet de tester la création d'un contribuable avec des valeurs explicites</MudText>
+            
+            <MudGrid>
+                <MudItem xs="12" md="6">
+                    <MudSelect @bind-Value="TypeContribuable" Label="Type de contribuable" Variant="Variant.Outlined">
+                        <MudSelectItem Value="@TypeContribuableType.PersonnePhysique">Personne physique</MudSelectItem>
+                        <MudSelectItem Value="@TypeContribuableType.PersonneMorale">Personne morale</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                
+                <MudItem xs="12" md="6">
+                    <MudSelect @bind-Value="Statut" Label="Statut" Variant="Variant.Outlined">
+                        <MudSelectItem Value="@StatutContribuableType.Actif">Actif</MudSelectItem>
+                        <MudSelectItem Value="@StatutContribuableType.Inactif">Inactif</MudSelectItem>
+                        <MudSelectItem Value="@StatutContribuableType.EnAttente">En attente</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                
+                <MudItem xs="12" md="6">
+                    <MudDatePicker @bind-Date="DateEnregistrement" Label="Date d'enregistrement" Variant="Variant.Outlined" />
+                </MudItem>
+                
+                <MudItem xs="12" md="6">
+                    <MudSelect @bind-Value="Genre" Label="Genre" Variant="Variant.Outlined">
+                        <MudSelectItem Value="@GenreType.Homme">Homme</MudSelectItem>
+                        <MudSelectItem Value="@GenreType.Femme">Femme</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="NumeroIdentification" Label="Numéro d'identification" Variant="Variant.Outlined" />
+                </MudItem>
+                
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="Adresse" Label="Adresse" Variant="Variant.Outlined" />
+                </MudItem>
+                
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="ContactPrincipal" Label="Contact principal" Variant="Variant.Outlined" />
+                </MudItem>
+                
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="TypeActivite" Label="Type d'activité" Variant="Variant.Outlined" />
+                </MudItem>
+                
+                <MudItem xs="12">
+                    <MudButton OnClick="TestCreateContribuable" Variant="Variant.Filled" Color="Color.Primary" Class="mb-4">
+                        Tester la création
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
+            
+            @if (!string.IsNullOrEmpty(_result))
+            {
+                <MudDivider Class="my-4" />
+                <MudText Typo="Typo.h6" Class="mb-2">Résultat</MudText>
+                <MudPaper Class="pa-4" Elevation="3">
+                    <MudText Typo="Typo.body1" Style="white-space: pre-wrap;">@_result</MudText>
+                </MudPaper>
+            }
+            
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <MudDivider Class="my-4" />
+                <MudAlert Severity="Severity.Error" Class="mt-4">
+                    <MudText Typo="Typo.body1" Style="white-space: pre-wrap;">@_errorMessage</MudText>
+                </MudAlert>
+            }
+        </MudCardContent>
+    </MudCard>
+</MudContainer>
+
+@code {
+    private TypeContribuableType TypeContribuable { get; set; } = TypeContribuableType.PersonnePhysique;
+    private StatutContribuableType Statut { get; set; } = StatutContribuableType.Actif;
+    private DateTime? DateEnregistrement { get; set; } = DateTime.Now;
+    private GenreType Genre { get; set; } = GenreType.Homme;
+    private string NumeroIdentification { get; set; } = "TEST-" + DateTime.Now.Ticks.ToString().Substring(10);
+    private string Adresse { get; set; } = "Adresse de test";
+    private string ContactPrincipal { get; set; } = "123456789";
+    private string TypeActivite { get; set; } = "Test";
+    
+    private string _result = string.Empty;
+    private string _errorMessage = string.Empty;
+    private bool _processing = false;
+    
+    private const string ApiVersion = "1.0";
+    
+    private async Task TestCreateContribuable()
+    {
+        if (_processing) return;
+        
+        _processing = true;
+        _result = string.Empty;
+        _errorMessage = string.Empty;
+        
+        try
+        {
+            // Afficher les valeurs pour le débogage
+            _result = "=== VALEURS DU TEST ===\n";
+            _result += $"TypeContribuable: {TypeContribuable} (valeur: {(int)TypeContribuable})\n";
+            _result += $"Statut: {Statut} (valeur: {(int)Statut})\n";
+            _result += $"Genre: {Genre} (valeur: {(int)Genre})\n";
+            _result += $"DateEnregistrement: {DateEnregistrement}\n";
+            _result += $"NumeroIdentification: {NumeroIdentification}\n";
+            _result += $"Adresse: {Adresse}\n";
+            _result += $"ContactPrincipal: {ContactPrincipal}\n";
+            _result += $"TypeActivite: {TypeActivite}\n\n";
+            
+            // Créer un objet command avec les valeurs explicites
+            var command = new CreateContribuableCommand();
+            
+            // Champs communs
+            command.NumeroIdentification = NumeroIdentification;
+            command.Adresse = Adresse;
+            command.ContactPrincipal = ContactPrincipal;
+            command.TypeActivite = TypeActivite;
+            command.DateEnregistrement = DateEnregistrement ?? DateTime.Now;
+            
+            // Forcer explicitement les valeurs des énumérations
+            command.TypeContribuable = EnumExtensions.MapToApiTypeContribuable(TypeContribuable);
+            command.Statut = EnumExtensions.MapToApiStatut(Statut);
+            
+            // Personne physique
+            if (TypeContribuable == TypeContribuableType.PersonnePhysique)
+            {
+                command.Nom = "Test Nom";
+                command.Prenom = "Test Prénom";
+                command.DateNaissance = DateTime.Now.AddYears(-30);
+                command.Genre = EnumExtensions.MapToApiGenre(Genre);
+            }
+            // Personne morale
+            else
+            {
+                command.NumeroRegistreCommerce = "TEST-RCCM";
+                command.Nif = "TEST-NIF";
+                command.FormeJuridique = "SARL";
+                command.RepresentantLegal = "Test Représentant";
+                command.DateCreationEntreprise = DateTime.Now.AddYears(-1);
+            }
+            
+            // Sérialiser l'objet pour le débogage
+            var options = new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
+            
+            var json = JsonSerializer.Serialize(command, options);
+            _result += "=== COMMANDE SERIALISÉE ===\n";
+            _result += json + "\n\n";
+            
+            // Appeler l'API
+            _result += "=== APPEL API ===\n";
+            var response = await ApiClient.CreateContribuableEndPointsAsync(ApiVersion, command);
+            
+            _result += "Succès! Contribuable créé avec l'ID: " + response.Id;
+            Snackbar.Add("Contribuable créé avec succès", Severity.Success);
+        }
+        catch (ApiException ex)
+        {
+            _errorMessage = $"Erreur API: {ex.Message}\n\n";
+            
+            if (!string.IsNullOrEmpty(ex.Response))
+            {
+                _errorMessage += "Réponse API:\n" + ex.Response;
+                
+                try
+                {
+                    // Essayer de formater le JSON pour une meilleure lisibilité
+                    var jsonDoc = JsonDocument.Parse(ex.Response);
+                    var options = new JsonSerializerOptions { WriteIndented = true };
+                    _errorMessage = $"Erreur API: {ex.Message}\n\n";
+                    _errorMessage += "Réponse API:\n" + JsonSerializer.Serialize(jsonDoc, options);
+                }
+                catch
+                {
+                    // Si le parsing échoue, utiliser la réponse brute
+                }
+            }
+            
+            Snackbar.Add("Erreur lors de la création du contribuable", Severity.Error);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Erreur: {ex.Message}\n";
+            if (ex.InnerException != null)
+            {
+                _errorMessage += $"Détails: {ex.InnerException.Message}\n";
+            }
+            _errorMessage += $"\nStackTrace: {ex.StackTrace}";
+            
+            Snackbar.Add("Une erreur est survenue", Severity.Error);
+        }
+        finally
+        {
+            _processing = false;
+            StateHasChanged();
+        }
+    }
+} 

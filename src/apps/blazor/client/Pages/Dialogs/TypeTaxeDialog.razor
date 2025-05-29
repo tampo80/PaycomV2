@@ -1,0 +1,56 @@
+@using MudBlazor
+@using TypeTaxeResponse = PayCom.Blazor.Infrastructure.Api.TypeTaxeResponse
+
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form" @bind-IsValid="@_success">
+            <MudStack>
+                <MudTextField T="string" Label="Nom" @bind-Value="_typeTaxe.Nom" Required="true" RequiredError="Le nom est requis" />
+                <MudTextField T="string" Label="Description" @bind-Value="_typeTaxe.Description" Required="true" RequiredError="La description est requise" />
+                <MudNumericField T="double" Label="Montant de base" @bind-Value="_typeTaxe.MontantBase" Required="true" RequiredError="Le montant de base est requis" Format="N0" Adornment="Adornment.End" AdornmentText="FCFA" />
+                <MudSelect T="string" Label="Fréquence de paiement" @bind-Value="_typeTaxe.FrequencePaiement" Required="true" RequiredError="La fréquence de paiement est requise">
+                    <MudSelectItem Value="@("Annuelle")">Annuelle</MudSelectItem>
+                    <MudSelectItem Value="@("Semestrielle")">Semestrielle</MudSelectItem>
+                    <MudSelectItem Value="@("Trimestrielle")">Trimestrielle</MudSelectItem>
+                    <MudSelectItem Value="@("Mensuelle")">Mensuelle</MudSelectItem>
+                </MudSelect>
+            </MudStack>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Annuler</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="@(!_success)">Enregistrer</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IDialogReference MudDialog { get; set; } = null!;
+
+    [Parameter] public TypeTaxeResponse? TypeTaxe { get; set; }
+
+    private MudForm _form = null!;
+    private bool _success;
+    private TypeTaxeResponse _typeTaxe = new();
+
+    protected override void OnInitialized()
+    {
+        if (TypeTaxe != null)
+        {
+            _typeTaxe = TypeTaxe;
+        }
+    }
+
+    private async Task Submit()
+    {
+        await _form.Validate();
+
+        if (_form.IsValid)
+        {
+            MudDialog.Close(DialogResult.Ok(_typeTaxe));
+        }
+    }
+
+    private void Cancel() => MudDialog.Close(DialogResult.Cancel());
+} 

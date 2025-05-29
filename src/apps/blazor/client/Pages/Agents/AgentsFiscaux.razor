@@ -1,0 +1,476 @@
+@page "/agents/liste"
+
+@using PayCom.Blazor.Infrastructure.Api
+
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject IApiClient ApiClient
+@inject NavigationManager NavigationManager
+
+<PageTitle>Liste des Agents Fiscaux - PayCom</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudPaper Elevation="3" Class="pa-4 mb-4 rounded-lg">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.SupervisorAccount" Color="Color.Primary" Size="Size.Large" Class="mr-2" />
+                <MudText Typo="Typo.h4" Color="Color.Primary">Gestion des agents fiscaux</MudText>
+            </MudStack>
+            <MudButton OnClick="OpenDialog" 
+                      Variant="Variant.Filled" 
+                      Color="Color.Primary" 
+                      StartIcon="@Icons.Material.Filled.Add" 
+                      Size="Size.Medium" 
+                      Class="rounded-lg px-4">
+                Ajouter un agent fiscal
+            </MudButton>
+        </MudStack>
+
+        <MudDivider Class="mb-4" />
+
+        <MudPaper Elevation="0" Class="pa-4 rounded-lg" Style="background-color: var(--mud-palette-background-grey)">
+            <MudTable Items="@_agents" 
+                     Loading="@_loading" 
+                     LoadingProgressColor="Color.Primary" 
+                     Hover="true" 
+                     Striped="true" 
+                     Elevation="0"
+                     Breakpoint="Breakpoint.Sm" 
+                     OnRowClick="@((e) => EditAgent(e.Item))"
+                     Filter="new Func<AgentFiscalDto, bool>(FilterAgents)"
+                     T="AgentFiscalDto"
+                     Dense="true"
+                     Class="rounded-lg">
+                <ToolBarContent>
+                    <MudText Typo="Typo.h6" Class="mud-text-secondary">Liste des agents fiscaux</MudText>
+                    <MudSpacer />
+                    <MudTextField @bind-Value="_searchString" 
+                                Placeholder="Rechercher un agent..." 
+                                Adornment="Adornment.Start" 
+                                AdornmentIcon="@Icons.Material.Filled.Search" 
+                                IconSize="Size.Medium" 
+                                Immediate="true"
+                                Variant="Variant.Outlined"
+                                Class="mt-0 ml-2" 
+                                Style="width: 300px"></MudTextField>
+                </ToolBarContent>
+                <HeaderContent>
+                    <MudTh><MudTableSortLabel SortBy="new Func<AgentFiscalDto, object>(x => x.Id)">Id</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy="new Func<AgentFiscalDto, object>(x => x.Identifiant)">Identifiant</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy="new Func<AgentFiscalDto, object>(x => x.Nom)">Nom</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy="new Func<AgentFiscalDto, object>(x => x.Prenom)">Prénom</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy="new Func<AgentFiscalDto, object>(x => x.DateEmbauche)">Date d'embauche</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy="new Func<AgentFiscalDto, object>(x => x.Statut)">Statut</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy="new Func<AgentFiscalDto, object>(x => x.EstCollecteurTerrain)">Collecteur</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy="new Func<AgentFiscalDto, object>(x => x.UtilisateurId)">Compte lié</MudTableSortLabel></MudTh>
+                    <MudTh Style="text-align: center">Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Id">@context.Id</MudTd>
+                    <MudTd DataLabel="Identifiant">
+                        @if (!string.IsNullOrEmpty(context.Identifiant))
+                        {
+                            <MudChip Color="Color.Secondary" T="string" Size="Size.Small" Text="@context.Identifiant" />
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.caption" Class="mud-text-disabled">Non défini</MudText>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="Nom">@context.Nom</MudTd>
+                    <MudTd DataLabel="Prénom">@context.Prenom</MudTd>
+                    <MudTd DataLabel="Date d'embauche">
+                        <MudTooltip Text="@context.DateEmbauche.ToString()">
+                            <MudText>@context.DateEmbauche.ToString("dd/MM/yyyy")</MudText>
+                        </MudTooltip>
+                    </MudTd>
+                    <MudTd DataLabel="Statut">
+                        @{
+                            var (color, text) = GetStatutInfo(context.Statut);
+                        }
+                        <MudChip Color="@color" T="string" Size="Size.Small">@text</MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="Collecteur">
+                        @if (context.EstCollecteurTerrain)
+                        {
+                            <MudChip Color="Color.Success" T="string" Size="Size.Small">Oui</MudChip>
+                        }
+                        else
+                        {
+                            <MudChip Color="Color.Default" T="string" Size="Size.Small">Non</MudChip>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="Compte lié">
+                        @if (context.UtilisateurId.HasValue)
+                        {
+                            <MudChip Color="Color.Success" T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Check">Lié</MudChip>
+                        }
+                        else
+                        {
+                            <MudButton Size="Size.Small" 
+                                      Variant="Variant.Outlined" 
+                                      Color="Color.Primary"
+                                      OnClick="@(() => AssocierUtilisateur(context))"
+                                      StartIcon="@Icons.Material.Filled.Link">
+                                Associer
+                            </MudButton>
+                        }
+                    </MudTd>
+                    <MudTd Style="text-align: center">
+                        <MudStack Row="true" Justify="Justify.Center" AlignItems="AlignItems.Center">
+                            <MudTooltip Text="Modifier cet agent">
+                                <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                              Color="Color.Primary" 
+                                              Size="Size.Small" 
+                                              OnClick="@(() => EditAgent(context))" 
+                                              Class="ma-1" />
+                            </MudTooltip>
+                            <MudTooltip Text="Supprimer cet agent">
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                              Color="Color.Error" 
+                                              Size="Size.Small" 
+                                              OnClick="() => ShowDeleteConfirmation(context)" 
+                                              Class="ma-1" />
+                            </MudTooltip>
+                        </MudStack>
+                    </MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    <MudStack AlignItems="AlignItems.Center" Class="pa-4">
+                        <MudIcon Icon="@Icons.Material.Filled.SearchOff" Color="Color.Secondary" Size="Size.Large" />
+                        <MudText Typo="Typo.subtitle1">Aucun agent fiscal trouvé</MudText>
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">Essayez de modifier vos critères de recherche ou ajoutez un nouvel agent.</MudText>
+                    </MudStack>
+                </NoRecordsContent>
+                <LoadingContent>
+                    <MudStack AlignItems="AlignItems.Center" Class="pa-4">
+                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+                        <MudText Typo="Typo.subtitle1">Chargement des agents fiscaux...</MudText>
+                    </MudStack>
+                </LoadingContent>
+                <PagerContent>
+                    <MudTablePager PageSizeOptions="new int[] { 5, 10, 25, 50, 100 }" />
+                </PagerContent>
+            </MudTable>
+        </MudPaper>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private List<AgentFiscalDto> _agents = new();
+    private bool _loading = true;
+    private string _searchString = "";
+    private const string ApiVersion = "1.0";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            _loading = true;
+            
+            // Appel à l'API pour récupérer les agents fiscaux
+            var result = await ApiHelper.ExecuteCallGuardedAsync(
+                async () =>
+                {
+                    var searchCommand = new SearchAgenFiscalsCommand
+                    {
+                        PageNumber = 1,
+                        PageSize = 50,
+                        OrderBy = new List<string> { "Nom" }
+                    };
+                    
+                    return await ApiClient.SearchAgentFiscalEndPointsAsync(ApiVersion, searchCommand);
+                },
+                Snackbar,
+                NavigationManager);
+
+            if (result?.Items != null)
+            {
+                _agents = result.Items.Select(a => new AgentFiscalDto
+                {
+                    Id = a.Id ?? Guid.Empty,
+                    Nom = a.Nom ?? string.Empty,
+                    Prenom = a.Prenom ?? string.Empty,
+                    Identifiant = a.Identifiant ?? string.Empty,
+                    LocalisationGPS = a.LocalisationGPS ?? string.Empty,
+                    DateEmbauche = a.DateEmbauche,
+                    DateFinFonction = a.DateFinFonction,
+                    Statut = a.Statut,
+                    Email = a.Email ?? string.Empty,
+                    Telephone = a.Telephone ?? string.Empty,
+                    EstCollecteurTerrain = a.EstCollecteurTerrain,
+                    SoldePortefeuille = a.SoldePortefeuille,
+                    UtilisateurId = a.UtilisateurId
+                }).ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erreur lors du chargement des agents fiscaux: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private bool FilterAgents(AgentFiscalDto agent)
+    {
+        if (string.IsNullOrWhiteSpace(_searchString))
+            return true;
+
+        return agent.Nom.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ||
+               agent.Prenom.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ||
+               agent.Identifiant.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ||
+               agent.Email.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ||
+               agent.Telephone.Contains(_searchString, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task OpenDialog()
+    {
+        var options = new DialogOptions { 
+            CloseButton = false, 
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+            BackdropClick = false
+        };
+        var parameters = new DialogParameters();
+        parameters.Add("Model", new AgentFiscalDto());
+        parameters.Add("DialogTitle", "Nouvel Agent Fiscal");
+        parameters.Add("ButtonText", "Ajouter");
+        parameters.Add("OnValidSubmit", EventCallback.Factory.Create<AgentFiscalDto>(this, SaveAgent));
+
+        var dialog = await DialogService.ShowAsync<AgentFiscalDialog>("Nouvel Agent Fiscal", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadData();
+        }
+    }
+    
+    private async Task SaveAgent(AgentFiscalDto agent)
+    {
+        try
+        {
+            // Appel à l'API pour créer l'agent fiscal
+            var command = new CreateAgentFiscalCommand
+            {
+                Nom = agent.Nom,
+                Prenom = agent.Prenom,
+                Identifiant = agent.Identifiant,
+                LocalisationGPS = agent.LocalisationGPS,
+                DateEmbauche = agent.DateEmbauche,
+                DateFinFonction = agent.DateFinFonction,
+                Statut = agent.Statut,
+                Email = agent.Email,
+                Telephone = agent.Telephone,
+                EstCollecteurTerrain = agent.EstCollecteurTerrain,
+                SoldePortefeuille = agent.SoldePortefeuille,
+                UtilisateurId = agent.UtilisateurId
+            };
+            
+            var response = await ApiClient.CreateAgentFiscalEndPointsAsync(ApiVersion, command);
+            
+            if (response != null)
+            {
+                // Fermeture automatique gérée par le dialogue lui-même
+                await LoadData();
+                Snackbar.Add("Agent fiscal ajouté avec succès", Severity.Success);
+            }
+        }
+        catch (ApiException ex)
+        {
+            var errorMessage = "Erreur lors de l'ajout de l'agent fiscal";
+            
+            if (ex.StatusCode == 400)
+            {
+                errorMessage = "Veuillez vérifier les informations saisies";
+            }
+            else if (ex.StatusCode == 409)
+            {
+                errorMessage = "Un agent fiscal avec cet identifiant existe déjà";
+            }
+            
+            Snackbar.Add(errorMessage, Severity.Error);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erreur lors de l'ajout de l'agent fiscal: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task EditAgent(AgentFiscalDto agent)
+    {
+        var options = new DialogOptions { 
+            CloseButton = false, 
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+            BackdropClick = false
+        };
+        
+        var parameters = new DialogParameters();
+        parameters.Add("Model", agent);
+        parameters.Add("DialogTitle", "Modifier l'Agent Fiscal");
+        parameters.Add("ButtonText", "Mettre à jour");
+        parameters.Add("OnValidSubmit", EventCallback.Factory.Create<AgentFiscalDto>(this, SaveEditedAgent));
+
+        var dialog = await DialogService.ShowAsync<AgentFiscalDialog>("Modifier l'Agent Fiscal", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadData();
+        }
+    }
+    
+    private async Task SaveEditedAgent(AgentFiscalDto agent)
+    {
+        try
+        {
+            // Appel à l'API pour mettre à jour l'agent fiscal
+            var command = new UpdateAgentFiscalCommand
+            {
+                Id = agent.Id,
+                Nom = agent.Nom,
+                Prenom = agent.Prenom,
+                Identifiant = agent.Identifiant,
+                LocalisationGPS = agent.LocalisationGPS,
+                DateEmbauche = agent.DateEmbauche,
+                DateFinFonction = agent.DateFinFonction.GetValueOrDefault(),
+                Statut = agent.Statut
+            };
+            
+            var response = await ApiClient.UpdateAgentFiscalEndPointsAsync(ApiVersion, agent.Id, command);
+            
+            if (response != null)
+            {
+                await LoadData();
+                Snackbar.Add("Agent fiscal mis à jour avec succès", Severity.Success);
+            }
+        }
+        catch (ApiException ex)
+        {
+            var errorMessage = "Erreur lors de la mise à jour de l'agent fiscal";
+            
+            if (ex.StatusCode == 400)
+            {
+                errorMessage = "Veuillez vérifier les informations saisies";
+            }
+            else if (ex.StatusCode == 409)
+            {
+                errorMessage = "Un agent fiscal avec cet identifiant existe déjà";
+            }
+            
+            Snackbar.Add(errorMessage, Severity.Error);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erreur lors de la mise à jour de l'agent fiscal: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ShowDeleteConfirmation(AgentFiscalDto agent)
+    {
+        var parameters = new DialogParameters();
+        parameters.Add("ContentText", $"Êtes-vous sûr de vouloir supprimer l'agent fiscal '{agent.Nom} {agent.Prenom}' ?");
+        parameters.Add("ButtonText", "Supprimer");
+        parameters.Add("Color", Color.Error);
+
+        var options = new DialogOptions() { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+        var dialog = await DialogService.ShowAsync<Components.ConfirmDialog>("Confirmation", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is bool confirmed && confirmed)
+        {
+            await DeleteAgent(agent);
+        }
+    }
+    
+    private async Task DeleteAgent(AgentFiscalDto agent)
+    {
+        try
+        {
+            // Appel à l'API pour supprimer l'agent fiscal
+            await ApiClient.DeleteAgentFiscalEndPointsAsync(ApiVersion, agent.Id);
+            
+            await LoadData(); // Recharger les données depuis l'API
+            Snackbar.Add("Agent fiscal supprimé avec succès", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erreur lors de la suppression de l'agent fiscal: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task AssocierUtilisateur(AgentFiscalDto agent)
+    {
+        // Récupérer la liste des utilisateurs disponibles
+        var options = new DialogOptions { 
+            CloseButton = true, 
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = false
+        };
+        
+        var parameters = new DialogParameters();
+        parameters.Add("AgentId", agent.Id);
+        parameters.Add("AgentNom", $"{agent.Nom} {agent.Prenom}");
+        
+        var dialog = await DialogService.ShowAsync<AssocierUtilisateurDialog>("Associer un utilisateur", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is Guid utilisateurId)
+        {
+            try
+            {
+                // Appel à l'API pour associer l'utilisateur à l'agent
+                var response = await ApiClient.AssocierUtilisateurAgentEndPointsAsync(ApiVersion, agent.Id, utilisateurId);
+                
+                if (response != null)
+                {
+                    await LoadData();
+                    Snackbar.Add("Utilisateur associé avec succès à l'agent fiscal", Severity.Success);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Erreur lors de l'association de l'utilisateur: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private (Color color, string text) GetStatutInfo(StatutAgent statut)
+    {
+        return statut switch
+        {
+            StatutAgent._0 => (Color.Success, "Actif"),
+            StatutAgent._1 => (Color.Error, "Inactif"),
+            StatutAgent._2 => (Color.Info, "En formation"),
+            StatutAgent._3 => (Color.Warning, "Suspendu"),
+            StatutAgent._4 => (Color.Default, "Retraité"),
+            _ => (Color.Default, "Inconnu")
+        };
+    }
+
+    public class AgentFiscalDto
+    {
+        public Guid Id { get; set; }
+        public string Nom { get; set; } = string.Empty;
+        public string Prenom { get; set; } = string.Empty;
+        public string Identifiant { get; set; } = string.Empty;
+        public string LocalisationGPS { get; set; } = string.Empty;
+        public DateTime DateEmbauche { get; set; } = DateTime.Today;
+        public DateTime? DateFinFonction { get; set; }
+        public StatutAgent Statut { get; set; } = StatutAgent._0;
+        public string Email { get; set; } = string.Empty;
+        public string Telephone { get; set; } = string.Empty;
+        public bool EstCollecteurTerrain { get; set; }
+        public double SoldePortefeuille { get; set; }
+        public Guid? UtilisateurId { get; set; }
+    }
+} 

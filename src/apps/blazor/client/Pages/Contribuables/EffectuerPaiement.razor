@@ -1,0 +1,369 @@
+@page "/contribuable/mes-paiements/effectuer"
+@using MudBlazor
+@using PayCom.Blazor.Infrastructure.Auth
+@using PayCom.Blazor.Infrastructure.Api
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+
+@inject ISnackbar Snackbar
+@inject IApiClient ApiClient
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+
+<PageTitle>Effectuer un Paiement - PayCom</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudPaper Elevation="3" Class="pa-4 mb-4 rounded-lg">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-4">
+            <MudIcon Icon="@Icons.Material.Filled.Payment" Color="Color.Primary" Size="Size.Large" Class="mr-2" />
+            <MudText Typo="Typo.h4" Color="Color.Primary">Effectuer un Paiement</MudText>
+        </MudStack>
+
+        <MudDivider Class="mb-4" />
+        
+        @if (_loading)
+        {
+            <div class="d-flex justify-center align-center">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            </div>
+        }
+        else
+        {
+            <MudForm @ref="_form" Model="@_paiement" @bind-IsValid="@_formIsValid">
+                <MudGrid>
+                    <MudItem xs="12" md="6">
+                        <MudSelect T="ObligationDto" Label="Obligation fiscale" 
+                                 Required RequiredError="Veuillez sélectionner une obligation fiscale"
+                                 @bind-Value="_selectedObligation" 
+                                 ToStringFunc="@(o => o?.Libelle ?? string.Empty)"
+                                 AdornmentIcon="@Icons.Material.Filled.Receipt"
+                                 AdornmentColor="Color.Primary"
+                                 HelperText="Sélectionnez l'obligation fiscale à payer"
+                                 HelperTextOnFocus="true"
+                                 OnSelectedItemChanged="@(o => UpdateMontant(o))">
+                            @foreach (var obligation in _obligations)
+                            {
+                                <MudSelectItem Value="@obligation">@obligation.Libelle</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    
+                    <MudItem xs="12" md="6">
+                        <MudSelect T="string" Label="Mode de paiement" 
+                                 Required RequiredError="Veuillez sélectionner un mode de paiement"
+                                 @bind-Value="_paiement.ModePaiement"
+                                 AdornmentIcon="@Icons.Material.Filled.Wallet"
+                                 AdornmentColor="Color.Primary"
+                                 HelperText="Sélectionnez votre mode de paiement préféré">
+                            <MudSelectItem Value="@("Mobile Money")">Mobile Money</MudSelectItem>
+                            <MudSelectItem Value="@("Carte bancaire")">Carte bancaire</MudSelectItem>
+                            <MudSelectItem Value="@("Virement bancaire")">Virement bancaire</MudSelectItem>
+                            <MudSelectItem Value="@("Espèces")">Espèces</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    
+                    <MudItem xs="12" md="6">
+                        <MudNumericField T="decimal" Label="Montant" 
+                                      Required RequiredError="Le montant est requis"
+                                      @bind-Value="_paiement.Montant"
+                                      Format="N0"
+                                      AdornmentIcon="@Icons.Material.Filled.Money"
+                                      AdornmentText="FCFA"
+                                      Adornment="Adornment.End"
+                                      AdornmentColor="Color.Primary"
+                                      Min="0"
+                                      Disabled="@(_selectedObligation != null)" />
+                    </MudItem>
+                    
+                    @if (_paiement.ModePaiement == "Mobile Money")
+                    {
+                        <MudItem xs="12" md="6">
+                            <MudTextField T="string" Label="Numéro de téléphone" 
+                                       Required RequiredError="Le numéro de téléphone est requis"
+                                       @bind-Value="_paiement.NumeroTelephone"
+                                       AdornmentIcon="@Icons.Material.Filled.Phone"
+                                       AdornmentColor="Color.Primary"
+                                       Placeholder="Ex: 0123456789" />
+                        </MudItem>
+                    }
+                    else if (_paiement.ModePaiement == "Carte bancaire")
+                    {
+                        <MudItem xs="12" md="6">
+                            <MudTextField T="string" Label="Numéro de carte" 
+                                       Required RequiredError="Le numéro de carte est requis"
+                                       @bind-Value="_paiement.NumeroCarte"
+                                       AdornmentIcon="@Icons.Material.Filled.CreditCard"
+                                       AdornmentColor="Color.Primary"
+                                       Placeholder="Ex: 1234 5678 9012 3456" />
+                        </MudItem>
+                        
+                        <MudItem xs="12" md="6">
+                            <MudTextField T="string" Label="Nom sur la carte" 
+                                       Required RequiredError="Le nom sur la carte est requis"
+                                       @bind-Value="_paiement.NomCarte"
+                                       AdornmentIcon="@Icons.Material.Filled.Person"
+                                       AdornmentColor="Color.Primary" />
+                        </MudItem>
+                        
+                        <MudItem xs="6" md="3">
+                            <MudTextField T="string" Label="Date d'expiration" 
+                                       Required RequiredError="La date d'expiration est requise"
+                                       @bind-Value="_paiement.DateExpiration"
+                                       AdornmentIcon="@Icons.Material.Filled.DateRange"
+                                       AdornmentColor="Color.Primary"
+                                       Placeholder="MM/AA" />
+                        </MudItem>
+                        
+                        <MudItem xs="6" md="3">
+                            <MudTextField T="string" Label="CVV" 
+                                       Required RequiredError="Le CVV est requis"
+                                       @bind-Value="_paiement.Cvv"
+                                       AdornmentIcon="@Icons.Material.Filled.Lock"
+                                       AdornmentColor="Color.Primary"
+                                       InputType="InputType.Password" />
+                        </MudItem>
+                    }
+                    else if (_paiement.ModePaiement == "Virement bancaire")
+                    {
+                        <MudItem xs="12">
+                            <MudAlert Severity="Severity.Info" Class="mb-4">
+                                Veuillez effectuer un virement bancaire vers le compte suivant:
+                                <br /><br />
+                                <b>Banque:</b> Banque Nationale de Développement<br />
+                                <b>Titulaire:</b> Trésor Public - Commune de Dakar<br />
+                                <b>IBAN:</b> SN12 3456 7890 1234 5678 9012 345<br />
+                                <b>BIC:</b> BNDSNSND<br />
+                                <b>Référence:</b> @(_paiement.Reference)<br />
+                            </MudAlert>
+                        </MudItem>
+                    }
+                    
+                    <MudItem xs="12">
+                        <MudTextField T="string" Label="Notes (facultatif)" 
+                                   @bind-Value="_paiement.Notes"
+                                   AdornmentIcon="@Icons.Material.Filled.Note"
+                                   AdornmentColor="Color.Primary"
+                                   Lines="3" />
+                    </MudItem>
+                    
+                    <MudItem xs="12">
+                        <MudDivider Class="my-4" />
+                        <MudText Typo="Typo.subtitle1" Class="mb-4">
+                            <b>Récapitulatif du paiement</b>
+                        </MudText>
+                        
+                        <MudGrid>
+                            <MudItem xs="12" md="6">
+                                <MudText><b>Obligation fiscale:</b> @(_selectedObligation?.Libelle ?? "-")</MudText>
+                                <MudText><b>Type de taxe:</b> @(_selectedObligation?.TypeTaxe ?? "-")</MudText>
+                                <MudText><b>Référence:</b> @_paiement.Reference</MudText>
+                            </MudItem>
+                            <MudItem xs="12" md="6">
+                                <MudText><b>Montant:</b> @_paiement.Montant.ToString("N0") FCFA</MudText>
+                                <MudText><b>Mode de paiement:</b> @(_paiement.ModePaiement ?? "-")</MudText>
+                                <MudText><b>Date:</b> @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</MudText>
+                            </MudItem>
+                        </MudGrid>
+                    </MudItem>
+                    
+                    <MudItem xs="12">
+                        <MudCheckBox @bind-Checked="@_paiement.AccepteConditions" 
+                                   Label="J'accepte les conditions générales de paiement" 
+                                   Required="true"
+                                   RequiredError="Vous devez accepter les conditions générales" />
+                    </MudItem>
+                    
+                    <MudItem xs="12" Class="d-flex justify-end">
+                        <MudButton Variant="Variant.Outlined" 
+                                 Color="Color.Secondary" 
+                                 Class="mr-2"
+                                 OnClick="@(() => NavigationManager.NavigateTo("/contribuable/mes-paiements/historique"))">
+                            Annuler
+                        </MudButton>
+                        <MudButton Variant="Variant.Filled" 
+                                 Color="Color.Primary" 
+                                 Disabled="@(!_formIsValid)"
+                                 OnClick="@(ProcessPayment)">
+                            Confirmer le paiement
+                        </MudButton>
+                    </MudItem>
+                </MudGrid>
+            </MudForm>
+        }
+    </MudPaper>
+</MudContainer>
+
+@if (_processing)
+{
+    <MudOverlay Visible="true" DarkBackground="true" ZIndex="9999" AutoClose="false">
+        <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+            <MudText Typo="Typo.h6" Color="Color.Surface" Class="mt-4">Traitement du paiement en cours...</MudText>
+        </MudStack>
+    </MudOverlay>
+}
+
+@code {
+    private MudForm _form;
+    private bool _formIsValid;
+    private bool _loading = true;
+    private bool _processing = false;
+    private string _userId;
+    private Guid? _contribuableId;
+    private List<ObligationDto> _obligations = new();
+    private ObligationDto _selectedObligation;
+    private PaiementModel _paiement = new();
+    private const string ApiVersion = "1.0";
+    
+    // Classe pour représenter les obligations fiscales
+    public class ObligationDto
+    {
+        public Guid Id { get; set; }
+        public string Libelle { get; set; }
+        public string TypeTaxe { get; set; }
+        public decimal Montant { get; set; }
+        public DateTime DateEcheance { get; set; }
+    }
+    
+    // Modèle pour le formulaire de paiement
+    public class PaiementModel
+    {
+        public string Reference { get; set; } = $"PAY-{DateTime.Now:yyyyMMdd}-{new Random().Next(1000, 9999)}";
+        public Guid? ObligationFiscaleId { get; set; }
+        public decimal Montant { get; set; }
+        public string ModePaiement { get; set; } = "Mobile Money";
+        public string NumeroTelephone { get; set; }
+        public string NumeroCarte { get; set; }
+        public string NomCarte { get; set; }
+        public string DateExpiration { get; set; }
+        public string Cvv { get; set; }
+        public string Notes { get; set; }
+        public bool AccepteConditions { get; set; }
+    }
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserData();
+        await LoadObligations();
+        _loading = false;
+    }
+    
+    private async Task LoadUserData()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        
+        if (user.Identity.IsAuthenticated)
+        {
+            _userId = user.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            
+            // Rechercher le contribuable associé à l'utilisateur
+            var searchCommand = new SearchContribuableCommand
+            {
+                PageNumber = 1,
+                PageSize = 1,
+                Keyword = _userId
+            };
+            
+            try
+            {
+                var result = await ApiClient.SearchContribuableEndPointsAsync(ApiVersion, searchCommand);
+                if (result?.Items != null && result.Items.Any())
+                {
+                    _contribuableId = result.Items.First().Id;
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Erreur lors de la recherche du contribuable: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+    
+    private async Task LoadObligations()
+    {
+        try
+        {
+            // Simuler les données d'obligations car l'API n'est pas disponible
+            _obligations = new List<ObligationDto>
+            {
+                new ObligationDto
+                {
+                    Id = Guid.NewGuid(),
+                    Libelle = "Taxe d'habitation 2023",
+                    TypeTaxe = "Taxe d'habitation",
+                    Montant = 25000,
+                    DateEcheance = DateTime.Now.AddDays(30)
+                },
+                new ObligationDto
+                {
+                    Id = Guid.NewGuid(),
+                    Libelle = "Taxe foncière 2023",
+                    TypeTaxe = "Taxe foncière",
+                    Montant = 50000,
+                    DateEcheance = DateTime.Now.AddDays(15)
+                },
+                new ObligationDto
+                {
+                    Id = Guid.NewGuid(),
+                    Libelle = "Taxe professionnelle 2023",
+                    TypeTaxe = "Taxe professionnelle",
+                    Montant = 75000,
+                    DateEcheance = DateTime.Now.AddDays(-5)
+                },
+                new ObligationDto
+                {
+                    Id = Guid.NewGuid(),
+                    Libelle = "Taxe sur les enseignes 2023",
+                    TypeTaxe = "Taxe sur les enseignes",
+                    Montant = 15000,
+                    DateEcheance = DateTime.Now.AddDays(45)
+                }
+            };
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erreur lors du chargement des obligations: {ex.Message}", Severity.Error);
+        }
+    }
+    
+    private void UpdateMontant(ObligationDto obligation)
+    {
+        if (obligation != null)
+        {
+            _paiement.ObligationFiscaleId = obligation.Id;
+            _paiement.Montant = obligation.Montant;
+        }
+    }
+    
+    private async Task ProcessPayment()
+    {
+        if (!_formIsValid)
+        {
+            Snackbar.Add("Veuillez remplir correctement tous les champs requis", Severity.Warning);
+            return;
+        }
+        
+        _processing = true;
+        
+        try
+        {
+            // Simuler un délai de traitement
+            await Task.Delay(2000);
+            
+            // Simuler une réponse de l'API
+            Snackbar.Add("Paiement effectué avec succès!", Severity.Success);
+            
+            // Rediriger vers la page d'historique des paiements
+            NavigationManager.NavigateTo("/contribuable/mes-paiements/historique");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erreur lors du traitement du paiement: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _processing = false;
+        }
+    }
+} 

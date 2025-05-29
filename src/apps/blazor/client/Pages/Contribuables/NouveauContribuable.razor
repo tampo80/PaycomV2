@@ -1,0 +1,235 @@
+@page "/contribuables/nouveau"
+@using MudBlazor
+@using PayCom.Blazor.Client.Components
+@using System.Text.Json
+
+<PageTitle>Nouveau Contribuable - PayCom</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="my-6">
+    <MudPaper Elevation="0" Class="mb-4 px-3 py-2">
+        <MudLink Href="@GetRetourUrl()" Color="Color.Primary" Class="d-flex align-center" Style="width: fit-content">
+            <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Class="mr-2" />
+            <MudText>Retour à la liste des @(_activeTabIndex == 0 ? "personnes physiques" : "personnes morales")</MudText>
+        </MudLink>
+    </MudPaper>
+
+    <MudPaper Elevation="3" Class="pa-6 rounded-lg">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Color="Color.Primary" Size="Size.Large" />
+                <MudText Typo="Typo.h4" Color="Color.Primary">Nouveau Contribuable</MudText>
+            </MudStack>
+            <MudChip Icon="@Icons.Material.Filled.Info" Color="Color.Info" Size="Size.Large" 
+                    Class="py-3 px-4"
+                    Label="true"
+                    T="string">
+                Complétez toutes les informations requises
+            </MudChip>
+        </MudStack>
+        
+        <MudDivider Class="mb-6" />
+        
+        <MudStack AlignItems="AlignItems.Center" Class="mb-4">
+            <MudText Typo="Typo.h6" Class="mb-2">Choisissez le type de contribuable à créer</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4 text-center">
+                Les formulaires diffèrent selon le type de contribuable sélectionné. Veuillez choisir le type approprié.<br />
+                Les champs obligatoires sont marqués d'un astérisque (*).
+            </MudText>
+        </MudStack>
+        
+        <style>
+            /* Style amélioré pour les onglets principaux */
+            .main-tabs .mud-tabs-toolbar {
+                background-color: var(--mud-palette-background);
+                border-radius: 12px;
+                padding: 8px;
+                box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+                margin-bottom: 20px;
+            }
+            
+            .main-tabs .mud-tab {
+                min-width: 180px;
+                min-height: 56px;
+                border-radius: 8px;
+                margin: 0 8px;
+                padding: 0 16px;
+                transition: all 0.3s ease;
+                font-weight: 500;
+                font-size: 1rem;
+                opacity: 0.7;
+            }
+            
+            .main-tabs .mud-tab-label {
+                justify-content: flex-start;
+            }
+            
+            .main-tabs .mud-tab .mud-icon-root {
+                margin-right: 12px;
+                transition: all 0.3s ease;
+            }
+            
+            .main-tabs .mud-tab.mud-tab-active {
+                background-color: var(--mud-palette-primary);
+                color: white;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+                transform: translateY(-2px);
+                opacity: 1;
+                border: 2px solid var(--mud-palette-primary-darken);
+                font-weight: 600;
+            }
+            
+            .main-tabs .mud-tab:hover:not(.mud-tab-active) {
+                background-color: var(--mud-palette-grey-lighten-3);
+                transform: translateY(-1px);
+                opacity: 0.9;
+            }
+            
+            /* Masquer le slider car nous utilisons un style d'onglet avec fond coloré */
+            .main-tabs .mud-tab-slider {
+                display: none;
+            }
+            
+            /* Animation d'apparition du contenu */
+            .mud-tab-panel {
+                animation: fadeIn 0.5s ease;
+            }
+
+            /* Renforcer la lisibilité du contenu des onglets actifs */
+            .main-tabs .mud-tab.mud-tab-active .mud-tab-label {
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            }
+            
+            .main-tabs .mud-tab.mud-tab-active .mud-icon-root {
+                filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+                font-size: 1.2rem;
+            }
+        </style>
+        
+        <style>
+            @@keyframes fadeIn {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+        </style>
+        
+        <MudTabs Elevation="0" 
+                Rounded="true" 
+                ApplyEffectsToContainer="true" 
+                PanelClass="pt-6 pa-2" 
+                Color="Color.Primary" 
+                Class="mt-4 main-tabs"
+                ActivePanelIndexChanged="OnTabChanged"
+                Border="false"
+                Centered="true"
+                TabPanelClass="pa-6">
+            <MudTabPanel Text="Personne Physique" Icon="@Icons.Material.Filled.Person">
+                <ChildContent>
+                    <MudPaper Elevation="0" Class="pa-4 mb-4" Style="background-color: var(--mud-palette-background-grey);">
+                        <MudStack Row="true" AlignItems="AlignItems.Center">
+                            <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Info" Class="mr-2" />
+                            <MudText Typo="Typo.body2">
+                                Une personne physique représente un individu. Vous devrez fournir des informations comme le nom, le prénom, la date de naissance, etc.
+                            </MudText>
+                        </MudStack>
+                    </MudPaper>
+                    <ContribuablePhysiqueForm OnSuccess="OnContribuableCreated" />
+                </ChildContent>
+            </MudTabPanel>
+            <MudTabPanel Text="Personne Morale" Icon="@Icons.Material.Filled.Business">
+                <ChildContent>
+                    <MudPaper Elevation="0" Class="pa-4 mb-4" Style="background-color: var(--mud-palette-background-grey);">
+                        <MudStack Row="true" AlignItems="AlignItems.Center">
+                            <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Info" Class="mr-2" />
+                            <MudText Typo="Typo.body2">
+                                Une personne morale représente une entreprise ou une organisation. Vous devrez fournir des informations comme la raison sociale, le RCCM, le NIF, etc.
+                            </MudText>
+                        </MudStack>
+                    </MudPaper>
+                    <ContribuableMoraleForm OnSuccess="OnContribuableCreated" />
+                </ChildContent>
+            </MudTabPanel>
+        </MudTabs>
+        
+        <MudDivider Class="my-4" />
+        
+        <MudStack Row="true" Justify="Justify.FlexEnd" Class="mt-6">
+            <MudButton Variant="Variant.Outlined" 
+                      Color="Color.Error"
+                      StartIcon="@Icons.Material.Filled.Cancel" 
+                      Size="Size.Medium"
+                      OnClick="@(() => NavigationManager.NavigateTo(GetRetourUrl()))">
+                Annuler
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+    
+    @if (_showHelpPanel)
+    {
+        <MudExpansionPanel Class="mt-4 rounded-lg" IsInitiallyExpanded="true">
+            <TitleContent>
+                <MudStack Row="true" AlignItems="AlignItems.Center">
+                    <MudIcon Icon="@Icons.Material.Filled.HelpOutline" Color="Color.Info" Class="mr-2" />
+                    <MudText Typo="Typo.h6">Aide et informations</MudText>
+                </MudStack>
+            </TitleContent>
+            <ChildContent>
+                <MudStack>
+                    <MudText Typo="Typo.subtitle1" Class="mt-2 mb-1">Documents nécessaires</MudText>
+                    @if (_activeTabIndex == 0)
+                    {
+                        <MudList Clickable="false" Dense="true" DisablePadding="true" T="string">
+                            <MudListItem Icon="@Icons.Material.Filled.Assignment" Text="Pièce d'identité (carte nationale d'identité, passeport)" T="string" />
+                            <MudListItem Icon="@Icons.Material.Filled.Assignment" Text="Justificatif de domicile" T="string" />
+                            <MudListItem Icon="@Icons.Material.Filled.Assignment" Text="Document attestant l'activité professionnelle" T="string" />
+                        </MudList>
+                    }
+                    else
+                    {
+                        <MudList Clickable="false" Dense="true" DisablePadding="true" T="string">
+                            <MudListItem Icon="@Icons.Material.Filled.Assignment" Text="Registre du Commerce et du Crédit Mobilier (RCCM)" T="string" />
+                            <MudListItem Icon="@Icons.Material.Filled.Assignment" Text="Numéro d'Identification Fiscale (NIF)" T="string" />
+                            <MudListItem Icon="@Icons.Material.Filled.Assignment" Text="Statuts de l'entreprise" T="string" />
+                            <MudListItem Icon="@Icons.Material.Filled.Assignment" Text="Document d'identité du représentant légal" T="string" />
+                        </MudList>
+                    }
+                    
+                    <MudText Typo="Typo.subtitle1" Class="mt-3 mb-1">Informations importantes</MudText>
+                    <MudText Typo="Typo.body2">
+                        • Tous les champs marqués d'un astérisque (*) sont obligatoires.<br />
+                        • Le numéro d'identification est généré automatiquement mais peut être modifié.<br />
+                        • Une fois créé, le contribuable apparaîtra dans la liste des contribuables.<br />
+                        • Vous pourrez modifier les informations du contribuable ultérieurement.
+                    </MudText>
+                </MudStack>
+            </ChildContent>
+        </MudExpansionPanel>
+    }
+</MudContainer>
+
+@code {
+    [Inject] private NavigationManager NavigationManager { get; set; }
+    [Inject] private ISnackbar Snackbar { get; set; }
+    
+    private int _activeTabIndex = 0;
+    private bool _showHelpPanel = true;
+    private bool _processing = false;
+    
+    private void OnTabChanged(int index)
+    {
+        _activeTabIndex = index;
+    }
+    
+    private string GetRetourUrl()
+    {
+        return _activeTabIndex == 0 
+            ? "/contribuables/personnes-physiques" 
+            : "/contribuables/personnes-morales";
+    }
+    
+    private async Task OnContribuableCreated(Guid id)
+    {
+        // Rediriger vers la liste des contribuables spécifique au type
+        Snackbar.Add($"Contribuable créé avec succès", Severity.Success);
+        NavigationManager.NavigateTo(GetRetourUrl());
+    }
+} 

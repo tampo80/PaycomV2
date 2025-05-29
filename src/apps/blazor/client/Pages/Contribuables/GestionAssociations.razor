@@ -1,0 +1,513 @@
+@page "/contribuables/associations"
+@using MudBlazor
+@using PayCom.Blazor.Client.Shared
+@using PayCom.Blazor.Client.Pages.Contribuables.Dialogs
+@using PayCom.Blazor.Client.Components
+@using PayCom.Blazor.Infrastructure.Api
+@using Microsoft.AspNetCore.Components
+@using PayCom.Blazor.Client.Pages.Contribuables.Models
+@using static PayCom.Blazor.Client.Pages.Contribuables.Models.EnumExtensions
+@using System.Threading
+
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject IApiClient ApiClient
+@inject NavigationManager NavigationManager
+
+<PageTitle>Gestion des Associations - PayCom</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudPaper Elevation="3" Class="pa-4 mb-4 rounded-lg">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.Link" Color="Color.Primary" Size="Size.Large" Class="mr-2" />
+                <MudText Typo="Typo.h4" Color="Color.Primary">Gestion des Associations Utilisateurs-Contribuables</MudText>
+            </MudStack>
+        </MudStack>
+
+        <MudDivider Class="mb-4" />
+
+        <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4">
+            <MudTabPanel Text="Contribuables avec compte" Icon="@Icons.Material.Filled.Check">
+                <MudText Class="mb-4">Liste des contribuables associés à un compte utilisateur</MudText>
+                
+                <MudTable T="ContribuableDto" ServerData="@ServerReloadAssocies"
+                         Dense="false"
+                         Hover="true"
+                         Bordered="false"
+                         Striped="true"
+                         @ref="_tableAssocies"
+                         Loading="@_loading"
+                         LoadingProgressColor="Color.Primary">
+                    <ToolBarContent>
+                        <MudTextField @bind-Value="_searchStringAssocies" 
+                                     Placeholder="Rechercher..." 
+                                     Adornment="Adornment.Start" 
+                                     AdornmentIcon="@Icons.Material.Filled.Search" 
+                                     IconSize="Size.Medium" 
+                                     Class="mt-0 mb-3"
+                                     Immediate="true"
+                                     DebounceInterval="500"
+                                     OnDebounceIntervalElapsed="@(() => _tableAssocies.ReloadServerData())" />
+                    </ToolBarContent>
+                    <HeaderContent>
+                        <MudTh>Nom / Raison Sociale</MudTh>
+                        <MudTh>Type</MudTh>
+                        <MudTh>Numéro ID</MudTh>
+                        <MudTh>Utilisateur associé</MudTh>
+                        <MudTh>Actions</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Nom">
+                            @if (context.TypeContribuable == TypeContribuableType.PersonnePhysique)
+                            {
+                                @($"{context.Nom} {context.Prenom}")
+                            }
+                            else
+                            {
+                                @context.RaisonSociale
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Type">
+                            @if (context.TypeContribuable == TypeContribuableType.PersonnePhysique)
+                            {
+                                <MudChip T="string" Color="Color.Info" Size="Size.Small">Personne Physique</MudChip>
+                            }
+                            else
+                            {
+                                <MudChip T="string" Color="Color.Secondary" Size="Size.Small">Personne Morale</MudChip>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Numéro ID">@context.NumeroIdentification</MudTd>
+                        <MudTd DataLabel="Utilisateur">
+                            @if (context.UtilisateurId.HasValue && _utilisateurs.TryGetValue(context.UtilisateurId.Value, out var user))
+                            {
+                                <div class="d-flex align-center">
+                                    <MudAvatar Color="Color.Primary" Size="Size.Small" Class="mr-2">@(user.FirstName?.Substring(0, 1) ?? "")@(user.LastName?.Substring(0, 1) ?? "")</MudAvatar>
+                                    <div>
+                                        <MudText Typo="Typo.body2">@user.FirstName @user.LastName</MudText>
+                                        <MudText Typo="Typo.caption">@user.Email</MudText>
+                                    </div>
+                                </div>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Actions">
+                            <MudIconButton Icon="@Icons.Material.Filled.LinkOff" 
+                                         Color="Color.Error" 
+                                         Size="Size.Small"
+                                         OnClick="@(() => DissocierUtilisateur(context))"
+                                         Title="Dissocier l'utilisateur" />
+                        </MudTd>
+                    </RowTemplate>
+                    <PagerContent>
+                        <MudTablePager />
+                    </PagerContent>
+                    <NoRecordsContent>
+                        <MudText>Aucun contribuable associé à un compte utilisateur n'a été trouvé.</MudText>
+                    </NoRecordsContent>
+                </MudTable>
+            </MudTabPanel>
+            
+            <MudTabPanel Text="Contribuables sans compte" Icon="@Icons.Material.Filled.PersonOff">
+                <MudText Class="mb-4">Liste des contribuables sans compte utilisateur associé</MudText>
+                
+                <MudTable T="ContribuableDto" ServerData="@ServerReloadNonAssocies"
+                         Dense="false"
+                         Hover="true"
+                         Bordered="false"
+                         Striped="true"
+                         @ref="_tableNonAssocies"
+                         Loading="@_loading"
+                         LoadingProgressColor="Color.Primary">
+                    <ToolBarContent>
+                        <MudTextField @bind-Value="_searchStringNonAssocies" 
+                                     Placeholder="Rechercher..." 
+                                     Adornment="Adornment.Start" 
+                                     AdornmentIcon="@Icons.Material.Filled.Search" 
+                                     IconSize="Size.Medium" 
+                                     Class="mt-0 mb-3"
+                                     Immediate="true"
+                                     DebounceInterval="500"
+                                     OnDebounceIntervalElapsed="@(() => _tableNonAssocies.ReloadServerData())" />
+                    </ToolBarContent>
+                    <HeaderContent>
+                        <MudTh>Nom / Raison Sociale</MudTh>
+                        <MudTh>Type</MudTh>
+                        <MudTh>Numéro ID</MudTh>
+                        <MudTh>Actions</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Nom">
+                            @if (context.TypeContribuable == TypeContribuableType.PersonnePhysique)
+                            {
+                                @($"{context.Nom} {context.Prenom}")
+                            }
+                            else
+                            {
+                                @context.RaisonSociale
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Type">
+                            @if (context.TypeContribuable == TypeContribuableType.PersonnePhysique)
+                            {
+                                <MudChip T="string" Color="Color.Info" Size="Size.Small">Personne Physique</MudChip>
+                            }
+                            else
+                            {
+                                <MudChip T="string" Color="Color.Secondary" Size="Size.Small">Personne Morale</MudChip>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Numéro ID">@context.NumeroIdentification</MudTd>
+                        <MudTd DataLabel="Actions">
+                            <MudButton Size="Size.Small" 
+                                      Variant="Variant.Outlined" 
+                                      Color="Color.Primary"
+                                      OnClick="@(() => AssocierUtilisateur(context))"
+                                      StartIcon="@Icons.Material.Filled.Link">
+                                Associer
+                            </MudButton>
+                        </MudTd>
+                    </RowTemplate>
+                    <PagerContent>
+                        <MudTablePager />
+                    </PagerContent>
+                    <NoRecordsContent>
+                        <MudText>Aucun contribuable sans compte utilisateur n'a été trouvé.</MudText>
+                    </NoRecordsContent>
+                </MudTable>
+            </MudTabPanel>
+        </MudTabs>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private bool _loading = false;
+    private string _searchStringAssocies = string.Empty;
+    private string _searchStringNonAssocies = string.Empty;
+    private MudTable<ContribuableDto> _tableAssocies;
+    private MudTable<ContribuableDto> _tableNonAssocies;
+    private List<ContribuableDto> _contribuables = new();
+    private Dictionary<Guid, UserDetail> _utilisateurs = new();
+    private const string ApiVersion = "1.0";
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUtilisateurs();
+    }
+    
+    private async Task LoadUtilisateurs()
+    {
+        try
+        {
+            var users = await ApiClient.GetUsersListEndpointAsync();
+            
+            if (users != null)
+            {
+                _utilisateurs = users.ToDictionary(u => u.Id, u => u);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erreur lors du chargement des utilisateurs: {ex.Message}", Severity.Error);
+        }
+    }
+    
+    private async Task<TableData<ContribuableDto>> ServerReloadAssocies(TableState state, CancellationToken cancellationToken)
+    {
+        try
+        {
+            _loading = true;
+            
+            // Appel à l'API pour récupérer les contribuables
+            var searchCommand = new SearchContribuableCommand
+            {
+                PageNumber = state.Page + 1,
+                PageSize = state.PageSize,
+                OrderBy = new List<string> { "Nom" }
+            };
+            
+            var result = await ApiClient.SearchContribuableEndPointsAsync(ApiVersion, searchCommand, cancellationToken);
+            
+            if (result?.Items == null)
+            {
+                return new TableData<ContribuableDto>() { TotalItems = 0, Items = new List<ContribuableDto>() };
+            }
+            
+            // Filtrer les contribuables associés à un utilisateur
+            var filteredItems = result.Items
+                .Where(c => c.UtilisateurId.HasValue)
+                .Select(c => new ContribuableDto
+                {
+                    Id = c.Id ?? Guid.Empty,
+                    Nom = c.Nom ?? string.Empty,
+                    Prenom = c.Prenom ?? string.Empty,
+                    RaisonSociale = c.Nom ?? string.Empty, // Pour les personnes morales, le nom est la raison sociale
+                    RCCM = c.NumeroRegistreCommerce ?? string.Empty,
+                    NumeroIdentification = c.NumeroIdentification ?? string.Empty,
+                    NIF = c.Nif ?? string.Empty,
+                    TypeContribuable = MapTypeContribuable(c.TypeContribuable),
+                    Adresse = c.Adresse ?? string.Empty,
+                    LocalisationGPS = c.LocalisationGPS ?? string.Empty,
+                    TypeActivite = c.TypeActivite ?? string.Empty,
+                    ContactPrincipal = c.ContactPrincipal ?? string.Empty,
+                    ContactSecondaire = c.ContactSecondaire ?? string.Empty,
+                    Email = c.Email ?? string.Empty,
+                    DateEnregistrement = c.DateEnregistrement != null ? c.DateEnregistrement : DateTime.Now,
+                    Statut = MapStatut(c.Statut),
+                    UtilisateurId = c.UtilisateurId,
+                    AgentFiscalId = c.AgentFiscalId
+                })
+                .ToList();
+            
+            // Appliquer la recherche
+            if (!string.IsNullOrWhiteSpace(_searchStringAssocies))
+            {
+                filteredItems = filteredItems
+                    .Where(c => 
+                        (c.Nom?.Contains(_searchStringAssocies, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                        (c.Prenom?.Contains(_searchStringAssocies, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                        (c.RaisonSociale?.Contains(_searchStringAssocies, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                        (c.NumeroIdentification?.Contains(_searchStringAssocies, StringComparison.OrdinalIgnoreCase) ?? false))
+                    .ToList();
+            }
+            
+            return new TableData<ContribuableDto>() { TotalItems = filteredItems.Count, Items = filteredItems };
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erreur lors du chargement des données: {ex.Message}", Severity.Error);
+            return new TableData<ContribuableDto>() { TotalItems = 0, Items = new List<ContribuableDto>() };
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+    
+    private async Task<TableData<ContribuableDto>> ServerReloadNonAssocies(TableState state, CancellationToken cancellationToken)
+    {
+        try
+        {
+            _loading = true;
+            
+            // Appel à l'API pour récupérer les contribuables
+            var searchCommand = new SearchContribuableCommand
+            {
+                PageNumber = state.Page + 1,
+                PageSize = state.PageSize,
+                OrderBy = new List<string> { "Nom" }
+            };
+            
+            var result = await ApiClient.SearchContribuableEndPointsAsync(ApiVersion, searchCommand, cancellationToken);
+            
+            if (result?.Items == null)
+            {
+                return new TableData<ContribuableDto>() { TotalItems = 0, Items = new List<ContribuableDto>() };
+            }
+            
+            // Filtrer les contribuables non associés à un utilisateur
+            var filteredItems = result.Items
+                .Where(c => !c.UtilisateurId.HasValue)
+                .Select(c => new ContribuableDto
+                {
+                    Id = c.Id ?? Guid.Empty,
+                    Nom = c.Nom ?? string.Empty,
+                    Prenom = c.Prenom ?? string.Empty,
+                    RaisonSociale = c.Nom ?? string.Empty, // Pour les personnes morales, le nom est la raison sociale
+                    RCCM = c.NumeroRegistreCommerce ?? string.Empty,
+                    NumeroIdentification = c.NumeroIdentification ?? string.Empty,
+                    NIF = c.Nif ?? string.Empty,
+                    TypeContribuable = MapTypeContribuable(c.TypeContribuable),
+                    Adresse = c.Adresse ?? string.Empty,
+                    LocalisationGPS = c.LocalisationGPS ?? string.Empty,
+                    TypeActivite = c.TypeActivite ?? string.Empty,
+                    ContactPrincipal = c.ContactPrincipal ?? string.Empty,
+                    ContactSecondaire = c.ContactSecondaire ?? string.Empty,
+                    Email = c.Email ?? string.Empty,
+                    DateEnregistrement = c.DateEnregistrement != null ? c.DateEnregistrement : DateTime.Now,
+                    Statut = MapStatut(c.Statut),
+                    UtilisateurId = c.UtilisateurId,
+                    AgentFiscalId = c.AgentFiscalId
+                })
+                .ToList();
+            
+            // Appliquer la recherche
+            if (!string.IsNullOrWhiteSpace(_searchStringNonAssocies))
+            {
+                filteredItems = filteredItems
+                    .Where(c => 
+                        (c.Nom?.Contains(_searchStringNonAssocies, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                        (c.Prenom?.Contains(_searchStringNonAssocies, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                        (c.RaisonSociale?.Contains(_searchStringNonAssocies, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                        (c.NumeroIdentification?.Contains(_searchStringNonAssocies, StringComparison.OrdinalIgnoreCase) ?? false))
+                    .ToList();
+            }
+            
+            return new TableData<ContribuableDto>() { TotalItems = filteredItems.Count, Items = filteredItems };
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erreur lors du chargement des données: {ex.Message}", Severity.Error);
+            return new TableData<ContribuableDto>() { TotalItems = 0, Items = new List<ContribuableDto>() };
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+    
+    private async Task AssocierUtilisateur(ContribuableDto contribuable)
+    {
+        try
+        {
+            var options = new DialogOptions { 
+                CloseButton = true, 
+                MaxWidth = MaxWidth.Medium,
+                FullWidth = false
+            };
+            
+            var parameters = new DialogParameters();
+            parameters.Add("ContribuableId", contribuable.Id);
+            
+            // Déterminer le nom à afficher selon le type de contribuable
+            string nomContribuable = contribuable.TypeContribuable == TypeContribuableType.PersonnePhysique
+                ? $"{contribuable.Nom} {contribuable.Prenom}"
+                : contribuable.RaisonSociale;
+                
+            parameters.Add("ContribuableNom", nomContribuable);
+            
+            var dialog = await DialogService.ShowAsync<AssocierUtilisateurDialog>("Associer un utilisateur", parameters, options);
+            var result = await dialog.Result;
+
+            if (!result.Canceled && result.Data is Guid utilisateurId)
+            {
+                try
+                {
+                    // Appel à l'API pour associer l'utilisateur au contribuable
+                    var response = await ApiClient.AssocierUtilisateurContribuableEndPointsAsync(ApiVersion, contribuable.Id, utilisateurId);
+                    
+                    if (response != null)
+                    {
+                        // Recharger les données des deux tableaux
+                        await _tableAssocies.ReloadServerData();
+                        await _tableNonAssocies.ReloadServerData();
+                        
+                        // Mettre à jour la liste des utilisateurs
+                        await LoadUtilisateurs();
+                        
+                        Snackbar.Add("Utilisateur associé avec succès au contribuable", Severity.Success);
+                    }
+                }
+                catch (ApiException ex)
+                {
+                    // Extraire le message d'erreur de la réponse JSON
+                    string errorMessage = "Erreur lors de l'association";
+                    
+                    try
+                    {
+                        if (!string.IsNullOrEmpty(ex.Response))
+                        {
+                            // Vérifier si la réponse contient le message sur l'utilisateur déjà associé
+                            if (ex.Response.Contains("déjà associé à un autre contribuable"))
+                            {
+                                // Extraire le message détaillé de la réponse JSON
+                                var startIndex = ex.Response.IndexOf("\"detail\":\"");
+                                if (startIndex >= 0)
+                                {
+                                    startIndex += 10; // Longueur de "\"detail\":\""
+                                    var endIndex = ex.Response.IndexOf("\"", startIndex);
+                                    if (endIndex > startIndex)
+                                    {
+                                        errorMessage = ex.Response.Substring(startIndex, endIndex - startIndex);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // En cas d'erreur lors de l'extraction du message, utiliser le message par défaut
+                    }
+                    
+                    Snackbar.Add(errorMessage, Severity.Error);
+                }
+                catch (Exception ex)
+                {
+                    Snackbar.Add($"Erreur lors de l'association: {ex.Message}", Severity.Error);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erreur: {ex.Message}", Severity.Error);
+        }
+    }
+    
+    private async Task DissocierUtilisateur(ContribuableDto contribuable)
+    {
+        if (!contribuable.UtilisateurId.HasValue)
+            return;
+            
+        // Demander confirmation avant de dissocier
+        bool? result = await DialogService.ShowMessageBox(
+            "Confirmation",
+            "Êtes-vous sûr de vouloir dissocier cet utilisateur du contribuable ?",
+            yesText: "Dissocier", 
+            noText: "Annuler");
+            
+        if (result != true)
+            return;
+            
+        try
+        {
+            // Appel à l'API pour dissocier l'utilisateur (mise à jour du contribuable avec UtilisateurId = null)
+            var command = new UpdateContribuableCommand
+            {
+                Id = contribuable.Id,
+                Nom = contribuable.Nom,
+                Prenom = contribuable.Prenom,
+                DateNaissance = contribuable.DateNaissance,
+                Genre = contribuable.Genre.HasValue 
+                    ? MapToApiGenre(contribuable.Genre.Value) 
+                    : PayCom.Blazor.Infrastructure.Api.Genre._0,
+                NumeroIdentification = contribuable.NumeroIdentification,
+                NomCommercial = contribuable.NomCommercial ?? string.Empty,
+                Adresse = contribuable.Adresse,
+                LocalisationGPS = contribuable.LocalisationGPS ?? string.Empty,
+                TypeActivite = contribuable.TypeActivite,
+                ContactPrincipal = contribuable.ContactPrincipal,
+                ContactSecondaire = contribuable.ContactSecondaire ?? string.Empty,
+                Email = contribuable.Email ?? string.Empty,
+                DateEnregistrement = contribuable.DateEnregistrement,
+                UtilisateurId = null, // Dissocier l'utilisateur
+                AgentFiscalId = contribuable.AgentFiscalId,
+                TypeContribuable = MapToApiTypeContribuable(contribuable.TypeContribuable),
+                Statut = MapToApiStatut(contribuable.Statut),
+                
+                // Champs pour personne morale
+                NumeroRegistreCommerce = contribuable.RCCM ?? string.Empty,
+                Nif = contribuable.NIF ?? string.Empty,
+                DateCreationEntreprise = contribuable.DateCreationEntreprise,
+                SecteurActivite = contribuable.SecteurActivite ?? string.Empty,
+                CapitalSocial = contribuable.CapitalSocial.HasValue ? (double)contribuable.CapitalSocial.Value : null,
+                FormeJuridique = contribuable.FormeJuridique ?? string.Empty,
+                RepresentantLegal = contribuable.RepresentantLegal ?? string.Empty
+            };
+            
+            var response = await ApiClient.UpdateContribuableEndPointsAsync(ApiVersion, contribuable.Id, command);
+            
+            if (response != null)
+            {
+                // Recharger les données des deux tableaux
+                await _tableAssocies.ReloadServerData();
+                await _tableNonAssocies.ReloadServerData();
+                
+                Snackbar.Add("Utilisateur dissocié avec succès du contribuable", Severity.Success);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erreur lors de la dissociation: {ex.Message}", Severity.Error);
+        }
+    }
+} 

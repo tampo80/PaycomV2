@@ -1,0 +1,351 @@
+@page "/contribuable/mes-paiements/echeances"
+@using MudBlazor
+@using PayCom.Blazor.Infrastructure.Auth
+@using PayCom.Blazor.Infrastructure.Api
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+
+@inject ISnackbar Snackbar
+@inject IApiClient ApiClient
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+
+<PageTitle>Échéances à venir - PayCom</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudPaper Elevation="3" Class="pa-4 mb-4 rounded-lg">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.DateRange" Color="Color.Primary" Size="Size.Large" Class="mr-2" />
+                <MudText Typo="Typo.h4" Color="Color.Primary">Échéances à venir</MudText>
+            </MudStack>
+            
+            <MudStack Row="true">
+                <MudSelect T="string" Label="Filtrer par période" 
+                         @bind-Value="_periodeFiltre"
+                         AdornmentIcon="@Icons.Material.Filled.FilterList"
+                         AdornmentColor="Color.Primary"
+                         OnSelectedItemChanged="@(_ => FilterEcheances())"
+                         Style="width: 200px;">
+                    <MudSelectItem Value="@("all")">Toutes les échéances</MudSelectItem>
+                    <MudSelectItem Value="@("week")">7 prochains jours</MudSelectItem>
+                    <MudSelectItem Value="@("month")">30 prochains jours</MudSelectItem>
+                    <MudSelectItem Value="@("quarter")">3 prochains mois</MudSelectItem>
+                </MudSelect>
+                
+                <MudTextField @bind-Value="_searchString" 
+                             Placeholder="Rechercher..." 
+                             Adornment="Adornment.Start" 
+                             AdornmentIcon="@Icons.Material.Filled.Search" 
+                             IconSize="Size.Medium" 
+                             Immediate="true"
+                             Class="ml-2" />
+            </MudStack>
+        </MudStack>
+
+        <MudDivider Class="mb-4" />
+        
+        @if (_loading)
+        {
+            <div class="d-flex justify-center align-center">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            </div>
+        }
+        else if (_echeances == null || !_echeances.Any())
+        {
+            <MudAlert Severity="Severity.Info" Class="mb-4">
+                Aucune échéance à venir trouvée.
+            </MudAlert>
+        }
+        else
+        {
+            <MudTable Items="@_filteredEcheances" 
+                     Dense="true" 
+                     Hover="true" 
+                     Bordered="false" 
+                     Striped="true" 
+                     Filter="new Func<EcheanceDto, bool>(FilterEcheance)"
+                     SortLabel="Trier par"
+                     T="EcheanceDto">
+                <HeaderContent>
+                    <MudTh><MudTableSortLabel SortBy="new Func<EcheanceDto, object>(x => x.DateLimite)">Date limite</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy="new Func<EcheanceDto, object>(x => x.ObligationFiscale)">Obligation</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy="new Func<EcheanceDto, object>(x => x.TypeTaxe)">Type de taxe</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy="new Func<EcheanceDto, object>(x => x.Montant)">Montant</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy="new Func<EcheanceDto, object>(x => x.Statut)">Statut</MudTableSortLabel></MudTh>
+                    <MudTh>Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Date limite">
+                        <MudStack Row="true" AlignItems="AlignItems.Center">
+                            <MudIcon Icon="@GetDateIcon(context.DateLimite)" Color="@GetDateColor(context.DateLimite)" Size="Size.Small" Class="mr-2" />
+                            <MudText>@context.DateLimite.ToString("dd/MM/yyyy")</MudText>
+                        </MudStack>
+                    </MudTd>
+                    <MudTd DataLabel="Obligation">@context.ObligationFiscale</MudTd>
+                    <MudTd DataLabel="Type de taxe">@context.TypeTaxe</MudTd>
+                    <MudTd DataLabel="Montant">@context.Montant.ToString("N0") FCFA</MudTd>
+                    <MudTd DataLabel="Statut">
+                        <MudChip T="string" Color="@GetStatutColor(context.Statut)" Size="Size.Small">
+                            @context.Statut
+                        </MudChip>
+                    </MudTd>
+                    <MudTd>
+                        <MudButton Variant="Variant.Filled" 
+                                 Color="Color.Primary" 
+                                 Size="Size.Small"
+                                 OnClick="@(() => NavigationManager.NavigateTo("/contribuable/mes-paiements/effectuer"))">
+                            Payer
+                        </MudButton>
+                    </MudTd>
+                </RowTemplate>
+                <PagerContent>
+                    <MudTablePager PageSizeOptions="new int[] { 5, 10, 25, 50 }" />
+                </PagerContent>
+            </MudTable>
+            
+            <MudDivider Class="my-4" />
+            
+            <MudGrid>
+                <MudItem xs="12" md="4">
+                    <MudPaper Elevation="0" Class="pa-4 mud-theme-primary rounded-lg">
+                        <MudText Typo="Typo.h6" Class="mb-2">À payer ce mois-ci</MudText>
+                        <MudText Typo="Typo.h4">@_echeances.Where(e => e.DateLimite.Month == DateTime.Now.Month && e.DateLimite.Year == DateTime.Now.Year).Sum(e => e.Montant).ToString("N0") FCFA</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudPaper Elevation="0" Class="pa-4 mud-theme-secondary rounded-lg">
+                        <MudText Typo="Typo.h6" Class="mb-2">À payer dans les 7 jours</MudText>
+                        <MudText Typo="Typo.h4">@_echeances.Where(e => (e.DateLimite - DateTime.Now).TotalDays <= 7 && (e.DateLimite - DateTime.Now).TotalDays >= 0).Sum(e => e.Montant).ToString("N0") FCFA</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudPaper Elevation="0" Class="pa-4 mud-theme-tertiary rounded-lg">
+                        <MudText Typo="Typo.h6" Class="mb-2">Total à venir</MudText>
+                        <MudText Typo="Typo.h4">@_echeances.Sum(e => e.Montant).ToString("N0") FCFA</MudText>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+        }
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private List<EcheanceDto> _echeances;
+    private List<EcheanceDto> _filteredEcheances;
+    private bool _loading = true;
+    private string _userId;
+    private Guid? _contribuableId;
+    private string _searchString = "";
+    private string _periodeFiltre = "all";
+    private const string ApiVersion = "1.0";
+    
+    // Classe pour représenter les échéances
+    public class EcheanceDto
+    {
+        public Guid Id { get; set; }
+        public string ObligationFiscale { get; set; }
+        public string TypeTaxe { get; set; }
+        public decimal Montant { get; set; }
+        public DateTime DateLimite { get; set; }
+        public string Statut { get; set; } // À venir, Bientôt due, En retard
+    }
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserData();
+        await LoadEcheances();
+    }
+    
+    private async Task LoadUserData()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        
+        if (user.Identity.IsAuthenticated)
+        {
+            _userId = user.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            
+            // Rechercher le contribuable associé à l'utilisateur
+            var searchCommand = new SearchContribuableCommand
+            {
+                PageNumber = 1,
+                PageSize = 1,
+                Keyword = _userId
+            };
+            
+            try
+            {
+                var result = await ApiClient.SearchContribuableEndPointsAsync(ApiVersion, searchCommand);
+                if (result?.Items != null && result.Items.Any())
+                {
+                    _contribuableId = result.Items.First().Id;
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Erreur lors de la recherche du contribuable: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+    
+    private async Task LoadEcheances()
+    {
+        try
+        {
+            _loading = true;
+            
+            // Simuler les données d'échéances car l'API n'est pas disponible
+            _echeances = new List<EcheanceDto>
+            {
+                new EcheanceDto
+                {
+                    Id = Guid.NewGuid(),
+                    ObligationFiscale = "Taxe d'habitation 2023",
+                    TypeTaxe = "Taxe d'habitation",
+                    Montant = 25000,
+                    DateLimite = DateTime.Now.AddDays(7),
+                    Statut = "Bientôt due"
+                },
+                new EcheanceDto
+                {
+                    Id = Guid.NewGuid(),
+                    ObligationFiscale = "Taxe foncière 2023",
+                    TypeTaxe = "Taxe foncière",
+                    Montant = 50000,
+                    DateLimite = DateTime.Now.AddDays(-2),
+                    Statut = "En retard"
+                },
+                new EcheanceDto
+                {
+                    Id = Guid.NewGuid(),
+                    ObligationFiscale = "Taxe professionnelle 2023 - T1",
+                    TypeTaxe = "Taxe professionnelle",
+                    Montant = 25000,
+                    DateLimite = DateTime.Now.AddDays(3),
+                    Statut = "Bientôt due"
+                },
+                new EcheanceDto
+                {
+                    Id = Guid.NewGuid(),
+                    ObligationFiscale = "Taxe professionnelle 2023 - T2",
+                    TypeTaxe = "Taxe professionnelle",
+                    Montant = 25000,
+                    DateLimite = DateTime.Now.AddDays(90),
+                    Statut = "À venir"
+                },
+                new EcheanceDto
+                {
+                    Id = Guid.NewGuid(),
+                    ObligationFiscale = "Taxe professionnelle 2023 - T3",
+                    TypeTaxe = "Taxe professionnelle",
+                    Montant = 25000,
+                    DateLimite = DateTime.Now.AddDays(180),
+                    Statut = "À venir"
+                },
+                new EcheanceDto
+                {
+                    Id = Guid.NewGuid(),
+                    ObligationFiscale = "Taxe sur les enseignes 2023",
+                    TypeTaxe = "Taxe sur les enseignes",
+                    Montant = 15000,
+                    DateLimite = DateTime.Now.AddDays(45),
+                    Statut = "À venir"
+                }
+            };
+            
+            FilterEcheances();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erreur lors du chargement des échéances: {ex.Message}", Severity.Error);
+            _echeances = new List<EcheanceDto>();
+            _filteredEcheances = new List<EcheanceDto>();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+    
+    private void FilterEcheances()
+    {
+        if (_echeances == null)
+        {
+            _filteredEcheances = new List<EcheanceDto>();
+            return;
+        }
+        
+        // Filtrer par période
+        _filteredEcheances = _periodeFiltre switch
+        {
+            "week" => _echeances.Where(e => (e.DateLimite - DateTime.Now).TotalDays <= 7).ToList(),
+            "month" => _echeances.Where(e => (e.DateLimite - DateTime.Now).TotalDays <= 30).ToList(),
+            "quarter" => _echeances.Where(e => (e.DateLimite - DateTime.Now).TotalDays <= 90).ToList(),
+            _ => _echeances.ToList()
+        };
+    }
+    
+    private bool FilterEcheance(EcheanceDto echeance)
+    {
+        if (string.IsNullOrWhiteSpace(_searchString))
+            return true;
+            
+        // Recherche par obligation fiscale
+        if (echeance.ObligationFiscale.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+            
+        // Recherche par type de taxe
+        if (echeance.TypeTaxe.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+            
+        // Recherche par statut
+        if (echeance.Statut.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+            
+        // Recherche par montant
+        if (echeance.Montant.ToString().Contains(_searchString))
+            return true;
+            
+        // Recherche par date
+        if (echeance.DateLimite.ToString("dd/MM/yyyy").Contains(_searchString))
+            return true;
+            
+        return false;
+    }
+    
+    private Color GetStatutColor(string statut)
+    {
+        return statut switch
+        {
+            "À venir" => Color.Info,
+            "Bientôt due" => Color.Warning,
+            "En retard" => Color.Error,
+            _ => Color.Default
+        };
+    }
+    
+    private string GetDateIcon(DateTime date)
+    {
+        var daysRemaining = (date - DateTime.Now).TotalDays;
+        
+        return daysRemaining switch
+        {
+            < 0 => Icons.Material.Filled.EventBusy,
+            <= 7 => Icons.Material.Filled.EventAvailable,
+            _ => Icons.Material.Filled.Event
+        };
+    }
+    
+    private Color GetDateColor(DateTime date)
+    {
+        var daysRemaining = (date - DateTime.Now).TotalDays;
+        
+        return daysRemaining switch
+        {
+            < 0 => Color.Error,
+            <= 7 => Color.Warning,
+            _ => Color.Info
+        };
+    }
+} 

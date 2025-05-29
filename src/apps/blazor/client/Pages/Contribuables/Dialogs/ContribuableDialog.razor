@@ -1,0 +1,1186 @@
+@using MudBlazor
+@using System.ComponentModel.DataAnnotations
+@using PayCom.Blazor.Infrastructure.Api
+@using PayCom.Blazor.Client.Pages.Contribuables.Models
+@using Microsoft.AspNetCore.Components
+@using System.Text.Json
+@using PayCom.Blazor.Client.Components
+
+@inject IApiClient ApiClient
+@inject ISnackbar Snackbar
+
+<MudDialog DisableSidePadding="true">
+    <TitleContent>
+        <div style="background-color: var(--mud-palette-primary); margin: -16px -24px -16px -24px; padding: 16px 24px;">
+            <div class="d-flex flex-row align-center justify-space-between">
+                <div class="d-flex flex-row align-center">
+                    @if (Model.TypeContribuable == TypeContribuableType.PersonnePhysique)
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Person" Class="mr-2" Style="color: white;" />
+                    }
+                    else
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Business" Class="mr-2" Style="color: white;" />
+                    }
+                    <MudText Typo="Typo.h6" Style="color: white;">@DialogTitle</MudText>
+                </div>
+                <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Inherit" Style="color: white;" OnClick="Cancel" />
+            </div>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="form" Model="@Model" @bind-IsValid="@_isValid">
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Class="my-2" ShowCloseIcon="true" CloseIconClicked="() => _errorMessage = string.Empty">
+                    <div class="d-flex align-center">
+                        <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Class="mr-2" />
+                        <MudText>@_errorMessage</MudText>
+                    </div>
+                </MudAlert>
+            }
+            
+            @if (_fieldErrors.Count > 0)
+            {
+                <MudAlert Severity="Severity.Warning" Class="my-2" ShowCloseIcon="true" CloseIconClicked="() => _fieldErrors.Clear()">
+                    <div class="d-flex flex-column">
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">Veuillez corriger les erreurs suivantes :</MudText>
+                        <div class="pl-2">
+                            @foreach (var error in _fieldErrors)
+                            {
+                                <div class="d-flex align-center mb-1">
+                                    <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Class="mr-2" Color="Color.Warning" />
+                                    <div>
+                                        <strong>@error.Key</strong>: @string.Join(", ", error.Value)
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </MudAlert>
+            }
+
+            <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-3" @bind-ActivePanelIndex="_activeTabIndex">
+                <!-- Onglet Informations Générales -->
+                <MudTabPanel Text="Informations générales">
+                    <MudGrid Spacing="2">
+                        <!-- Type de contribuable (sélection désactivée si déjà défini) -->
+                        <MudItem xs="12">
+                            <MudSelect Value="Model.TypeContribuable" 
+                                      ValueChanged="@((TypeContribuableType val) => OnTypeContribuableChanged(val))"
+                                      Label="Type de contribuable" 
+                                      Variant="Variant.Outlined"
+                                      AnchorOrigin="Origin.BottomCenter"
+                                      Required="true"
+                                      RequiredError="Le type de contribuable est requis"
+                                      AdornmentIcon="@Icons.Material.Filled.Category"
+                                      AdornmentColor="Color.Primary"
+                                      Disabled="@(!string.IsNullOrEmpty(Model.Nom) || !string.IsNullOrEmpty(Model.RaisonSociale))"
+                                      HelperText="Ce choix détermine les champs à remplir"
+                                      T="TypeContribuableType"
+                                      Error="@(_fieldErrors.ContainsKey("TypeContribuable"))"
+                                      ErrorText="@(GetFieldErrorText("TypeContribuable"))"
+                                      Validation="@(new Func<TypeContribuableType, IEnumerable<string>>(ValidateTypeContribuable))">
+                                <MudSelectItem Value="@(TypeContribuableType.PersonnePhysique)">Personne physique</MudSelectItem>
+                                <MudSelectItem Value="@(TypeContribuableType.PersonneMorale)">Personne morale</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+
+                        @if (Model.TypeContribuable == TypeContribuableType.PersonnePhysique)
+                        {
+                            <!-- Champs pour personne physique -->
+                            <MudItem xs="12" md="6">
+                                <MudTextField @bind-Value="Model.Nom" 
+                                            Label="Nom" 
+                                            Variant="Variant.Outlined"
+                                            Adornment="Adornment.Start" 
+                                            AdornmentIcon="@Icons.Material.Filled.Person" 
+                                            AdornmentColor="Color.Primary"
+                                            Required="true" 
+                                            RequiredError="Le nom est requis"
+                                            HelperText="Nom du contribuable"
+                                            Counter="100"
+                                            Immediate="true"
+                                            Error="@(_fieldErrors.ContainsKey("Nom"))"
+                                            ErrorText="@(GetFieldErrorText("Nom"))"
+                                            Validation="@(new Func<string, IEnumerable<string>>(ValidateNom))" />
+                            </MudItem>
+                            <MudItem xs="12" md="6">
+                                <MudTextField @bind-Value="Model.Prenom" 
+                                            Label="Prénom" 
+                                            Variant="Variant.Outlined"
+                                            Adornment="Adornment.Start" 
+                                            AdornmentIcon="@Icons.Material.Filled.Person" 
+                                            AdornmentColor="Color.Primary"
+                                            Required="true" 
+                                            RequiredError="Le prénom est requis"
+                                            HelperText="Prénom du contribuable"
+                                            Counter="100"
+                                            Immediate="true"
+                                            Error="@(_fieldErrors.ContainsKey("Prenom"))"
+                                            ErrorText="@(GetFieldErrorText("Prenom"))"
+                                            Validation="@(new Func<string, IEnumerable<string>>(ValidatePrenom))" />
+                            </MudItem>
+                            <MudItem xs="12" md="6">
+                                <MudDatePicker Date="@Model.DateNaissance" DateChanged="@((DateTime? date) => DateChanged(date))"
+                                              Label="Date de naissance" 
+                                              Variant="Variant.Outlined"
+                                              Adornment="Adornment.Start" 
+                                              AdornmentIcon="@Icons.Material.Filled.CalendarMonth" 
+                                              AdornmentColor="Color.Primary"
+                                              Required="true"
+                                              RequiredError="La date de naissance est requise"
+                                              Error="@(_fieldErrors.ContainsKey("DateNaissance"))"
+                                              ErrorText="@(GetFieldErrorText("DateNaissance"))"
+                                              HelperText="Date de naissance du contribuable"
+                                              Placeholder="Sélectionnez une date" />
+                            </MudItem>
+                            <MudItem xs="12" md="6">
+                                <MudSelect @bind-Value="Model.Genre" 
+                                          Label="Genre" 
+                                          Variant="Variant.Outlined"
+                                          Adornment="Adornment.Start" 
+                                          AdornmentIcon="@Icons.Material.Filled.Person" 
+                                          AdornmentColor="Color.Primary"
+                                          Required="true"
+                                          RequiredError="Le genre est requis"
+                                          Error="@(_fieldErrors.ContainsKey("Genre"))"
+                                          ErrorText="@(GetFieldErrorText("Genre"))"
+                                          HelperText="Genre du contribuable"
+                                          Validation="@(new Func<GenreType?, IEnumerable<string>>(ValidateGenre))">
+                                    <MudSelectItem T="GenreType?" Value="GenreType.Homme">Homme</MudSelectItem>
+                                    <MudSelectItem T="GenreType?" Value="GenreType.Femme">Femme</MudSelectItem>
+                                </MudSelect>
+                            </MudItem>
+                        }
+                        else
+                        {
+                            <!-- Champs pour personne morale -->
+                            <MudItem xs="12" md="6">
+                                <MudTextField @bind-Value="Model.RaisonSociale" 
+                                            Label="Raison sociale" 
+                                            Variant="Variant.Outlined"
+                                            Adornment="Adornment.Start" 
+                                            AdornmentIcon="@Icons.Material.Filled.Business" 
+                                            AdornmentColor="Color.Primary"
+                                            Required="true" 
+                                            RequiredError="La raison sociale est requise"
+                                            HelperText="Raison sociale de l'entreprise"
+                                            Counter="100"
+                                            Immediate="true"
+                                            Error="@(_fieldErrors.ContainsKey("RaisonSociale"))"
+                                            ErrorText="@(GetFieldErrorText("RaisonSociale"))"
+                                            Validation="@(new Func<string, IEnumerable<string>>(ValidateRaisonSociale))" />
+                            </MudItem>
+                            <MudItem xs="12" md="6">
+                                <MudTextField @bind-Value="Model.NomCommercial" 
+                                            Label="Nom commercial" 
+                                            Variant="Variant.Outlined"
+                                            Adornment="Adornment.Start" 
+                                            AdornmentIcon="@Icons.Material.Filled.Store" 
+                                            AdornmentColor="Color.Secondary"
+                                            HelperText="Nom commercial (optionnel)"
+                                            Counter="100"
+                                            Immediate="true" />
+                            </MudItem>
+                            <MudItem xs="12" md="6">
+                                <MudTextField @bind-Value="Model.RCCM" 
+                                            Label="RCCM" 
+                                            Variant="Variant.Outlined"
+                                            Adornment="Adornment.Start" 
+                                            AdornmentIcon="@Icons.Material.Filled.Description" 
+                                            AdornmentColor="Color.Primary"
+                                            Required="true" 
+                                            RequiredError="Le RCCM est requis"
+                                            HelperText="Registre du Commerce et du Crédit Mobilier"
+                                            Counter="50"
+                                            Immediate="true"
+                                            Error="@(_fieldErrors.ContainsKey("RCCM"))"
+                                            ErrorText="@(GetFieldErrorText("RCCM"))"
+                                            Validation="@(new Func<string, IEnumerable<string>>(ValidateRCCM))" />
+                            </MudItem>
+                            <MudItem xs="12" md="6">
+                                <MudTextField @bind-Value="Model.NIF" 
+                                            Label="NIF" 
+                                            Variant="Variant.Outlined"
+                                            Adornment="Adornment.Start" 
+                                            AdornmentIcon="@Icons.Material.Filled.Numbers" 
+                                            AdornmentColor="Color.Primary"
+                                            Required="true" 
+                                            RequiredError="Le NIF est requis"
+                                            HelperText="Numéro d'Identification Fiscale"
+                                            Counter="50"
+                                            Immediate="true"
+                                            Error="@(_fieldErrors.ContainsKey("NIF"))"
+                                            ErrorText="@(GetFieldErrorText("NIF"))"
+                                            Validation="@(new Func<string, IEnumerable<string>>(ValidateNIF))" />
+                            </MudItem>
+                        }
+
+                        <!-- Champs communs aux deux types -->
+                        <MudItem xs="12" md="6">
+                            <MudTextField @bind-Value="Model.NumeroIdentification" 
+                                        Label="Numéro d'identification" 
+                                        Variant="Variant.Outlined"
+                                        Adornment="Adornment.Start" 
+                                        AdornmentIcon="@Icons.Material.Filled.Badge" 
+                                        AdornmentColor="Color.Secondary"
+                                        Required="true"
+                                        RequiredError="Le numéro d'identification est requis"
+                                        HelperText="Numéro d'identification unique"
+                                        Counter="50"
+                                        Immediate="true"
+                                        Error="@(_fieldErrors.ContainsKey("NumeroIdentification"))"
+                                        ErrorText="@(GetFieldErrorText("NumeroIdentification"))"
+                                        Validation="@(new Func<string, IEnumerable<string>>(ValidateNumeroIdentification))" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudDatePicker Date="Model.DateEnregistrement"
+                                          DateChanged="@((DateTime? date) => DateEnregistrementChanged(date))"
+                                          Label="Date d'enregistrement" 
+                                          Variant="Variant.Outlined"
+                                          Adornment="Adornment.Start" 
+                                          AdornmentIcon="@Icons.Material.Filled.CalendarToday" 
+                                          AdornmentColor="Color.Primary"
+                                          Required="true"
+                                          RequiredError="La date d'enregistrement est requise"
+                                          Error="@(_fieldErrors.ContainsKey("DateEnregistrement"))"
+                                          ErrorText="@(GetFieldErrorText("DateEnregistrement"))"
+                                          HelperText="Date d'enregistrement du contribuable"
+                                          Placeholder="Sélectionnez une date"
+                                          Validation="@(new Func<DateTime, IEnumerable<string>>(ValidateDateEnregistrement))" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudSelect @bind-Value="Model.Statut" 
+                                      Label="Statut" 
+                                      Variant="Variant.Outlined"
+                                      Adornment="Adornment.Start" 
+                                      AdornmentIcon="@Icons.Material.Filled.VerifiedUser" 
+                                      AdornmentColor="Color.Primary"
+                                      Required="true"
+                                      RequiredError="Le statut est requis"
+                                      Error="@(_fieldErrors.ContainsKey("Statut"))"
+                                      ErrorText="@(GetFieldErrorText("Statut"))"
+                                      HelperText="Statut du contribuable"
+                                      Validation="@(new Func<StatutContribuableType, IEnumerable<string>>(ValidateStatut))">
+                                <MudSelectItem Value="@StatutContribuableType.Actif">Actif</MudSelectItem>
+                                <MudSelectItem Value="@StatutContribuableType.Inactif">Inactif</MudSelectItem>
+                                <MudSelectItem Value="@StatutContribuableType.EnAttente">En attente</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+
+                <!-- Onglet Activité Professionnelle -->
+                <MudTabPanel Text="Activité Professionnelle">
+                    <MudGrid Spacing="2">
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="Model.TypeActivite" 
+                                        Label="Type d'activité" 
+                                        Variant="Variant.Outlined"
+                                        Adornment="Adornment.Start" 
+                                        AdornmentIcon="@Icons.Material.Filled.Work" 
+                                        AdornmentColor="Color.Primary"
+                                        Required="true"
+                                        RequiredError="Le type d'activité est requis"
+                                        HelperText="Type d'activité du contribuable"
+                                        Counter="100"
+                                        Immediate="true"
+                                        Error="@(_fieldErrors.ContainsKey("TypeActivite"))"
+                                        ErrorText="@(GetFieldErrorText("TypeActivite"))"
+                                        Validation="@(new Func<string, IEnumerable<string>>(ValidateTypeActivite))" />
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+
+                <!-- Onglet Adresse et Contact -->
+                <MudTabPanel Text="Adresse et Contact">
+                    <MudGrid Spacing="2">
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="Model.Adresse" 
+                                        Label="Adresse" 
+                                        Variant="Variant.Outlined"
+                                        Adornment="Adornment.Start" 
+                                        AdornmentIcon="@Icons.Material.Filled.Home" 
+                                        AdornmentColor="Color.Primary"
+                                        Required="true"
+                                        RequiredError="L'adresse est requise"
+                                        HelperText="Adresse complète du contribuable"
+                                        Counter="200"
+                                        Lines="2"
+                                        Immediate="true"
+                                        Error="@(_fieldErrors.ContainsKey("Adresse"))"
+                                        ErrorText="@(GetFieldErrorText("Adresse"))"
+                                        Validation="@(new Func<string, IEnumerable<string>>(ValidateAdresse))" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="Model.LocalisationGPS" 
+                                        Label="Localisation GPS" 
+                                        Variant="Variant.Outlined"
+                                        Adornment="Adornment.Start" 
+                                        AdornmentIcon="@Icons.Material.Filled.LocationOn" 
+                                        AdornmentColor="Color.Secondary"
+                                        HelperText="Coordonnées GPS (optionnel)"
+                                        Counter="100"
+                                        Immediate="true" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudTextField @bind-Value="Model.ContactPrincipal" 
+                                        Label="Contact principal" 
+                                        Variant="Variant.Outlined"
+                                        Adornment="Adornment.Start" 
+                                        AdornmentIcon="@Icons.Material.Filled.Phone" 
+                                        AdornmentColor="Color.Primary"
+                                        Required="true"
+                                        RequiredError="Le contact principal est requis"
+                                        HelperText="Numéro de téléphone principal"
+                                        Counter="50"
+                                        Immediate="true"
+                                        Error="@(_fieldErrors.ContainsKey("ContactPrincipal"))"
+                                        ErrorText="@(GetFieldErrorText("ContactPrincipal"))"
+                                        Validation="@(new Func<string, IEnumerable<string>>(ValidateContactPrincipal))" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudTextField @bind-Value="Model.ContactSecondaire" 
+                                        Label="Contact secondaire" 
+                                        Variant="Variant.Outlined"
+                                        Adornment="Adornment.Start" 
+                                        AdornmentIcon="@Icons.Material.Filled.PhoneAndroid" 
+                                        AdornmentColor="Color.Secondary"
+                                        HelperText="Numéro de téléphone secondaire (optionnel)"
+                                        Counter="50"
+                                        Immediate="true" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="Model.Email" 
+                                        Label="Email" 
+                                        Variant="Variant.Outlined"
+                                        Adornment="Adornment.Start" 
+                                        AdornmentIcon="@Icons.Material.Filled.Email" 
+                                        AdornmentColor="Color.Primary"
+                                        HelperText="Adresse email du contribuable"
+                                        Counter="100"
+                                        Immediate="true"
+                                        Error="@(_fieldErrors.ContainsKey("Email"))"
+                                        ErrorText="@(GetFieldErrorText("Email"))"
+                                        Validation="@(new Func<string, IEnumerable<string>>(ValidateEmail))" />
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+            </MudTabs>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudTooltip Text="Annuler les modifications">
+            <MudButton Variant="Variant.Outlined" OnClick="Cancel" StartIcon="@Icons.Material.Filled.Cancel" Color="Color.Error">Annuler</MudButton>
+        </MudTooltip>
+        <MudTooltip Text="@((_isValid) ? $"{ButtonText} le contribuable" : "Veuillez remplir correctement tous les champs requis")">
+            <MudButton Variant="Variant.Filled" OnClick="Submit" StartIcon="@Icons.Material.Filled.Save" Color="Color.Primary" Disabled="@(!_isValid || _processing)">
+                @if (_processing)
+                {
+                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                    <span class="ms-2">Traitement...</span>
+                }
+                else
+                {
+                    @ButtonText
+                }
+            </MudButton>
+        </MudTooltip>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    public IMudDialogInstance MudDialog { get; set; } = default!;
+    
+    [Parameter] public ContribuableDto Model { get; set; } = new();
+    [Parameter] public string ButtonText { get; set; } = "Enregistrer";
+    [Parameter] public string DialogTitle { get; set; } = "Contribuable";
+    [Parameter] public Func<ContribuableDto, Task<bool>> OnValidSubmit { get; set; }
+
+    private MudForm form;
+    private bool _isValid;
+    private string _errorMessage = string.Empty;
+    private Dictionary<string, List<string>> _fieldErrors = new();
+    private bool _processing = false;
+    private int _activeTabIndex = 0;
+    private const string ApiVersion = "1.0";
+
+    protected override void OnInitialized()
+    {
+        // Forcer l'initialisation des champs obligatoires problématiques
+        
+        // S'assurer que le type de contribuable est défini avec une valeur non-default explicite
+        if (Model.TypeContribuable == default)
+        {
+            Model.TypeContribuable = TypeContribuableType.PersonnePhysique;
+            Console.WriteLine($"OnInitialized - TypeContribuable initialisé à: {Model.TypeContribuable} (valeur: {(int)Model.TypeContribuable})");
+        }
+        
+        // S'assurer que le statut est défini avec une valeur non-default explicite
+        if (Model.Statut == default)
+        {
+            Model.Statut = StatutContribuableType.Actif;
+            Console.WriteLine($"OnInitialized - Statut initialisé à: {Model.Statut} (valeur: {(int)Model.Statut})");
+        }
+        
+        // S'assurer que la date d'enregistrement est définie
+        if (Model.DateEnregistrement == default)
+        {
+            Model.DateEnregistrement = DateTime.Now;
+            Console.WriteLine($"OnInitialized - DateEnregistrement initialisé à: {Model.DateEnregistrement}");
+        }
+        
+        // Initialisation des valeurs par défaut pour personne physique
+        if (Model.TypeContribuable == TypeContribuableType.PersonnePhysique)
+        {
+            if (!Model.Genre.HasValue)
+            {
+                Model.Genre = GenreType.Homme;
+                Console.WriteLine($"OnInitialized - Genre initialisé à: {Model.Genre} (valeur: {(int)Model.Genre.Value})");
+            }
+            
+            if (!Model.DateNaissance.HasValue)
+            {
+                Model.DateNaissance = DateTime.Now.AddYears(-30);
+                Console.WriteLine($"OnInitialized - DateNaissance initialisé à: {Model.DateNaissance}");
+            }
+        }
+        // Initialisation des valeurs par défaut pour personne morale
+        else if (Model.TypeContribuable == TypeContribuableType.PersonneMorale)
+        {
+            if (!Model.DateCreationEntreprise.HasValue)
+            {
+                Model.DateCreationEntreprise = DateTime.Now.AddYears(-1);
+                Console.WriteLine($"OnInitialized - DateCreationEntreprise initialisé à: {Model.DateCreationEntreprise}");
+            }
+        }
+        
+        // Afficher les valeurs actuelles du modèle pour le débogage
+        Console.WriteLine($"OnInitialized - Valeurs actuelles du modèle:");
+        Console.WriteLine($"  - TypeContribuable: {Model.TypeContribuable} (valeur: {(int)Model.TypeContribuable})");
+        Console.WriteLine($"  - Statut: {Model.Statut} (valeur: {(int)Model.Statut})");
+        Console.WriteLine($"  - Genre: {(Model.Genre.HasValue ? Model.Genre.Value.ToString() : "null")}");
+        Console.WriteLine($"  - DateEnregistrement: {Model.DateEnregistrement}");
+        
+        // Valider le formulaire au démarrage pour s'assurer que _isValid est correctement initialisé
+        _isValid = ValidateModel();
+        
+        // Forcer une mise à jour de l'interface
+        StateHasChanged();
+    }
+
+    // Méthode pour gérer le changement de type de contribuable
+    private void OnTypeContribuableChanged(TypeContribuableType newType)
+    {
+        // Afficher la valeur actuelle pour le débogage
+        Console.WriteLine($"OnTypeContribuableChanged - Nouvelle valeur: {newType} (valeur: {(int)newType})");
+        Model.DateEnregistrement = DateTime.Now;
+        // S'assurer que les champs communs obligatoires sont définis
+        if (Model.DateEnregistrement == default)
+        {
+            Model.DateEnregistrement = DateTime.Now;
+            Console.WriteLine($"OnTypeContribuableChanged - DateEnregistrement défini à: {Model.DateEnregistrement}");
+        }
+        
+        // S'assurer que le statut est défini avec une valeur explicite
+        if (Model.Statut == default)
+        {
+            Model.Statut = StatutContribuableType.Actif;
+            Console.WriteLine($"OnTypeContribuableChanged - Statut défini à: {Model.Statut} (valeur: {(int)Model.Statut})");
+        }
+        
+        // Réinitialiser les champs non pertinents en fonction du nouveau type
+        if (newType == TypeContribuableType.PersonnePhysique)
+        {
+            // Réinitialiser les champs spécifiques aux personnes morales
+            Model.RaisonSociale = string.Empty;
+            Model.RCCM = string.Empty;
+            Model.NIF = string.Empty;
+            Model.DateCreationEntreprise = null;
+            Model.SecteurActivite = string.Empty;
+            Model.CapitalSocial = null;
+            Model.FormeJuridique = string.Empty;
+            Model.RepresentantLegal = string.Empty;
+            
+            // Initialiser les valeurs par défaut pour personne physique
+            if (!Model.Genre.HasValue)
+            {
+                Model.Genre = GenreType.Homme;
+                Console.WriteLine($"OnTypeContribuableChanged - Genre défini à: {Model.Genre} (valeur: {(int)Model.Genre.Value})");
+            }
+            if (!Model.DateNaissance.HasValue)
+            {
+                Model.DateNaissance = DateTime.Now.AddYears(-30);
+                Console.WriteLine($"OnTypeContribuableChanged - DateNaissance défini à: {Model.DateNaissance}");
+            }
+        }
+        else // PersonneMorale
+        {
+            // Réinitialiser les champs spécifiques aux personnes physiques
+            Model.Nom = string.Empty;
+            Model.Prenom = string.Empty;
+            Model.DateNaissance = null;
+            Model.Genre = null;
+            
+            // Initialiser les valeurs par défaut pour personne morale
+            if (!Model.DateCreationEntreprise.HasValue)
+            {
+                Model.DateCreationEntreprise = DateTime.Now.AddYears(-1);
+                Console.WriteLine($"OnTypeContribuableChanged - DateCreationEntreprise défini à: {Model.DateCreationEntreprise}");
+            }
+        }
+        
+        // Mettre à jour le modèle
+        Model.TypeContribuable = newType;
+        Console.WriteLine($"OnTypeContribuableChanged - TypeContribuable mis à jour: {Model.TypeContribuable} (valeur: {(int)Model.TypeContribuable})");
+        
+        // Revalider le formulaire
+        _isValid = ValidateModel();
+        StateHasChanged();
+    }
+
+    private bool ValidateModel()
+    {
+        // Vérifications communes pour tous les types
+        bool commonValidation = 
+            !string.IsNullOrWhiteSpace(Model.NumeroIdentification) &&
+            !string.IsNullOrWhiteSpace(Model.Adresse) &&
+            !string.IsNullOrWhiteSpace(Model.ContactPrincipal) &&
+            !string.IsNullOrWhiteSpace(Model.TypeActivite) &&
+            Model.DateEnregistrement != default &&
+            Model.Statut != default &&
+            Model.TypeContribuable != default;
+        
+        if (!commonValidation)
+            return false;
+        
+        if (Model.TypeContribuable == TypeContribuableType.PersonnePhysique)
+        {
+            return !string.IsNullOrWhiteSpace(Model.Nom) && 
+                   !string.IsNullOrWhiteSpace(Model.Prenom) && 
+                   Model.DateNaissance.HasValue &&
+                   Model.Genre.HasValue;
+        }
+        else // PersonneMorale
+        {
+            return !string.IsNullOrWhiteSpace(Model.RaisonSociale) && 
+                   !string.IsNullOrWhiteSpace(Model.RCCM) &&
+                   !string.IsNullOrWhiteSpace(Model.NIF) &&
+                   !string.IsNullOrWhiteSpace(Model.FormeJuridique) &&
+                   !string.IsNullOrWhiteSpace(Model.RepresentantLegal) &&
+                   Model.DateCreationEntreprise.HasValue;
+        }
+    }
+
+    private void DateChanged(DateTime? date)
+    {
+        Model.DateNaissance = date;
+    }
+
+    private void DateEnregistrementChanged(DateTime? date)
+    {
+        // Always set to a valid date, never null or default
+        if (date.HasValue && date.Value != default && date.Value.Year > 1900 && date.Value <= DateTime.Now)
+        {
+            Model.DateEnregistrement = date.Value;
+        }
+        else
+        {
+            // If date is null, default, or invalid in any way, use current date
+            Model.DateEnregistrement = DateTime.Now;
+            
+            // Inform user if they tried to set an invalid date
+            if (date.HasValue && (date.Value == default || date.Value.Year <= 1900))
+            {
+                Snackbar.Add("Date d'enregistrement invalide. La date actuelle a été utilisée.", Severity.Warning);
+            }
+            else if (date.HasValue && date.Value > DateTime.Now)
+            {
+                Snackbar.Add("La date d'enregistrement ne peut pas être dans le futur. La date actuelle a été utilisée.", Severity.Warning);
+            }
+        }
+        
+        Console.WriteLine($"DateEnregistrementChanged - Date définie à: {Model.DateEnregistrement}");
+        
+        // Forcer la validation du formulaire
+        StateHasChanged();
+    }
+
+    private IEnumerable<string> ValidateNom(string nom)
+    {
+        if (Model.TypeContribuable == TypeContribuableType.PersonnePhysique)
+        {
+            if (string.IsNullOrWhiteSpace(nom))
+                yield return "Le nom du contribuable est requis";
+            else if (nom.Length < 2)
+                yield return "Le nom doit contenir au moins 2 caractères";
+            else if (nom.Length > 100)
+                yield return "Le nom ne doit pas dépasser 100 caractères";
+        }
+    }
+
+    private IEnumerable<string> ValidatePrenom(string prenom)
+    {
+        if (Model.TypeContribuable == TypeContribuableType.PersonnePhysique)
+        {
+            if (string.IsNullOrWhiteSpace(prenom))
+                yield return "Le prénom du contribuable est requis";
+            else if (prenom.Length < 2)
+                yield return "Le prénom doit contenir au moins 2 caractères";
+            else if (prenom.Length > 100)
+                yield return "Le prénom ne doit pas dépasser 100 caractères";
+        }
+    }
+
+    private IEnumerable<string> ValidateRaisonSociale(string raisonSociale)
+    {
+        if (Model.TypeContribuable == TypeContribuableType.PersonneMorale)
+        {
+            if (string.IsNullOrWhiteSpace(raisonSociale))
+                yield return "La raison sociale est requise";
+            else if (raisonSociale.Length < 2)
+                yield return "La raison sociale doit contenir au moins 2 caractères";
+            else if (raisonSociale.Length > 100)
+                yield return "La raison sociale ne doit pas dépasser 100 caractères";
+        }
+    }
+
+    private IEnumerable<string> ValidateRCCM(string rccm)
+    {
+        if (Model.TypeContribuable == TypeContribuableType.PersonneMorale)
+        {
+            if (string.IsNullOrWhiteSpace(rccm))
+                yield return "Le RCCM est requis";
+            else if (rccm.Length > 50)
+                yield return "Le RCCM ne doit pas dépasser 50 caractères";
+        }
+    }
+
+    private IEnumerable<string> ValidateNIF(string nif)
+    {
+        if (Model.TypeContribuable == TypeContribuableType.PersonneMorale)
+        {
+            if (string.IsNullOrWhiteSpace(nif))
+                yield return "Le NIF est requis";
+            else if (nif.Length > 50)
+                yield return "Le NIF ne doit pas dépasser 50 caractères";
+        }
+    }
+
+    private IEnumerable<string> ValidateNumeroIdentification(string numeroIdentification)
+    {
+        if (string.IsNullOrWhiteSpace(numeroIdentification))
+            yield return "Le numéro d'identification est requis";
+        else if (numeroIdentification.Length < 2)
+            yield return "Le numéro d'identification doit contenir au moins 2 caractères";
+        else if (numeroIdentification.Length > 50)
+            yield return "Le numéro d'identification ne doit pas dépasser 50 caractères";
+    }
+
+    private IEnumerable<string> ValidateTypeActivite(string typeActivite)
+    {
+        if (string.IsNullOrWhiteSpace(typeActivite))
+            yield return "Le type d'activité est requis";
+        else if (typeActivite.Length < 2)
+            yield return "Le type d'activité doit contenir au moins 2 caractères";
+        else if (typeActivite.Length > 100)
+            yield return "Le type d'activité ne doit pas dépasser 100 caractères";
+    }
+
+    private IEnumerable<string> ValidateAdresse(string adresse)
+    {
+        if (string.IsNullOrWhiteSpace(adresse))
+            yield return "L'adresse est requise";
+        else if (adresse.Length < 5)
+            yield return "L'adresse doit contenir au moins 5 caractères";
+        else if (adresse.Length > 200)
+            yield return "L'adresse ne doit pas dépasser 200 caractères";
+    }
+
+    private IEnumerable<string> ValidateContactPrincipal(string contactPrincipal)
+    {
+        if (string.IsNullOrWhiteSpace(contactPrincipal))
+            yield return "Le contact principal est requis";
+        else if (contactPrincipal.Length < 8)
+            yield return "Le contact principal doit contenir au moins 8 caractères";
+        else if (contactPrincipal.Length > 50)
+            yield return "Le contact principal ne doit pas dépasser 50 caractères";
+    }
+
+    private IEnumerable<string> ValidateEmail(string email)
+    {
+        if (!string.IsNullOrWhiteSpace(email))
+        {
+            if (!new EmailAddressAttribute().IsValid(email))
+                yield return "L'adresse email n'est pas valide";
+            else if (email.Length > 100)
+                yield return "L'email ne doit pas dépasser 100 caractères";
+        }
+    }
+
+    private IEnumerable<string> ValidateDateEnregistrement(DateTime date)
+    {
+        if (date == default)
+        {
+            yield return "La date d'enregistrement est requise";
+        }
+        else if (date > DateTime.Now)
+        {
+            yield return "La date d'enregistrement ne peut pas être dans le futur";
+        }
+    }
+
+    private IEnumerable<string> ValidateStatut(StatutContribuableType statut)
+    {
+        // Forcer une valeur par défaut si nécessaire
+        if (statut == default)
+        {
+            // Modifier le modèle directement
+            Model.Statut = StatutContribuableType.Actif;
+            Console.WriteLine($"ValidateStatut - Statut forcé à: {Model.Statut} (valeur: {(int)Model.Statut})");
+        }
+        
+        // Ne pas retourner d'erreur car nous avons forcé une valeur
+        yield break;
+    }
+
+    private IEnumerable<string> ValidateTypeContribuable(TypeContribuableType type)
+    {
+        // Forcer une valeur par défaut si nécessaire
+        if (type == default)
+        {
+            // Modifier le modèle directement
+            Model.TypeContribuable = TypeContribuableType.PersonnePhysique;
+            Console.WriteLine($"ValidateTypeContribuable - TypeContribuable forcé à: {Model.TypeContribuable} (valeur: {(int)Model.TypeContribuable})");
+        }
+        
+        // Ne pas retourner d'erreur car nous avons forcé une valeur
+        yield break;
+    }
+
+    private IEnumerable<string> ValidateGenre(GenreType? genre)
+    {
+        if (Model.TypeContribuable == TypeContribuableType.PersonnePhysique && !genre.HasValue)
+        {
+            yield return "Le genre est requis pour une personne physique";
+        }
+    }
+
+    private async Task Submit()
+    {
+        _errorMessage = string.Empty;
+        _fieldErrors.Clear();
+        form.Validate();
+        
+        // IMPORTANT: Forcer les valeurs des énumérations pour éviter les erreurs de validation côté serveur
+        Console.WriteLine("=== DÉBUT SOUMISSION ===");
+        Console.WriteLine($"Valeurs avant forçage:");
+        Console.WriteLine($"- TypeContribuable: {Model.TypeContribuable} (valeur: {(int)Model.TypeContribuable})");
+        Console.WriteLine($"- Statut: {Model.Statut} (valeur: {(int)Model.Statut})");
+        if (Model.Genre.HasValue)
+            Console.WriteLine($"- Genre: {Model.Genre} (valeur: {(int)Model.Genre.Value})");
+        else
+            Console.WriteLine($"- Genre: null");
+        Console.WriteLine($"- DateEnregistrement: {Model.DateEnregistrement}");
+        
+        // CORRECTION CRITIQUE: Forcer des valeurs non-nulles pour les champs problématiques
+        // Toujours définir une nouvelle date pour s'assurer qu'elle est valide
+        Model.DateEnregistrement = DateTime.Now;
+        Console.WriteLine($"Date d'enregistrement forcée à maintenant: {Model.DateEnregistrement}");
+        
+        // Forcer un type de contribuable valide (jamais 0 par défaut)
+        if ((int)Model.TypeContribuable == 0)
+        {
+            // Forcer explicitement la valeur à PersonnePhysique (0)
+            // Mais en le faisant de cette façon, on s'assure que c'est une valeur explicite
+            Model.TypeContribuable = TypeContribuableType.PersonnePhysique;
+            Console.WriteLine($"TypeContribuable forcé à: PersonnePhysique ({(int)Model.TypeContribuable})");
+        }
+        
+        // Forcer un statut valide (jamais 0 par défaut)
+        if ((int)Model.Statut == 0)
+        {
+            // Forcer explicitement la valeur à Actif (0)
+            Model.Statut = StatutContribuableType.Actif;
+            Console.WriteLine($"Statut forcé à: Actif ({(int)Model.Statut})");
+        }
+        
+        // Pour les personnes physiques, s'assurer que le genre est défini
+        if (Model.TypeContribuable == TypeContribuableType.PersonnePhysique && !Model.Genre.HasValue)
+        {
+            Model.Genre = GenreType.Homme;
+            Console.WriteLine($"Genre forcé à: Homme ({(int)Model.Genre.Value})");
+        }
+        
+        Console.WriteLine($"Valeurs après forçage:");
+        Console.WriteLine($"- TypeContribuable: {Model.TypeContribuable} (valeur: {(int)Model.TypeContribuable})");
+        Console.WriteLine($"- Statut: {Model.Statut} (valeur: {(int)Model.Statut})");
+        if (Model.Genre.HasValue)
+            Console.WriteLine($"- Genre: {Model.Genre} (valeur: {(int)Model.Genre.Value})");
+        else
+            Console.WriteLine($"- Genre: null");
+        Console.WriteLine($"- DateEnregistrement: {Model.DateEnregistrement}");
+        
+        // Créer une copie explicite du modèle pour s'assurer que toutes les propriétés sont correctement définies
+        var modelToSubmit = new ContribuableDto
+        {
+            Id = Model.Id,
+            Nom = Model.Nom,
+            Prenom = Model.Prenom,
+            DateNaissance = Model.DateNaissance ?? DateTime.Now.AddYears(-30),
+            Genre = Model.Genre ?? GenreType.Homme,
+            // Forcer explicitement ces valeurs pour éviter les erreurs de validation
+            TypeContribuable = Model.TypeContribuable,
+            Statut = Model.Statut,
+            // IMPORTANT: Utiliser l'extension pour s'assurer que la date est valide
+            DateEnregistrement = DateTime.Now, // Toujours utiliser la date actuelle
+            // Autres propriétés
+            RaisonSociale = Model.RaisonSociale,
+            RCCM = Model.RCCM,
+            NIF = Model.NIF,
+            DateCreationEntreprise = Model.DateCreationEntreprise ?? DateTime.Now.AddYears(-1),
+            SecteurActivite = Model.SecteurActivite,
+            CapitalSocial = Model.CapitalSocial,
+            FormeJuridique = Model.FormeJuridique,
+            RepresentantLegal = Model.RepresentantLegal,
+            NumeroIdentification = Model.NumeroIdentification,
+            NomCommercial = Model.NomCommercial,
+            Adresse = Model.Adresse,
+            LocalisationGPS = Model.LocalisationGPS,
+            TypeActivite = Model.TypeActivite,
+            ContactPrincipal = Model.ContactPrincipal,
+            ContactSecondaire = Model.ContactSecondaire,
+            Email = Model.Email,
+            UtilisateurId = Model.UtilisateurId,
+            AgentFiscalId = Model.AgentFiscalId
+        };
+        
+        // Afficher les valeurs du modèle à soumettre pour le débogage
+        Console.WriteLine($"ModelToSubmit - TypeContribuable: {modelToSubmit.TypeContribuable} (valeur: {(int)modelToSubmit.TypeContribuable})");
+        Console.WriteLine($"ModelToSubmit - Statut: {modelToSubmit.Statut} (valeur: {(int)modelToSubmit.Statut})");
+        if (modelToSubmit.Genre.HasValue)
+            Console.WriteLine($"ModelToSubmit - Genre: {modelToSubmit.Genre} (valeur: {(int)modelToSubmit.Genre.Value})");
+        else
+            Console.WriteLine($"ModelToSubmit - Genre: null");
+        Console.WriteLine($"ModelToSubmit - DateEnregistrement: {modelToSubmit.DateEnregistrement}");
+        Console.WriteLine("=== FIN PRÉPARATION SOUMISSION ===");
+        
+        // Vérification finale avant soumission
+        if (modelToSubmit.DateEnregistrement == default || modelToSubmit.DateEnregistrement == null)
+        {
+            Console.WriteLine("ALERTE CRITIQUE: DateEnregistrement est toujours null ou default après forçage!");
+            // Dernière tentative de correction
+            modelToSubmit.DateEnregistrement = DateTime.Now;
+            Console.WriteLine($"DateEnregistrement forcé une dernière fois à: {modelToSubmit.DateEnregistrement}");
+        }
+        
+        try
+        {
+            _processing = true;
+            
+            if (OnValidSubmit != null)
+            {
+                try
+                {
+                    Console.WriteLine("Invocation du callback OnValidSubmit...");
+                    
+                    // Invoquer le callback et attendre le résultat de succès/échec
+                    bool success = await OnValidSubmit(modelToSubmit);
+                    
+                    Console.WriteLine($"Callback OnValidSubmit terminé. Résultat: {(success ? "Succès" : "Échec")}");
+                    
+                    if (success)
+                    {
+                        Console.WriteLine("Opération réussie, fermeture du dialogue");
+                        MudDialog.Close(DialogResult.Ok(modelToSubmit));
+                    }
+                    else
+                    {
+                        Console.WriteLine("Des erreurs ont été détectées, le dialogue reste ouvert");
+                        Snackbar.Add("Veuillez corriger les erreurs avant de continuer", Severity.Warning);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Exception lors de l'exécution du callback: {ex.Message}");
+                    Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                    
+                    _errorMessage = ex.Message;
+                    Snackbar.Add($"Erreur: {ex.Message}", Severity.Error);
+                }
+            }
+            else
+            {
+                Console.WriteLine("Aucun callback défini, fermeture directe du dialogue");
+                MudDialog.Close(DialogResult.Ok(modelToSubmit));
+            }
+        }
+        catch (ApiException ex)
+        {
+            Console.WriteLine($"ApiException: {ex.Message}");
+            Console.WriteLine($"Response: {ex.Response}");
+            
+            if (!string.IsNullOrEmpty(ex.Response))
+            {
+                ParseApiErrors(ex.Response);
+            }
+            else
+            {
+                _errorMessage = ex.Message;
+            }
+            Snackbar.Add($"Erreur API: {ex.Message}", Severity.Error);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Exception générale: {ex.Message}");
+            Console.WriteLine($"StackTrace: {ex.StackTrace}");
+            
+            _errorMessage = ex.Message;
+            Snackbar.Add($"Une erreur est survenue: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _processing = false;
+            StateHasChanged();
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    // Method to set general error message, can be called by parent
+    public void SetError(string errorMessage)
+    {
+        _errorMessage = errorMessage;
+        _fieldErrors.Clear();
+        StateHasChanged();
+    }
+
+    // Method to set field-specific errors, can be called by parent
+    public void SetFieldErrors(Dictionary<string, ICollection<string>> errors)
+    {
+        _fieldErrors.Clear();
+        if (errors != null)
+        {
+            foreach (var error in errors)
+            {
+                _fieldErrors[error.Key] = error.Value.ToList();
+            }
+        }
+        _errorMessage = string.Empty; 
+        SetActiveTabForFirstError();
+        StateHasChanged();
+    }
+    
+    // Method to get error text for a specific field
+    private string GetFieldErrorText(string fieldName)
+    {
+        if (_fieldErrors.TryGetValue(fieldName, out var errors) && errors.Count > 0)
+        {
+            return string.Join(", ", errors);
+        }
+        return string.Empty; // Return empty string if no error for this field
+    }
+
+    // Determines which tab to show based on errors
+    private void SetActiveTabForFirstError()
+    {
+        if (_fieldErrors.Count == 0 && string.IsNullOrEmpty(_errorMessage)) return;
+
+        // Define fields per tab. Adjust these based on your ContribuableDialog structure.
+        // This is an example, you'll need to map your fields correctly.
+        var fieldsInTab0 = new[] { "TypeContribuable", "Nom", "Prenom", "DateNaissance", "Genre", "RaisonSociale", "NomCommercial", "RCCM", "NIF", "NumeroIdentification", "Statut" };
+        var fieldsInTab1 = new[] { "TypeActivite" };
+        var fieldsInTab2 = new[] { "Adresse", "LocalisationGPS", "ContactPrincipal", "ContactSecondaire", "Email" };
+
+        // Check for general error first or if field errors exist but no specific field matches
+        if (!string.IsNullOrEmpty(_errorMessage) && _fieldErrors.Count == 0) {
+             _activeTabIndex = 0; // Default to first tab for general errors
+             return;
+        }
+
+        if (_fieldErrors.Keys.Any(k => fieldsInTab0.Contains(k, StringComparer.OrdinalIgnoreCase)))
+        {
+            _activeTabIndex = 0;
+        }
+        else if (_fieldErrors.Keys.Any(k => fieldsInTab1.Contains(k, StringComparer.OrdinalIgnoreCase)))
+        {
+            _activeTabIndex = 1;
+        }
+        else if (_fieldErrors.Keys.Any(k => fieldsInTab2.Contains(k, StringComparer.OrdinalIgnoreCase)))
+        {
+            _activeTabIndex = 2;
+        }
+        else if (_fieldErrors.ContainsKey("General") || _fieldErrors.Count > 0) // If error is "General" or any other unmapped field error
+        {
+             _activeTabIndex = 0; // Default to first tab
+        }
+    }
+
+    // Method to parse API errors from JSON response
+    public void ParseApiErrors(string jsonResponse)
+    {
+        if (string.IsNullOrEmpty(jsonResponse)) return;
+            
+        _fieldErrors.Clear();
+        _errorMessage = string.Empty;
+
+        try
+        {
+            var jsonDoc = JsonDocument.Parse(jsonResponse);
+            
+            // Vérifier s'il y a un message de détail ou titre
+            if (jsonDoc.RootElement.TryGetProperty("title", out var titleElement) && 
+                titleElement.ValueKind == JsonValueKind.String)
+            {
+                _errorMessage = titleElement.GetString() ?? "Une erreur est survenue";
+            }
+            
+            if (jsonDoc.RootElement.TryGetProperty("detail", out var detailElement) && 
+                detailElement.ValueKind == JsonValueKind.String)
+            {
+                // Append detail if title was also found, otherwise set it as the main message
+                _errorMessage = string.IsNullOrEmpty(_errorMessage) 
+                    ? detailElement.GetString() 
+                    : $"{_errorMessage} {detailElement.GetString()}";
+            }
+            
+            // Extraire les erreurs spécifiques
+            if (jsonDoc.RootElement.TryGetProperty("errors", out var errorsElement))
+            {
+                // Si les erreurs sont dans un tableau simple
+                if (errorsElement.ValueKind == JsonValueKind.Array)
+                {
+                    var errorsList = new List<string>();
+                    foreach (var error in errorsElement.EnumerateArray())
+                    {
+                        if (error.ValueKind == JsonValueKind.String)
+                        {
+                            string errorMessage = error.GetString() ?? string.Empty;
+                            errorsList.Add(errorMessage);
+                            
+                            // Essayer de déterminer le champ concerné par l'erreur
+                            // Règles spécifiques pour les contribuables
+                            if (errorMessage.Contains("date d'enregistrement", StringComparison.OrdinalIgnoreCase))
+                            {
+                                _fieldErrors["DateEnregistrement"] = new List<string> { errorMessage };
+                            }
+                            else if (errorMessage.Contains("statut du contribuable", StringComparison.OrdinalIgnoreCase))
+                            {
+                                _fieldErrors["Statut"] = new List<string> { errorMessage };
+                            }
+                            else if (errorMessage.Contains("type de contribuable", StringComparison.OrdinalIgnoreCase))
+                            {
+                                _fieldErrors["TypeContribuable"] = new List<string> { errorMessage };
+                            }
+                            else if (errorMessage.Contains("genre", StringComparison.OrdinalIgnoreCase) && 
+                                     errorMessage.Contains("personne physique", StringComparison.OrdinalIgnoreCase))
+                            {
+                                _fieldErrors["Genre"] = new List<string> { errorMessage };
+                            }
+                            else if (errorMessage.Contains("nom", StringComparison.OrdinalIgnoreCase))
+                            {
+                                _fieldErrors["Nom"] = new List<string> { errorMessage };
+                            }
+                            else if (errorMessage.Contains("prénom", StringComparison.OrdinalIgnoreCase) || 
+                                     errorMessage.Contains("prenom", StringComparison.OrdinalIgnoreCase))
+                            {
+                                _fieldErrors["Prenom"] = new List<string> { errorMessage };
+                            }
+                            else if (errorMessage.Contains("raison sociale", StringComparison.OrdinalIgnoreCase))
+                            {
+                                _fieldErrors["RaisonSociale"] = new List<string> { errorMessage };
+                            }
+                            else if (errorMessage.Contains("numéro d'identification", StringComparison.OrdinalIgnoreCase) || 
+                                     errorMessage.Contains("numero d'identification", StringComparison.OrdinalIgnoreCase))
+                            {
+                                _fieldErrors["NumeroIdentification"] = new List<string> { errorMessage };
+                            }
+                            else if (errorMessage.Contains("RCCM", StringComparison.OrdinalIgnoreCase) || 
+                                     errorMessage.Contains("registre commerce", StringComparison.OrdinalIgnoreCase))
+                            {
+                                _fieldErrors["RCCM"] = new List<string> { errorMessage };
+                            }
+                            else if (errorMessage.Contains("NIF", StringComparison.OrdinalIgnoreCase) || 
+                                     errorMessage.Contains("identification fiscale", StringComparison.OrdinalIgnoreCase))
+                            {
+                                _fieldErrors["NIF"] = new List<string> { errorMessage };
+                            }
+                            else if (errorMessage.Contains("adresse", StringComparison.OrdinalIgnoreCase))
+                            {
+                                _fieldErrors["Adresse"] = new List<string> { errorMessage };
+                            }
+                            else if (errorMessage.Contains("contact principal", StringComparison.OrdinalIgnoreCase))
+                            {
+                                _fieldErrors["ContactPrincipal"] = new List<string> { errorMessage };
+                            }
+                            else if (errorMessage.Contains("email", StringComparison.OrdinalIgnoreCase))
+                            {
+                                _fieldErrors["Email"] = new List<string> { errorMessage };
+                            }
+                            else if (errorMessage.Contains("type d'activité", StringComparison.OrdinalIgnoreCase) || 
+                                     errorMessage.Contains("type d'activite", StringComparison.OrdinalIgnoreCase))
+                            {
+                                _fieldErrors["TypeActivite"] = new List<string> { errorMessage };
+                            }
+                            else
+                            {
+                                // Si on ne peut pas déterminer le champ, ajouter à "General"
+                                if (!_fieldErrors.ContainsKey("General"))
+                                {
+                                    _fieldErrors["General"] = new List<string>();
+                                }
+                                _fieldErrors["General"].Add(errorMessage);
+                            }
+                        }
+                    }
+                    
+                    if (errorsList.Count > 0 && _fieldErrors.Count == 0)
+                    {
+                        _fieldErrors["General"] = errorsList;
+                    }
+                }
+                // Si les erreurs sont dans un objet avec des clés par champ
+                else if (errorsElement.ValueKind == JsonValueKind.Object)
+                {
+                    foreach (var property in errorsElement.EnumerateObject())
+                    {
+                        var fieldName = property.Name;
+                        var fieldErrors = new List<string>();
+                        
+                        if (property.Value.ValueKind == JsonValueKind.Array)
+                        {
+                            foreach (var error in property.Value.EnumerateArray())
+                            {
+                                if (error.ValueKind == JsonValueKind.String)
+                                {
+                                    fieldErrors.Add(error.GetString() ?? string.Empty);
+                                }
+                            }
+                        }
+                        else if (property.Value.ValueKind == JsonValueKind.String)
+                        {
+                            fieldErrors.Add(property.Value.GetString() ?? string.Empty);
+                        }
+                        
+                        if (fieldErrors.Count > 0)
+                        {
+                            // Normaliser les noms de propriétés (camelCase vers PascalCase)
+                            var normalizedFieldName = char.ToUpperInvariant(fieldName[0]) + fieldName.Substring(1);
+                            _fieldErrors[normalizedFieldName] = fieldErrors;
+                        }
+                    }
+                }
+            }
+            
+            // Définir l'onglet actif en fonction du premier champ en erreur
+            SetActiveTabForFirstError();
+        }
+        catch (JsonException ex)
+        {
+            Console.WriteLine($"Erreur lors de l'analyse du JSON: {ex.Message}");
+            _errorMessage = "Une erreur est survenue lors de l'analyse de la réponse du serveur";
+        }
+    }
+} 

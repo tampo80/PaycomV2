@@ -1,0 +1,710 @@
+@page "/parametres/localisation/communes"
+@using MudBlazor
+@using PayCom.Blazor.Client.Shared
+@using PayCom.Blazor.Client.Pages.Parametres.Localisation.Dialogs
+@using PayCom.Blazor.Client.Components
+@using PayCom.Blazor.Infrastructure.Api
+@using Microsoft.AspNetCore.Components
+
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject IApiClient ApiClient
+@inject NavigationManager NavigationManager
+
+<PageTitle>Liste des Communes - PayCom</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudPaper Elevation="3" Class="pa-4 mb-4 rounded-lg">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.LocationCity" Color="Color.Primary" Size="Size.Large" Class="mr-2" />
+                <MudText Typo="Typo.h4" Color="Color.Primary">Gestion des communes</MudText>
+            </MudStack>
+            <MudButton OnClick="OpenDialog" 
+                      Variant="Variant.Filled" 
+                      Color="Color.Primary" 
+                      StartIcon="@Icons.Material.Filled.Add" 
+                      Size="Size.Medium" 
+                      Class="rounded-lg px-4">
+                Ajouter une commune
+            </MudButton>
+        </MudStack>
+
+        <MudDivider Class="mb-4" />
+
+        <MudPaper Elevation="0" Class="pa-4 rounded-lg" Style="background-color: var(--mud-palette-background-grey)">
+            <MudTable Items="@_communes" 
+                     Loading="@_loading" 
+                     LoadingProgressColor="Color.Primary" 
+                     Hover="true" 
+                     Striped="true" 
+                     Elevation="0"
+                     Breakpoint="Breakpoint.Sm" 
+                     OnRowClick="@((e) => EditCommune(e.Item))"
+                     Filter="new Func<CommuneDto, bool>(FilterCommunes)"
+                     T="CommuneDto"
+                     Dense="true"
+                     Class="rounded-lg">
+                <ToolBarContent>
+                    <MudText Typo="Typo.h6" Class="mud-text-secondary">Liste des communes</MudText>
+                    <MudSpacer />
+                    <MudTextField @bind-Value="_searchString" 
+                                Placeholder="Rechercher une commune..." 
+                                Adornment="Adornment.Start" 
+                                AdornmentIcon="@Icons.Material.Filled.Search" 
+                                IconSize="Size.Medium" 
+                                Immediate="true"
+                                Variant="Variant.Outlined"
+                                Class="mt-0 ml-2" 
+                                Style="width: 300px"></MudTextField>
+                </ToolBarContent>
+                <HeaderContent>
+                    <MudTh><MudTableSortLabel SortBy="new Func<CommuneDto, object>(x => x.Id)">Id</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy="new Func<CommuneDto, object>(x => x.Code)">Code</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy="new Func<CommuneDto, object>(x => x.Nom)">Nom</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy="new Func<CommuneDto, object>(x => x.Type)">Type</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy="new Func<CommuneDto, object>(x => x.NomRegion)">Région</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy="new Func<CommuneDto, object>(x => x.CreatedOn)">Date de création</MudTableSortLabel></MudTh>
+                    <MudTh Style="text-align: center">Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Id">@context.Id</MudTd>
+                    <MudTd DataLabel="Code">
+                        @if (!string.IsNullOrEmpty(context.Code))
+                        {
+                            <MudChip T="string" Color="Color.Secondary" Size="Size.Small">@context.Code</MudChip>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.caption" Class="mud-text-disabled">Non défini</MudText>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="Nom">@context.Nom</MudTd>
+                    <MudTd DataLabel="Type">
+                        @{
+                            var (color, label) = GetTypeInfo(context.Type);
+                        }
+                        <MudChip T="string" Color="@color" Size="Size.Small">@label</MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="Région">
+                        @if (!string.IsNullOrEmpty(context.NomRegion) && context.NomRegion != "Non définie")
+                        {
+                            <MudChip T="string" Color="Color.Primary" Size="Size.Small">@context.NomRegion</MudChip>
+                        }
+                        else if (context.RegionId != Guid.Empty)
+                        {
+                            <MudChip T="string" Color="Color.Warning" Size="Size.Small">ID: @context.RegionId.ToString().Substring(0, 8)...</MudChip>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.caption" Class="mud-text-disabled">Non définie</MudText>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="Date de création">
+                        @if (context.CreatedOn != default)
+                        {
+                            <MudTooltip Text="@context.CreatedOn.ToString("dd/MM/yyyy HH:mm:ss")">
+                                <MudText>@context.CreatedOn.ToString("dd/MM/yyyy")</MudText>
+                            </MudTooltip>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.caption" Class="mud-text-disabled">Non définie</MudText>
+                        }
+                    </MudTd>
+                    <MudTd Style="text-align: center">
+                        <MudStack Row="true" Justify="Justify.Center" AlignItems="AlignItems.Center">
+                            <MudTooltip Text="Modifier cette commune">
+                                <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                              Color="Color.Primary" 
+                                              Size="Size.Small" 
+                                              OnClick="@(() => EditCommune(context))" 
+                                              Class="ma-1" />
+                            </MudTooltip>
+                            <MudTooltip Text="Supprimer cette commune">
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                              Color="Color.Error" 
+                                              Size="Size.Small" 
+                                              OnClick="() => ShowDeleteConfirmation(context)" 
+                                              Class="ma-1" />
+                            </MudTooltip>
+                        </MudStack>
+                    </MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    <MudStack AlignItems="AlignItems.Center" Class="pa-4">
+                        <MudIcon Icon="@Icons.Material.Filled.SearchOff" Color="Color.Secondary" Size="Size.Large" />
+                        <MudText Typo="Typo.subtitle1">Aucune commune trouvée</MudText>
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">Essayez de modifier vos critères de recherche ou ajoutez une nouvelle commune.</MudText>
+                    </MudStack>
+                </NoRecordsContent>
+                <LoadingContent>
+                    <MudStack AlignItems="AlignItems.Center" Class="pa-4">
+                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+                        <MudText Typo="Typo.subtitle1">Chargement des communes...</MudText>
+                    </MudStack>
+                </LoadingContent>
+                <PagerContent>
+                    <MudTablePager PageSizeOptions="new int[] { 5, 10, 25, 50, 100 }" />
+                </PagerContent>
+            </MudTable>
+        </MudPaper>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private List<CommuneDto> _communes = new();
+    private bool _loading = true;
+    private string _searchString = "";
+    private const string ApiVersion = "1.0";
+    private CommuneDialog _communeDialog;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            _loading = true;
+            
+            // Appel à l'API pour récupérer les communes
+            var result = await ApiHelper.ExecuteCallGuardedAsync(
+                async () =>
+                {
+                    var searchCommand = new SearchCommuneCommand
+                    {
+                        PageNumber = 1,
+                        PageSize = 100,  // Augmenter la taille pour récupérer plus de communes
+                        OrderBy = new List<string> { "Nom" }
+                    };
+                    
+                    return await ApiClient.SearchCommuneEndpointAsync(ApiVersion, searchCommand);
+                },
+                null, // Ne pas utiliser Snackbar ici pour éviter les messages d'erreur en double
+                null  // Ne pas utiliser NavigationManager ici
+            );
+
+            if (result?.Items != null)
+            {
+                _communes = result.Items.Select(c => new CommuneDto
+                {
+                    Id = c.Id,
+                    Code = c.Code ?? string.Empty,
+                    Nom = c.Nom ?? string.Empty,
+                    Type = c.Type,
+                    RegionId = c.RegionId,
+                    // NomRegion n'existe pas dans CommuneResponse, nous allons le remplir plus tard
+                    NomRegion = "Non définie", // Valeur par défaut
+                    CodeTenant = c.CodeTenant ?? string.Empty,
+                    EstTenantActif = c.EstTenantActif,
+                    NombreArrondissements = c.NombreArrondissements,
+                    NombreSecteurs = c.NombreSecteurs,
+                    TypeChefLieu = c.TypeChefLieu,
+                    LogoUrl = c.LogoUrl ?? string.Empty,
+                    AdresseSiege = c.AdresseSiege ?? string.Empty,
+                    Contact = c.Contact ?? string.Empty,
+                    Email = c.Email ?? string.Empty,
+                    SiteWeb = c.SiteWeb ?? string.Empty,
+                    NomCentreAdmin = c.NomCentreAdmin ?? string.Empty,
+                    AdresseCentreAdmin = c.AdresseCentreAdmin ?? string.Empty,
+                    ContactCentreAdmin = c.ContactCentreAdmin ?? string.Empty,
+                    EmailCentreAdmin = c.EmailCentreAdmin ?? string.Empty,
+                    ResponsableCentreAdmin = c.ResponsableCentreAdmin ?? string.Empty,
+                    CreatedOn = DateTime.Now // CreatedOn n'existe pas dans CommuneResponse, utiliser la date actuelle
+                }).ToList();
+                
+                // Vérifier si certaines communes n'ont pas de région définie et charger les informations manquantes
+                var communesSansRegion = _communes.Where(c => string.IsNullOrEmpty(c.NomRegion) || c.NomRegion == "Non définie").ToList();
+                if (communesSansRegion.Any())
+                {
+                    await LoadRegionNames(communesSansRegion);
+                }
+            }
+            else
+            {
+                _communes = new List<CommuneDto>();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erreur lors du chargement des communes: {ex.Message}", Severity.Error);
+            _communes = new List<CommuneDto>();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    // Méthode pour charger les noms des régions manquantes
+    private async Task LoadRegionNames(List<CommuneDto> communes)
+    {
+        try
+        {
+            // Récupérer toutes les régions
+            var regionsResult = await ApiHelper.ExecuteCallGuardedAsync(
+                async () =>
+                {
+                    var searchCommand = new SearchRegionsCommand
+                    {
+                        PageNumber = 1,
+                        PageSize = 100,
+                        OrderBy = new List<string> { "Nom" }
+                    };
+                    
+                    return await ApiClient.SearchRegionEndPointsAsync(ApiVersion, searchCommand);
+                },
+                null, // Ne pas utiliser Snackbar ici
+                null  // Ne pas utiliser NavigationManager ici
+            );
+
+            if (regionsResult?.Items != null)
+            {
+                // Créer un dictionnaire des régions par ID pour une recherche rapide
+                var regionsDict = regionsResult.Items.ToDictionary(r => r.Id, r => r.Nom ?? string.Empty);
+                
+                // Mettre à jour les noms de région manquants
+                foreach (var commune in communes)
+                {
+                    if (commune.RegionId != Guid.Empty && regionsDict.ContainsKey(commune.RegionId))
+                    {
+                        commune.NomRegion = regionsDict[commune.RegionId];
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Ignorer les erreurs ici, car c'est juste une tentative de récupération des noms de région manquants
+            Console.WriteLine($"Erreur lors du chargement des noms de régions: {ex.Message}");
+        }
+    }
+
+    private bool FilterCommunes(CommuneDto commune)
+    {
+        if (string.IsNullOrWhiteSpace(_searchString))
+            return true;
+
+        return commune.Nom.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ||
+               (commune.Code?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ?? false) ||
+               (commune.NomRegion?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ?? false) ||
+               commune.Id.ToString().Contains(_searchString, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private (Color color, string label) GetTypeInfo(TypeCommune type)
+    {
+        string label = type switch
+        {
+            TypeCommune._0 => "Standard",
+            TypeCommune._1 => "Urbaine",
+            TypeCommune._2 => "Rurale",
+            TypeCommune._3 => "Arrondissement",
+            TypeCommune._4 => "Municipalité",
+            TypeCommune._5 => "Statut Spécial",
+            _ => "Inconnu"
+        };
+        
+        // Utiliser la couleur orange (Warning) pour tous les types de commune
+        return (Color.Warning, label);
+    }
+
+    private async Task OpenDialog()
+    {
+        var options = new DialogOptions { 
+            CloseButton = true, 
+            MaxWidth = MaxWidth.ExtraLarge, 
+            FullWidth = true,
+            BackdropClick = false
+        };
+        var parameters = new DialogParameters();
+        parameters.Add("Model", new CommuneDialog.CommuneDto());
+        parameters.Add("DialogTitle", "Nouvelle Commune");
+        parameters.Add("ButtonText", "Ajouter");
+        parameters.Add("OnValidSubmit", EventCallback.Factory.Create<CommuneDialog.CommuneDto>(this, SaveCommune));
+
+        var dialogReference = await DialogService.ShowAsync<CommuneDialog>("Nouvelle Commune", parameters, options);
+        // Récupérer l'instance du dialogue pour pouvoir y accéder plus tard
+        if (dialogReference.Dialog is CommuneDialog dialog)
+        {
+            _communeDialog = dialog;
+        }
+    }
+    
+    private async Task SaveCommune(CommuneDialog.CommuneDto commune)
+    {
+        try
+        {
+            if (commune.RegionId == Guid.Empty)
+            {
+                // Afficher l'erreur dans le dialogue plutôt que dans le Snackbar
+                if (_communeDialog != null)
+                {
+                    _communeDialog.SetError("Veuillez sélectionner une région pour la commune");
+                    _communeDialog.SetFieldErrors(new Dictionary<string, ICollection<string>>
+                    {
+                        { "RegionId", new List<string> { "La région est requise" } }
+                    });
+                }
+                return;
+            }
+
+            // Appel à l'API pour créer la commune
+            var command = new CreateCommuneCommand
+            {
+                Nom = commune.Nom,
+                Code = commune.Code,
+                Type = commune.Type,
+                RegionId = commune.RegionId,
+                NombreSecteurs = commune.NombreSecteurs,
+                NombreArrondissements = commune.NombreArrondissements,
+                TypeChefLieu = commune.TypeChefLieu,
+                LogoUrl = commune.LogoUrl,
+                AdresseSiege = commune.AdresseSiege,
+                Contact = commune.Contact,
+                Email = commune.Email,
+                SiteWeb = commune.SiteWeb,
+                CodeTenant = commune.CodeTenant,
+                NomCentreAdmin = commune.NomCentreAdmin,
+                AdresseCentreAdmin = commune.AdresseCentreAdmin,
+                ContactCentreAdmin = commune.ContactCentreAdmin,
+                EmailCentreAdmin = commune.EmailCentreAdmin,
+                ResponsableCentreAdmin = commune.ResponsableCentreAdmin
+            };
+            
+            try
+            {
+                // Appel direct à l'API sans passer par ApiHelper pour récupérer les détails de l'erreur
+                await ApiClient.CreateCommuneEndpointAsync(ApiVersion, command);
+                
+                // Si l'appel réussit, recharger les données et fermer le dialogue
+                await LoadData();
+                Snackbar.Add("Commune ajoutée avec succès", Severity.Success);
+                
+                // Fermer le dialogue seulement en cas de succès
+                if (_communeDialog != null)
+                {
+                    _communeDialog.MudDialog?.Close(DialogResult.Ok(commune));
+                }
+            }
+            catch (ApiException ex)
+            {
+                // Utiliser la nouvelle méthode ParseApiErrors pour analyser l'erreur
+                if (_communeDialog != null && !string.IsNullOrEmpty(ex.Response))
+                {
+                    _communeDialog.ParseApiErrors(ex.Response);
+                }
+                else
+                {
+                    // Extraire un message d'erreur convivial
+                    string errorMessage = "Erreur lors de l'ajout de la commune";
+                    
+                    if (ex.StatusCode == 400)
+                    {
+                        errorMessage = "Veuillez vérifier les informations saisies";
+                    }
+                    else if (ex.StatusCode == 409)
+                    {
+                        errorMessage = "Une commune avec ce code ou ce nom existe déjà";
+                    }
+                    
+                    if (_communeDialog != null)
+                    {
+                        _communeDialog.SetError(errorMessage);
+                    }
+                    else
+                    {
+                        Snackbar.Add(errorMessage, Severity.Error);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Extraire un message d'erreur convivial
+            string errorMessage = "Erreur lors de l'ajout de la commune";
+            var fieldErrors = new Dictionary<string, ICollection<string>>();
+            
+            if (ex.Message.Contains("duplicate key"))
+            {
+                errorMessage = "Une commune avec ce code ou ce nom existe déjà";
+                // Ajouter des erreurs spécifiques aux champs potentiellement concernés
+                fieldErrors.Add("Code", new List<string> { "Ce code est peut-être déjà utilisé" });
+                fieldErrors.Add("Nom", new List<string> { "Ce nom est peut-être déjà utilisé" });
+            }
+            else if (ex.Message.Contains("validation"))
+            {
+                errorMessage = "Veuillez vérifier les informations saisies";
+            }
+            else if (ex.Message.Contains("région"))
+            {
+                errorMessage = ex.Message;
+                fieldErrors.Add("RegionId", new List<string> { "Problème avec la région sélectionnée" });
+            }
+            
+            // Afficher l'erreur dans le dialogue plutôt que dans le Snackbar
+            if (_communeDialog != null)
+            {
+                _communeDialog.SetError(errorMessage);
+                
+                // Afficher les erreurs par champ si disponibles
+                if (fieldErrors.Count > 0)
+                {
+                    _communeDialog.SetFieldErrors(fieldErrors);
+                }
+            }
+            else
+            {
+                Snackbar.Add(errorMessage, Severity.Error);
+            }
+        }
+    }
+
+    private async Task EditCommune(CommuneDto commune)
+    {
+        var options = new DialogOptions { 
+            CloseButton = true, 
+            MaxWidth = MaxWidth.Medium, 
+            FullWidth = true,
+            BackdropClick = false
+        };
+        var communeDto = new CommuneDialog.CommuneDto
+        {
+            Id = commune.Id,
+            Nom = commune.Nom,
+            Code = commune.Code,
+            Type = commune.Type,
+            RegionId = commune.RegionId,
+            NomRegion = commune.NomRegion,
+            NombreSecteurs = commune.NombreSecteurs,
+            NombreArrondissements = commune.NombreArrondissements,
+            TypeChefLieu = commune.TypeChefLieu,
+            LogoUrl = commune.LogoUrl,
+            AdresseSiege = commune.AdresseSiege,
+            Contact = commune.Contact,
+            Email = commune.Email,
+            SiteWeb = commune.SiteWeb,
+            CodeTenant = commune.CodeTenant,
+            NomCentreAdmin = commune.NomCentreAdmin,
+            AdresseCentreAdmin = commune.AdresseCentreAdmin,
+            ContactCentreAdmin = commune.ContactCentreAdmin,
+            EmailCentreAdmin = commune.EmailCentreAdmin,
+            ResponsableCentreAdmin = commune.ResponsableCentreAdmin
+        };
+        
+        var parameters = new DialogParameters();
+        parameters.Add("Model", communeDto);
+        parameters.Add("DialogTitle", "Modifier la commune");
+        parameters.Add("ButtonText", "Mettre à jour");
+        parameters.Add("OnValidSubmit", EventCallback.Factory.Create<CommuneDialog.CommuneDto>(this, SaveEditedCommune));
+
+        var dialogReference = await DialogService.ShowAsync<CommuneDialog>("Modifier la commune", parameters, options);
+        // Récupérer l'instance du dialogue pour pouvoir y accéder plus tard
+        if (dialogReference.Dialog is CommuneDialog dialog)
+        {
+            _communeDialog = dialog;
+        }
+    }
+    
+    private async Task SaveEditedCommune(CommuneDialog.CommuneDto commune)
+    {
+        try
+        {
+            if (commune.RegionId == Guid.Empty)
+            {
+                // Afficher l'erreur dans le dialogue plutôt que dans le Snackbar
+                if (_communeDialog != null)
+                {
+                    _communeDialog.SetError("Veuillez sélectionner une région pour la commune");
+                    _communeDialog.SetFieldErrors(new Dictionary<string, ICollection<string>>
+                    {
+                        { "RegionId", new List<string> { "La région est requise" } }
+                    });
+                }
+                return;
+            }
+
+            // Appel à l'API pour mettre à jour la commune
+            var command = new UpdateCommuneCommand
+            {
+                Id = commune.Id,
+                Nom = commune.Nom,
+                Code = commune.Code,
+                Type = commune.Type,
+                RegionId = commune.RegionId,
+                NombreSecteurs = commune.NombreSecteurs,
+                NombreArrondissements = commune.NombreArrondissements,
+                TypeChefLieu = commune.TypeChefLieu,
+                LogoUrl = commune.LogoUrl,
+                AdresseSiege = commune.AdresseSiege,
+                Contact = commune.Contact,
+                Email = commune.Email,
+                SiteWeb = commune.SiteWeb,
+                CodeTenant = commune.CodeTenant,
+                NomCentreAdmin = commune.NomCentreAdmin,
+                AdresseCentreAdmin = commune.AdresseCentreAdmin,
+                ContactCentreAdmin = commune.ContactCentreAdmin,
+                EmailCentreAdmin = commune.EmailCentreAdmin,
+                ResponsableCentreAdmin = commune.ResponsableCentreAdmin
+            };
+            
+            try
+            {
+                // Appel direct à l'API sans passer par ApiHelper pour récupérer les détails de l'erreur
+                await ApiClient.UpdateCommuneEndpointAsync(ApiVersion, commune.Id, command);
+                
+                // Si l'appel réussit, recharger les données et fermer le dialogue
+                await LoadData();
+                Snackbar.Add("Commune mise à jour avec succès", Severity.Success);
+                
+                // Fermer le dialogue seulement en cas de succès
+                if (_communeDialog != null)
+                {
+                    _communeDialog.MudDialog?.Close(DialogResult.Ok(commune));
+                }
+            }
+            catch (ApiException ex)
+            {
+                // Utiliser la nouvelle méthode ParseApiErrors pour analyser l'erreur
+                if (_communeDialog != null && !string.IsNullOrEmpty(ex.Response))
+                {
+                    _communeDialog.ParseApiErrors(ex.Response);
+                }
+                else
+                {
+                    // Extraire un message d'erreur convivial
+                    string errorMessage = "Erreur lors de la mise à jour de la commune";
+                    
+                    if (ex.StatusCode == 400)
+                    {
+                        errorMessage = "Veuillez vérifier les informations saisies";
+                    }
+                    else if (ex.StatusCode == 409)
+                    {
+                        errorMessage = "Une commune avec ce code ou ce nom existe déjà";
+                    }
+                    
+                    if (_communeDialog != null)
+                    {
+                        _communeDialog.SetError(errorMessage);
+                    }
+                    else
+                    {
+                        Snackbar.Add(errorMessage, Severity.Error);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Extraire un message d'erreur convivial
+            string errorMessage = "Erreur lors de la mise à jour de la commune";
+            var fieldErrors = new Dictionary<string, ICollection<string>>();
+            
+            if (ex.Message.Contains("duplicate key"))
+            {
+                errorMessage = "Une commune avec ce code ou ce nom existe déjà";
+                // Ajouter des erreurs spécifiques aux champs potentiellement concernés
+                fieldErrors.Add("Code", new List<string> { "Ce code est peut-être déjà utilisé" });
+                fieldErrors.Add("Nom", new List<string> { "Ce nom est peut-être déjà utilisé" });
+            }
+            else if (ex.Message.Contains("validation"))
+            {
+                errorMessage = "Veuillez vérifier les informations saisies";
+            }
+            else if (ex.Message.Contains("région"))
+            {
+                errorMessage = ex.Message;
+                fieldErrors.Add("RegionId", new List<string> { "Problème avec la région sélectionnée" });
+            }
+            
+            // Afficher l'erreur dans le dialogue plutôt que dans le Snackbar
+            if (_communeDialog != null)
+            {
+                _communeDialog.SetError(errorMessage);
+                
+                // Afficher les erreurs par champ si disponibles
+                if (fieldErrors.Count > 0)
+                {
+                    _communeDialog.SetFieldErrors(fieldErrors);
+                }
+            }
+            else
+            {
+                Snackbar.Add(errorMessage, Severity.Error);
+            }
+        }
+    }
+    
+    private async Task ShowDeleteConfirmation(CommuneDto commune)
+    {
+        var parameters = new DialogParameters();
+        parameters.Add("ContentText", $"Êtes-vous sûr de vouloir supprimer la commune {commune.Nom} ?");
+        parameters.Add("ButtonText", "Supprimer");
+        parameters.Add("Color", Color.Error);
+
+        var options = new DialogOptions() { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+        var dialog = await DialogService.ShowAsync<Components.ConfirmDialog>("Confirmation", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is bool confirmed && confirmed)
+        {
+            await DeleteCommune(commune);
+        }
+    }
+    
+    private async Task DeleteCommune(CommuneDto commune)
+    {
+        try
+        {
+            var success = await ApiHelper.ExecuteCallGuardedAsync<bool>(
+                async () =>
+                {
+                    await ApiClient.DeleteCommuneEndpointAsync(ApiVersion, commune.Id);
+                    return true;
+                },
+                Snackbar,
+                NavigationManager,
+                null,
+                "Commune supprimée avec succès");
+                
+            if (success)
+            {
+                await LoadData(); // Recharger les données depuis l'API
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erreur lors de la suppression de la commune: {ex.Message}", Severity.Error);
+        }
+    }
+
+    // Classe pour les données des communes
+    public class CommuneDto
+    {
+        public Guid Id { get; set; }
+        public string Nom { get; set; } = string.Empty;
+        public TypeCommune Type { get; set; }
+        public string Code { get; set; } = string.Empty;
+        public int NombreSecteurs { get; set; }
+        public int NombreArrondissements { get; set; }
+        public TypeChefLieu TypeChefLieu { get; set; }
+        public string LogoUrl { get; set; } = string.Empty;
+        public string AdresseSiege { get; set; } = string.Empty;
+        public string Contact { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string SiteWeb { get; set; } = string.Empty;
+        public Guid RegionId { get; set; }
+        public string NomRegion { get; set; } = string.Empty;
+        public string CodeTenant { get; set; } = string.Empty;
+        public bool EstTenantActif { get; set; }
+        public string NomCentreAdmin { get; set; } = string.Empty;
+        public string AdresseCentreAdmin { get; set; } = string.Empty;
+        public string ContactCentreAdmin { get; set; } = string.Empty;
+        public string EmailCentreAdmin { get; set; } = string.Empty;
+        public string ResponsableCentreAdmin { get; set; } = string.Empty;
+        public DateTime CreatedOn { get; set; }
+    }
+} 

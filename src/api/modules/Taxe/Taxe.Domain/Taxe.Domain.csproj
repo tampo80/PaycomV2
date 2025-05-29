@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>PayCom.WebApi.Taxe.Domain</RootNamespace>
+    <AssemblyName>PayCom.WebApi.Taxe.Domain</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\framework\Core\Core.csproj" />
+  </ItemGroup>
+
+</Project>

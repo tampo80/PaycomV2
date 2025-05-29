@@ -1,0 +1,128 @@
+@page "/types-taxes"
+@using MudBlazor
+@using PayCom.Blazor.Client.Services
+@using PayCom.Blazor.Client.Shared
+
+@using TypeTaxeResponse = PayCom.Blazor.Infrastructure.Api.TypeTaxeResponse
+@inject ITaxeService TaxeService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+<PageTitle>Types de Taxes - PayCom</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudPaper Class="pa-4">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" Class="mb-4">
+            <MudText Typo="Typo.h5">Types de Taxes</MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => OpenDialog())">
+                Nouveau Type
+            </MudButton>
+        </MudStack>
+
+        <MudTable Items="@_typesTaxes" Dense="true" Hover="true" Bordered="true" Striped="true" Loading="@_loading"
+                 LoadingProgressColor="Color.Info" Filter="new Func<Services.TypeTaxeResponse,bool>(FilterFunc)" T="Services.TypeTaxeResponse">
+            <ToolBarContent>
+                <MudText Typo="Typo.h6">Liste des Types de Taxes</MudText>
+                <MudSpacer />
+                <MudTextField @bind-Value="_searchString" Placeholder="Rechercher" Adornment="Adornment.Start"
+                            AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+            </ToolBarContent>
+            <HeaderContent>
+                <MudTh>Nom</MudTh>
+                <MudTh>Description</MudTh>
+                <MudTh>Montant de base</MudTh>
+                <MudTh>Fréquence de paiement</MudTh>
+                <MudTh>Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Nom">@context.Nom</MudTd>
+                <MudTd DataLabel="Description">@context.Description</MudTd>
+                <MudTd DataLabel="Montant de base">@context.MontantBase.ToString("N0") FCFA</MudTd>
+                <MudTd DataLabel="Fréquence de paiement">@context.FrequencePaiement</MudTd>
+                <MudTd>
+                    <MudStack Row="true">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => EditType(context))" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => DeleteType(context))" />
+                    </MudStack>
+                </MudTd>
+            </RowTemplate>
+            <PagerContent>
+                <MudTablePager />
+            </PagerContent>
+        </MudTable>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private List<Services.TypeTaxeResponse> _typesTaxes = new();
+    private bool _loading = true;
+    private string _searchString = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            _loading = true;
+            var types = await TaxeService.GetTypesTaxesAsync();
+            _typesTaxes = types.ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Erreur lors du chargement des types de taxes", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private bool FilterFunc(Services.TypeTaxeResponse type)
+    {
+        if (string.IsNullOrWhiteSpace(_searchString))
+            return true;
+
+        return type.Nom?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) == true
+            || type.Description?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) == true;
+    }
+
+    private void OpenDialog()
+    {
+        // TODO: Implémenter l'ouverture du dialogue de création
+    }
+
+    private void EditType(Services.TypeTaxeResponse type)
+    {
+        // TODO: Implémenter l'édition
+    }
+
+    private async Task DeleteType(Services.TypeTaxeResponse type)
+    {
+        var parameters = new DialogParameters
+        {
+            { "ContentText", $"Êtes-vous sûr de vouloir supprimer le type de taxe '{type.Nom}' ?" },
+            { "ButtonText", "Supprimer" },
+            { "Color", Color.Error }
+        };
+
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>("Confirmation", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            try
+            {
+                // TODO: Implémenter la suppression
+                await LoadData();
+                Snackbar.Add("Type de taxe supprimé avec succès", Severity.Success);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add("Erreur lors de la suppression", Severity.Error);
+            }
+        }
+    }
+} 

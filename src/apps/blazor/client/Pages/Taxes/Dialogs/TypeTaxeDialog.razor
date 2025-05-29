@@ -1,0 +1,267 @@
+@using MudBlazor
+@using System.ComponentModel.DataAnnotations
+@using PayCom.Blazor.Client.Pages.Taxes.Models
+@using MudBlazor.Interfaces
+@using PayCom.Blazor.Client.Components
+@using PayCom.Blazor.Infrastructure.Api
+
+@inject ISnackbar Snackbar
+
+<MudDialog DisableSidePadding="true" CloseButton="false">
+    <TitleContent>
+        <div style="background-color: var(--mud-palette-primary); margin: -16px -24px -16px -24px; padding: 16px 24px;">
+            <div class="d-flex flex-row align-center justify-space-between">
+                <div class="d-flex flex-row align-center">
+                    <MudIcon Icon="@Icons.Material.Filled.AccountBalance" Class="mr-2" Style="color: white;" />
+                    <MudText Typo="Typo.h6" Style="color: white;">@DialogTitle</MudText>
+                </div>
+                <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Inherit" Style="color: white;" OnClick="Cancel" />
+            </div>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="form" Model="@Model" @bind-IsValid="@_isValid">
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Class="my-2" ShowCloseIcon="true" CloseIconClicked="() => _errorMessage = string.Empty">
+                    @_errorMessage
+                </MudAlert>
+            }
+            <div class="d-flex flex-column gap-4 mt-4">
+                <MudTextField @bind-Value="Model.Nom"
+                            For="@(() => Model.Nom)"
+                            Label="Nom"
+                            Variant="Variant.Outlined"
+                            Required="true"
+                            RequiredError="Le nom est requis"
+                            Error="@(_formErrors.ContainsKey("Nom"))"
+                            ErrorText="@(GetErrorMessage("Nom"))"
+                            Counter="100"
+                            Immediate="true" />
+
+                <MudTextField @bind-Value="Model.Description"
+                            For="@(() => Model.Description)"
+                            Label="Description"
+                            Variant="Variant.Outlined"
+                            Lines="3"
+                            Required="true"
+                            RequiredError="La description est requise"
+                            Error="@(_formErrors.ContainsKey("Description"))"
+                            ErrorText="@(GetErrorMessage("Description"))"
+                            Counter="500"
+                            Immediate="true" />
+
+                <MudNumericField @bind-Value="Model.MontantBase"
+                               For="@(() => Model.MontantBase)"
+                               Label="Montant de base"
+                               Variant="Variant.Outlined"
+                               Required="true"
+                               RequiredError="Le montant de base est requis"
+                               Error="@(_formErrors.ContainsKey("MontantBase"))"
+                               ErrorText="@(GetErrorMessage("MontantBase"))"
+                               Min="0"
+                               Format="N0"
+                               Adornment="Adornment.End"
+                               AdornmentText="XOF"
+                               Immediate="true" />
+
+                <MudSelect @bind-Value="Model.FrequencePaiement"
+                         For="@(() => Model.FrequencePaiement)"
+                         Label="Fréquence de paiement"
+                         Variant="Variant.Outlined"
+                         Required="true"
+                         RequiredError="La fréquence de paiement est requise"
+                         Error="@(_formErrors.ContainsKey("FrequencePaiement"))"
+                         ErrorText="@(GetErrorMessage("FrequencePaiement"))"
+                         Immediate="true">
+                    <MudSelectItem Value="@("Mensuelle")">Mensuelle</MudSelectItem>
+                    <MudSelectItem Value="@("Trimestrielle")">Trimestrielle</MudSelectItem>
+                    <MudSelectItem Value="@("Semestrielle")">Semestrielle</MudSelectItem>
+                    <MudSelectItem Value="@("Annuelle")">Annuelle</MudSelectItem>
+                    <MudSelectItem Value="@("Ponctuelle")">Ponctuelle</MudSelectItem>
+                </MudSelect>
+            </div>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text" Color="Color.Default" DisableElevation="true">Annuler</MudButton>
+        <MudButton OnClick="Submit" 
+                  Variant="Variant.Filled" 
+                  Color="Color.Primary" 
+                  Disabled="@(!_isValid || _processing)"
+                  DisableElevation="true"
+                  StartIcon="@Icons.Material.Filled.Save"
+                  Class="ml-2">
+            @if (_processing)
+            {
+                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                <span class="ms-2">Traitement...</span>
+            }
+            else
+            {
+                @ButtonText
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+    
+    [Parameter] public TypeTaxeDto Model { get; set; } = new();
+    [Parameter] public string DialogTitle { get; set; } = "Type de taxe";
+    [Parameter] public string ButtonText { get; set; } = "Enregistrer";
+    [Parameter] public EventCallback<TypeTaxeDto> OnValidSubmit { get; set; }
+
+    private MudForm form;
+    private bool _isValid;
+    private string _errorMessage = string.Empty;
+    private bool _processing = false;
+    private Dictionary<string, string> _formErrors = new();
+    private FshValidation _validation = new();
+
+    protected override void OnInitialized()
+    {
+        if (Model == null)
+        {
+            Model = new TypeTaxeDto();
+        }
+        
+        _isValid = !string.IsNullOrWhiteSpace(Model.Nom) && 
+                   !string.IsNullOrWhiteSpace(Model.Description) && 
+                   !string.IsNullOrWhiteSpace(Model.FrequencePaiement) &&
+                   Model.MontantBase > 0;
+    }
+
+    private string GetErrorMessage(string fieldName)
+    {
+        return _formErrors.TryGetValue(fieldName, out var message) ? message : string.Empty;
+    }
+    
+    private void ClearErrors()
+    {
+        _errorMessage = string.Empty;
+        _formErrors.Clear();
+    }
+    
+    private void AddFieldError(string fieldName, string errorMessage)
+    {
+        _formErrors[fieldName] = errorMessage;
+    }
+
+    private async Task Submit()
+    {
+        ClearErrors();
+        form.Validate();
+        
+        if (_isValid)
+        {
+            try
+            {
+                _processing = true;
+                
+                if (OnValidSubmit.HasDelegate)
+                {
+                    try 
+                    {
+                        await OnValidSubmit.InvokeAsync(Model);
+                        MudDialog.Close(DialogResult.Ok(Model));
+                    }
+                    catch (ApiException ex)
+                    {
+                        Console.WriteLine($"Erreur lors de la soumission du formulaire: {ex.Message}");
+                        
+                        if (ex.Response != null)
+                        {
+                            try
+                            {
+                                var jsonDoc = System.Text.Json.JsonDocument.Parse(ex.Response);
+                                if (jsonDoc.RootElement.TryGetProperty("errors", out var errorsElement) &&
+                                    errorsElement.ValueKind == System.Text.Json.JsonValueKind.Object)
+                                {
+                                    foreach (var error in errorsElement.EnumerateObject())
+                                    {
+                                        var fieldName = error.Name;
+                                        var errorMessages = new List<string>();
+                                        
+                                        if (error.Value.ValueKind == System.Text.Json.JsonValueKind.Array)
+                                        {
+                                            foreach (var errorItem in error.Value.EnumerateArray())
+                                            {
+                                                errorMessages.Add(errorItem.GetString() ?? string.Empty);
+                                            }
+                                        }
+                                        
+                                        if (errorMessages.Count > 0)
+                                        {
+                                            AddFieldError(fieldName, string.Join(", ", errorMessages));
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    _errorMessage = "Veuillez vérifier les informations saisies.";
+                                }
+                            }
+                            catch (System.Text.Json.JsonException)
+                            {
+                                _errorMessage = "Une erreur s'est produite lors de la validation des données.";
+                            }
+                        }
+                        else
+                        {
+                            if (ex.Message.Contains("duplicate key"))
+                            {
+                                _errorMessage = "Un type de taxe avec ce nom existe déjà.";
+                            }
+                            else if (ex.Message.Contains("validation"))
+                            {
+                                _errorMessage = "Veuillez vérifier les informations saisies.";
+                            }
+                            else
+                            {
+                                _errorMessage = "Une erreur s'est produite lors de l'enregistrement.";
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _errorMessage = "Une erreur inattendue s'est produite.";
+                        Console.WriteLine($"Exception non gérée: {ex.Message}");
+                    }
+                }
+                else
+                {
+                    MudDialog.Close(DialogResult.Ok(Model));
+                }
+            }
+            finally
+            {
+                _processing = false;
+            }
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    public class TypeTaxeDto
+    {
+        public Guid Id { get; set; }
+        
+        [Required(ErrorMessage = "Le nom est requis")]
+        [StringLength(100, ErrorMessage = "Le nom ne doit pas dépasser 100 caractères")]
+        public string Nom { get; set; } = string.Empty;
+        
+        [Required(ErrorMessage = "La description est requise")]
+        [StringLength(500, ErrorMessage = "La description ne doit pas dépasser 500 caractères")]
+        public string Description { get; set; } = string.Empty;
+        
+        [Required(ErrorMessage = "Le montant de base est requis")]
+        [Range(0, double.MaxValue, ErrorMessage = "Le montant doit être supérieur ou égal à 0")]
+        public decimal MontantBase { get; set; }
+        
+        [Required(ErrorMessage = "La fréquence de paiement est requise")]
+        public string FrequencePaiement { get; set; } = string.Empty;
+    }
+} 

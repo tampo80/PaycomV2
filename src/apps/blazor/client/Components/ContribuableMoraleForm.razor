@@ -1,0 +1,549 @@
+@using PayCom.Blazor.Client.Pages.Contribuables.Models
+@using PayCom.Blazor.Infrastructure.Api
+@using System.Text.Json
+@inject IApiClient ApiClient
+@inject ISnackbar Snackbar
+
+<MudPaper Elevation="0" Class="pb-4">
+    <MudForm Model="@this" @ref="form">
+        <style>
+            /* Style amélioré pour les onglets secondaires */
+            .secondary-tabs .mud-tabs-toolbar {
+                background-color: var(--mud-palette-grey-lighten-5);
+                border-radius: 10px;
+                margin-bottom: 20px;
+                padding: 6px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            }
+            
+            .secondary-tabs .mud-tab {
+                min-height: 46px;
+                border-radius: 6px;
+                margin: 0 4px;
+                padding: 6px 16px;
+                transition: all 0.3s ease;
+                font-size: 0.95rem;
+                opacity: 0.8;
+            }
+            
+            .secondary-tabs .mud-tab-label {
+                justify-content: flex-start;
+            }
+            
+            .secondary-tabs .mud-tab .mud-icon-root {
+                margin-right: 10px;
+                font-size: 1.2rem;
+            }
+            
+            .secondary-tabs .mud-tab.mud-tab-active {
+                background-color: var(--mud-palette-secondary);
+                color: white;
+                font-weight: 500;
+                transform: translateY(-1px);
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+                opacity: 1;
+                border: 1px solid var(--mud-palette-secondary-darken);
+            }
+            
+            .secondary-tabs .mud-tab:hover:not(.mud-tab-active) {
+                background-color: var(--mud-palette-grey-lighten-3);
+                opacity: 0.95;
+            }
+            
+            .secondary-tabs .mud-tab-slider {
+                height: 3px;
+                border-radius: 3px;
+                background-color: var(--mud-palette-secondary-darken);
+            }
+            
+            /* Animation de transition pour les panneaux */
+            .secondary-tabs .mud-tab-panel {
+                animation: fadeIn 0.4s ease;
+            }
+            
+            @@keyframes fadeIn {
+                from { opacity: 0; transform: translateY(5px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+        </style>
+    
+        <MudTabs Elevation="0" 
+                Color="Color.Secondary" 
+                ApplyEffectsToContainer="true" 
+                PanelClass="pa-4" 
+                Class="mt-4 secondary-tabs"
+                Rounded="true"
+                Border="false"
+                Centered="true">
+            <MudTabPanel Text="Informations de l'entreprise" Icon="@Icons.Material.Filled.Business">
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="RaisonSociale" 
+                                    Label="Raison sociale" 
+                                    Variant="Variant.Outlined"
+                                    Required="true" 
+                                    RequiredError="La raison sociale est requise"
+                                    Adornment="Adornment.Start"
+                                    AdornmentIcon="@Icons.Material.Filled.Business"
+                                    AdornmentColor="Color.Primary"
+                                    HelperText="Raison sociale de l'entreprise"
+                                    Counter="100" />
+                    </MudItem>
+                    
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="NomCommercial" 
+                                    Label="Nom commercial" 
+                                    Variant="Variant.Outlined"
+                                    Adornment="Adornment.Start"
+                                    AdornmentIcon="@Icons.Material.Filled.Store"
+                                    AdornmentColor="Color.Secondary"
+                                    HelperText="Nom commercial (optionnel)"
+                                    Counter="100" />
+                    </MudItem>
+                    
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="RCCM" 
+                                    Label="RCCM" 
+                                    Variant="Variant.Outlined"
+                                    Required="true" 
+                                    RequiredError="Le RCCM est requis"
+                                    Adornment="Adornment.Start"
+                                    AdornmentIcon="@Icons.Material.Filled.Description"
+                                    AdornmentColor="Color.Primary"
+                                    HelperText="Registre du Commerce et du Crédit Mobilier"
+                                    Counter="50" />
+                    </MudItem>
+                    
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="NIF" 
+                                    Label="NIF" 
+                                    Variant="Variant.Outlined"
+                                    Required="true" 
+                                    RequiredError="Le NIF est requis"
+                                    Adornment="Adornment.Start"
+                                    AdornmentIcon="@Icons.Material.Filled.Numbers"
+                                    AdornmentColor="Color.Primary"
+                                    HelperText="Numéro d'Identification Fiscale"
+                                    Counter="50" />
+                    </MudItem>
+                    
+                    <MudItem xs="12" md="6">
+                        <MudDatePicker @bind-Date="DateCreationEntreprise" 
+                                     Label="Date de création" 
+                                     Variant="Variant.Outlined"
+                                     Required="true"
+                                     RequiredError="La date de création est requise"
+                                     Adornment="Adornment.Start"
+                                     AdornmentIcon="@Icons.Material.Filled.CalendarMonth"
+                                     AdornmentColor="Color.Primary"
+                                     HelperText="Date de création de l'entreprise"
+                                     Placeholder="Sélectionnez une date" />
+                    </MudItem>
+                    
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="FormeJuridique" 
+                                    Label="Forme juridique" 
+                                    Variant="Variant.Outlined"
+                                    Required="true" 
+                                    RequiredError="La forme juridique est requise"
+                                    Adornment="Adornment.Start"
+                                    AdornmentIcon="@Icons.Material.Filled.Balance"
+                                    AdornmentColor="Color.Primary"
+                                    HelperText="SARL, SA, EURL, etc."
+                                    Counter="50" />
+                    </MudItem>
+                </MudGrid>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Activité et représentation" Icon="@Icons.Material.Filled.WorkOutline">
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="SecteurActivite" 
+                                    Label="Secteur d'activité" 
+                                    Variant="Variant.Outlined"
+                                    Required="true" 
+                                    RequiredError="Le secteur d'activité est requis"
+                                    Adornment="Adornment.Start"
+                                    AdornmentIcon="@Icons.Material.Filled.Category"
+                                    AdornmentColor="Color.Primary"
+                                    HelperText="Secteur d'activité principal"
+                                    Counter="100" />
+                    </MudItem>
+                    
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="RepresentantLegal" 
+                                    Label="Représentant légal" 
+                                    Variant="Variant.Outlined"
+                                    Required="true" 
+                                    RequiredError="Le représentant légal est requis"
+                                    Adornment="Adornment.Start"
+                                    AdornmentIcon="@Icons.Material.Filled.Person"
+                                    AdornmentColor="Color.Primary"
+                                    HelperText="Nom et prénom du représentant légal"
+                                    Counter="100" />
+                    </MudItem>
+                    
+                    <MudItem xs="12" md="6">
+                        <MudNumericField @bind-Value="CapitalSocial" 
+                                       Label="Capital social" 
+                                       Variant="Variant.Outlined"
+                                       Format="N0"
+                                       Adornment="Adornment.Start"
+                                       AdornmentText="FCFA"
+                                       AdornmentColor="Color.Primary"
+                                       HelperText="Capital social de l'entreprise" />
+                    </MudItem>
+                    
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="TypeActivite" 
+                                    Label="Type d'activité" 
+                                    Variant="Variant.Outlined"
+                                    Required="true"
+                                    RequiredError="Le type d'activité est requis"
+                                    Adornment="Adornment.Start"
+                                    AdornmentIcon="@Icons.Material.Filled.Work"
+                                    AdornmentColor="Color.Primary"
+                                    HelperText="Type d'activité principale"
+                                    Counter="100" />
+                    </MudItem>
+                </MudGrid>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Identification et contact" Icon="@Icons.Material.Filled.ContactPhone">
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="NumeroIdentification" 
+                                    Label="Numéro d'identification" 
+                                    Variant="Variant.Outlined"
+                                    Required="true"
+                                    RequiredError="Le numéro d'identification est requis"
+                                    Adornment="Adornment.Start"
+                                    AdornmentIcon="@Icons.Material.Filled.Badge"
+                                    AdornmentColor="Color.Primary"
+                                    HelperText="Numéro d'identification unique (généré automatiquement)"
+                                    Counter="50" />
+                    </MudItem>
+                    
+                    <MudItem xs="12" md="6">
+                        <MudDatePicker @bind-Date="DateEnregistrement" 
+                                     Label="Date d'enregistrement" 
+                                     Variant="Variant.Outlined"
+                                     Required="true"
+                                     RequiredError="La date d'enregistrement est requise"
+                                     Adornment="Adornment.Start"
+                                     AdornmentIcon="@Icons.Material.Filled.CalendarToday"
+                                     AdornmentColor="Color.Primary"
+                                     HelperText="Date d'enregistrement du contribuable"
+                                     Placeholder="Sélectionnez une date" />
+                    </MudItem>
+                    
+                    <MudItem xs="12" md="6">
+                        <MudSelect @bind-Value="Statut" 
+                                 Label="Statut" 
+                                 Variant="Variant.Outlined"
+                                 Required="true"
+                                 RequiredError="Le statut est requis"
+                                 Adornment="Adornment.Start"
+                                 AdornmentIcon="@Icons.Material.Filled.VerifiedUser"
+                                 AdornmentColor="Color.Primary"
+                                 HelperText="Statut du contribuable">
+                            <MudSelectItem Value="@StatutContribuableType.Actif">Actif</MudSelectItem>
+                            <MudSelectItem Value="@StatutContribuableType.Inactif">Inactif</MudSelectItem>
+                            <MudSelectItem Value="@StatutContribuableType.EnAttente">En attente</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="Adresse" 
+                                    Label="Adresse" 
+                                    Variant="Variant.Outlined"
+                                    Required="true"
+                                    RequiredError="L'adresse est requise"
+                                    Adornment="Adornment.Start"
+                                    AdornmentIcon="@Icons.Material.Filled.Home"
+                                    AdornmentColor="Color.Primary"
+                                    HelperText="Adresse complète de l'entreprise"
+                                    Counter="200"
+                                    Lines="2" />
+                    </MudItem>
+                    
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="ContactPrincipal" 
+                                    Label="Contact principal" 
+                                    Variant="Variant.Outlined"
+                                    Required="true"
+                                    RequiredError="Le contact principal est requis"
+                                    Adornment="Adornment.Start"
+                                    AdornmentIcon="@Icons.Material.Filled.Phone"
+                                    AdornmentColor="Color.Primary"
+                                    HelperText="Numéro de téléphone principal"
+                                    Counter="50" />
+                    </MudItem>
+                    
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="ContactSecondaire" 
+                                    Label="Contact secondaire" 
+                                    Variant="Variant.Outlined"
+                                    Adornment="Adornment.Start"
+                                    AdornmentIcon="@Icons.Material.Filled.PhoneAndroid"
+                                    AdornmentColor="Color.Secondary"
+                                    HelperText="Numéro de téléphone secondaire (optionnel)"
+                                    Counter="50" />
+                    </MudItem>
+                    
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="Email" 
+                                    Label="Email" 
+                                    Variant="Variant.Outlined"
+                                    Adornment="Adornment.Start"
+                                    AdornmentIcon="@Icons.Material.Filled.Email"
+                                    AdornmentColor="Color.Primary"
+                                    HelperText="Adresse email de l'entreprise (optionnelle)"
+                                    Counter="100" />
+                    </MudItem>
+                </MudGrid>
+            </MudTabPanel>
+        </MudTabs>
+
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <MudAlert Severity="Severity.Error" Class="mt-4" ShowCloseIcon="true" CloseIconClicked="() => _errorMessage = string.Empty">
+                <div class="d-flex align-center">
+                    <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Class="mr-2" />
+                    <MudText>@_errorMessage</MudText>
+                </div>
+            </MudAlert>
+        }
+
+        <MudDivider Class="my-4" />
+
+        <MudStack Row="true" Justify="Justify.FlexEnd">
+            <MudButton Variant="Variant.Outlined" 
+                      Color="Color.Error"
+                      StartIcon="@Icons.Material.Filled.Cancel" 
+                      Size="Size.Medium">
+                Annuler
+            </MudButton>
+            <MudButton OnClick="Submit" 
+                      Variant="Variant.Filled" 
+                      Color="Color.Primary" 
+                      StartIcon="@Icons.Material.Filled.Save"
+                      Size="Size.Medium"
+                      Disabled="@_processing">
+                @if (_processing)
+                {
+                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                    <span class="ms-2">Traitement...</span>
+                }
+                else
+                {
+                    @("Enregistrer")
+                }
+            </MudButton>
+        </MudStack>
+    </MudForm>
+</MudPaper>
+
+@if (!string.IsNullOrEmpty(_result))
+{
+    <MudPaper Class="pa-4 mt-4" Elevation="3">
+        <MudText Typo="Typo.subtitle1" Class="mb-2">Résultat</MudText>
+        <MudText Typo="Typo.body1" Style="white-space: pre-wrap;">@_result</MudText>
+    </MudPaper>
+}
+
+@code {
+    [Parameter] public EventCallback<Guid> OnSuccess { get; set; }
+
+    private MudForm form;
+    private string RaisonSociale { get; set; } = string.Empty;
+    private string NomCommercial { get; set; } = string.Empty;
+    private string RCCM { get; set; } = string.Empty;
+    private string NIF { get; set; } = string.Empty;
+    private DateTime? DateCreationEntreprise { get; set; } = DateTime.Now.AddYears(-1);
+    private string FormeJuridique { get; set; } = string.Empty;
+    private string SecteurActivite { get; set; } = string.Empty;
+    private string RepresentantLegal { get; set; } = string.Empty;
+    private decimal? CapitalSocial { get; set; } = null;
+    private string NumeroIdentification { get; set; } = "PM-" + DateTime.Now.Ticks.ToString().Substring(10);
+    private DateTime? DateEnregistrement { get; set; } = DateTime.Now;
+    private StatutContribuableType Statut { get; set; } = StatutContribuableType.Actif;
+    private string Adresse { get; set; } = string.Empty;
+    private string ContactPrincipal { get; set; } = string.Empty;
+    private string ContactSecondaire { get; set; } = string.Empty;
+    private string Email { get; set; } = string.Empty;
+    private string TypeActivite { get; set; } = string.Empty;
+    
+    private string _result = string.Empty;
+    private string _errorMessage = string.Empty;
+    private bool _processing = false;
+    
+    private const string ApiVersion = "1.0";
+    
+    private async Task Submit()
+    {
+        if (_processing) return;
+
+        form.Validate();
+        
+        // Validation basique
+        if (string.IsNullOrWhiteSpace(RaisonSociale) ||
+            string.IsNullOrWhiteSpace(RCCM) ||
+            string.IsNullOrWhiteSpace(NIF) ||
+            !DateCreationEntreprise.HasValue ||
+            string.IsNullOrWhiteSpace(FormeJuridique) ||
+            string.IsNullOrWhiteSpace(SecteurActivite) ||
+            string.IsNullOrWhiteSpace(RepresentantLegal) ||
+            string.IsNullOrWhiteSpace(NumeroIdentification) ||
+            !DateEnregistrement.HasValue ||
+            string.IsNullOrWhiteSpace(Adresse) ||
+            string.IsNullOrWhiteSpace(ContactPrincipal) ||
+            string.IsNullOrWhiteSpace(TypeActivite))
+        {
+            _errorMessage = "Veuillez remplir tous les champs obligatoires.";
+            return;
+        }
+        
+        // Force valid date value
+        DateEnregistrement = DateTime.Now;
+        
+        _processing = true;
+        _errorMessage = string.Empty;
+        
+        try
+        {
+            // Create command
+            var command = new CreateContribuableCommand
+            {
+                // Personne morale
+                Nom = RaisonSociale, // Utiliser RaisonSociale comme Nom
+                NumeroRegistreCommerce = RCCM,
+                Nif = NIF,
+                DateCreationEntreprise = DateCreationEntreprise,
+                SecteurActivite = SecteurActivite,
+                CapitalSocial = CapitalSocial.HasValue ? (double)CapitalSocial.Value : null,
+                FormeJuridique = FormeJuridique,
+                RepresentantLegal = RepresentantLegal,
+                
+                // Champs communs
+                NumeroIdentification = NumeroIdentification,
+                NomCommercial = NomCommercial ?? string.Empty,
+                Adresse = Adresse,
+                ContactPrincipal = ContactPrincipal,
+                ContactSecondaire = ContactSecondaire ?? string.Empty,
+                Email = Email ?? string.Empty,
+                TypeActivite = TypeActivite,
+                DateEnregistrement = DateEnregistrement ?? DateTime.Now,
+                
+                // Forcer explicitement les valeurs des énumérations
+                TypeContribuable = MapToApiTypeContribuable(TypeContribuableType.PersonneMorale),
+                Statut = MapToApiStatut(Statut),
+                
+                // Valeurs par défaut pour personne physique
+                Prenom = string.Empty,
+                DateNaissance = null,
+                Genre = PayCom.Blazor.Infrastructure.Api.Genre._0
+            };
+            
+            // Appel API
+            var response = await ApiClient.CreateContribuableEndPointsAsync(ApiVersion, command);
+            
+            if (response != null && response.Id != Guid.Empty)
+            {
+                Snackbar.Add("Contribuable personne morale ajouté avec succès", Severity.Success);
+                await OnSuccess.InvokeAsync(response.Id);
+            }
+            else
+            {
+                _errorMessage = "Une erreur est survenue lors de la création du contribuable. Réessayez.";
+            }
+        }
+        catch (ApiException ex)
+        {
+            ParseApiErrors(ex);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Erreur : {ex.Message}";
+        }
+        finally
+        {
+            _processing = false;
+        }
+    }
+    
+    private void ParseApiErrors(ApiException ex)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(ex.Response)) 
+            {
+                _errorMessage = ex.Message;
+                return;
+            }
+            
+            var doc = JsonDocument.Parse(ex.Response);
+            
+            if (doc.RootElement.TryGetProperty("title", out var titleElement))
+            {
+                _errorMessage = titleElement.GetString() ?? ex.Message;
+            }
+            else if (doc.RootElement.TryGetProperty("errors", out var errorsElement))
+            {
+                var errors = new List<string>();
+                
+                if (errorsElement.ValueKind == JsonValueKind.Object)
+                {
+                    foreach (var error in errorsElement.EnumerateObject())
+                    {
+                        if (error.Value.ValueKind == JsonValueKind.Array)
+                        {
+                            foreach (var item in error.Value.EnumerateArray())
+                            {
+                                errors.Add($"{error.Name}: {item.GetString()}");
+                            }
+                        }
+                    }
+                }
+                else if (errorsElement.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var item in errorsElement.EnumerateArray())
+                    {
+                        errors.Add(item.GetString() ?? "Erreur de validation");
+                    }
+                }
+                
+                _errorMessage = string.Join("\n", errors);
+            }
+            else
+            {
+                _errorMessage = ex.Message;
+            }
+        }
+        catch
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+    
+    private PayCom.Blazor.Infrastructure.Api.TypeContribuable MapToApiTypeContribuable(TypeContribuableType type)
+    {
+        return type switch
+        {
+            TypeContribuableType.PersonnePhysique => PayCom.Blazor.Infrastructure.Api.TypeContribuable._0,
+            TypeContribuableType.PersonneMorale => PayCom.Blazor.Infrastructure.Api.TypeContribuable._1,
+            _ => PayCom.Blazor.Infrastructure.Api.TypeContribuable._1
+        };
+    }
+    
+    private PayCom.Blazor.Infrastructure.Api.StatutContribuable MapToApiStatut(StatutContribuableType statut)
+    {
+        return statut switch
+        {
+            StatutContribuableType.Actif => PayCom.Blazor.Infrastructure.Api.StatutContribuable._0,
+            StatutContribuableType.Inactif => PayCom.Blazor.Infrastructure.Api.StatutContribuable._1,
+            StatutContribuableType.EnAttente => PayCom.Blazor.Infrastructure.Api.StatutContribuable._2,
+            _ => PayCom.Blazor.Infrastructure.Api.StatutContribuable._0
+        };
+    }
+} 

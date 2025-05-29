@@ -1,0 +1,460 @@
+@page "/contribuable/mes-obligations"
+@using MudBlazor
+@using PayCom.Blazor.Infrastructure.Auth
+@using PayCom.Blazor.Infrastructure.Api
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+
+@inject ISnackbar Snackbar
+@inject IApiClient ApiClient
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+
+<PageTitle>Mes Obligations Fiscales - PayCom</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudPaper Elevation="3" Class="pa-4 mb-4 rounded-lg">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.Assignment" Color="Color.Primary" Size="Size.Large" Class="mr-2" />
+                <MudText Typo="Typo.h4" Color="Color.Primary">Mes Obligations Fiscales</MudText>
+            </MudStack>
+            
+            <MudStack Row="true">
+                <MudToggleIconButton
+                    @bind-Toggled="@_showActiveOnly"
+                    Icon="@Icons.Material.Filled.FilterAlt"
+                    Title="Voir toutes les obligations"
+                    ToggledIcon="@Icons.Material.Filled.FilterAltOff"
+                    ToggledTitle="Voir uniquement les obligations actives"
+                    Color="Color.Primary"
+                    ToggledColor="Color.Secondary"
+                    Size="Size.Medium" />
+                
+                <MudTextField @bind-Value="_searchString" 
+                             Placeholder="Rechercher..." 
+                             Adornment="Adornment.Start" 
+                             AdornmentIcon="@Icons.Material.Filled.Search" 
+                             IconSize="Size.Medium" 
+                             Immediate="true"
+                             Class="ml-2" />
+            </MudStack>
+        </MudStack>
+
+        <MudDivider Class="mb-4" />
+        
+        @if (_loading)
+        {
+            <div class="d-flex justify-center align-center">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            </div>
+        }
+        else if (_obligations == null || !_obligations.Any())
+        {
+            <MudAlert Severity="Severity.Info" Class="mb-4">
+                Aucune obligation fiscale trouvée. Vous n'avez pas encore d'obligations fiscales associées à votre compte.
+            </MudAlert>
+        }
+        else
+        {
+            <MudTable Items="@_filteredObligations" 
+                     Dense="true" 
+                     Hover="true" 
+                     Bordered="false" 
+                     Striped="true" 
+                     Filter="new Func<ObligationFiscaleResponse, bool>(FilterObligations)"
+                     @bind-SelectedItem="_selectedObligation"
+                     OnRowClick="@((e) => ShowObligationDetails(e.Item))"
+                     T="ObligationFiscaleResponse">
+                <HeaderContent>
+                    <MudTh>Type de taxe</MudTh>
+                    <MudTh>Date de début</MudTh>
+                    <MudTh>Date de fin</MudTh>
+                    <MudTh>Montant</MudTh>
+                    <MudTh>Statut</MudTh>
+                    <MudTh>Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Type de taxe">@GetTypeTaxeName(context.TypeTaxeId)</MudTd>
+                    <MudTd DataLabel="Date de début">@context.DateDebut.ToString("dd/MM/yyyy")</MudTd>
+                    <MudTd DataLabel="Date de fin">@(context.DateFin.HasValue ? context.DateFin.Value.ToString("dd/MM/yyyy") : "-")</MudTd>
+                    <MudTd DataLabel="Montant">@(context.MontantPersonnalise.HasValue ? context.MontantPersonnalise.Value.ToString("N0") : context.MontantCalcule.ToString("N0")) FCFA</MudTd>
+                    <MudTd DataLabel="Statut">
+                        <MudChip T="string" Color="@(context.EstActif ? Color.Success : Color.Error)" Size="Size.Small">
+                            @(context.EstActif ? "Actif" : "Inactif")
+                        </MudChip>
+                    </MudTd>
+                    <MudTd>
+                        <MudIconButton Icon="@Icons.Material.Filled.Visibility" 
+                                      Color="Color.Primary" 
+                                      Size="Size.Small" 
+                                      OnClick="@(() => ShowObligationDetails(context))" />
+                    </MudTd>
+                </RowTemplate>
+                <PagerContent>
+                    <MudTablePager PageSizeOptions="new int[] { 5, 10, 25, 50 }" />
+                </PagerContent>
+            </MudTable>
+        }
+    </MudPaper>
+</MudContainer>
+
+@if (_selectedObligation != null && _showDetails)
+{
+    <MudDialog @bind-IsVisible="_showDetails" Options="new DialogOptions { FullWidth = true, MaxWidth = MaxWidth.Medium }">
+        <TitleContent>
+            <MudText Typo="Typo.h6">
+                <MudIcon Icon="@Icons.Material.Filled.Assignment" Class="mr-2" />
+                Détails de l'obligation fiscale
+            </MudText>
+        </TitleContent>
+        <DialogContent>
+            <MudGrid>
+                <MudItem xs="12" md="6">
+                    <MudText Typo="Typo.subtitle1"><b>Type de taxe:</b></MudText>
+                    <MudText>@GetTypeTaxeName(_selectedObligation.TypeTaxeId)</MudText>
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudText Typo="Typo.subtitle1"><b>Statut:</b></MudText>
+                    <MudChip T="string" Color="@(_selectedObligation.EstActif ? Color.Success : Color.Error)" Size="Size.Small">
+                        @(_selectedObligation.EstActif ? "Actif" : "Inactif")
+                    </MudChip>
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudText Typo="Typo.subtitle1"><b>Date de début:</b></MudText>
+                    <MudText>@_selectedObligation.DateDebut.ToString("dd/MM/yyyy")</MudText>
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudText Typo="Typo.subtitle1"><b>Date de fin:</b></MudText>
+                    <MudText>@(_selectedObligation.DateFin.HasValue ? _selectedObligation.DateFin.Value.ToString("dd/MM/yyyy") : "-")</MudText>
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudText Typo="Typo.subtitle1"><b>Montant calculé:</b></MudText>
+                    <MudText>@_selectedObligation.MontantCalcule.ToString("N0") FCFA</MudText>
+                </MudItem>
+                @if (_selectedObligation.MontantPersonnalise.HasValue)
+                {
+                    <MudItem xs="12" md="6">
+                        <MudText Typo="Typo.subtitle1"><b>Montant personnalisé:</b></MudText>
+                        <MudText>@_selectedObligation.MontantPersonnalise.Value.ToString("N0") FCFA</MudText>
+                    </MudItem>
+                }
+                
+                @if (_selectedTypeTaxe != null)
+                {
+                    <MudItem xs="12">
+                        <MudDivider Class="my-3" />
+                        <MudText Typo="Typo.h6" Class="mb-2">Informations sur la taxe</MudText>
+                        
+                        <MudText Typo="Typo.subtitle1"><b>Nom:</b> @_selectedTypeTaxe.Nom</MudText>
+                        <MudText Typo="Typo.subtitle1"><b>Description:</b> @_selectedTypeTaxe.Description</MudText>
+                        <MudText Typo="Typo.subtitle1"><b>Fréquence de paiement:</b> @_selectedTypeTaxe.FrequencePaiement</MudText>
+                        <MudText Typo="Typo.subtitle1"><b>Montant de base:</b> @_selectedTypeTaxe.MontantBase.ToString("N0") FCFA</MudText>
+                    </MudItem>
+                }
+                
+                <MudItem xs="12">
+                    <MudDivider Class="my-3" />
+                    <MudText Typo="Typo.h6" Class="mb-2">Échéances</MudText>
+                    
+                    @if (_echeances != null && _echeances.Any())
+                    {
+                        <MudTable Items="@_echeances" Dense="true" Hover="true" Bordered="false" Striped="true">
+                            <HeaderContent>
+                                <MudTh>Année</MudTh>
+                                <MudTh>Période</MudTh>
+                                <MudTh>Date limite</MudTh>
+                                <MudTh>Montant</MudTh>
+                                <MudTh>Statut</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Année">@context.AnneeImposition</MudTd>
+                                <MudTd DataLabel="Période">@context.PeriodeImposition</MudTd>
+                                <MudTd DataLabel="Date limite">@context.DateLimite.ToString("dd/MM/yyyy")</MudTd>
+                                <MudTd DataLabel="Montant">@context.Montant.ToString("N0") FCFA</MudTd>
+                                <MudTd DataLabel="Statut">
+                                    <MudChip T="string" Color="@GetEcheanceStatusColor(context)" Size="Size.Small">
+                                        @GetEcheanceStatusText(context)
+                                    </MudChip>
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    }
+                    else
+                    {
+                        <MudText>Aucune échéance disponible pour cette obligation.</MudText>
+                    }
+                </MudItem>
+            </MudGrid>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="@(() => _showDetails = false)" Color="Color.Primary">Fermer</MudButton>
+            <MudButton Href="/paiements/effectuer" Color="Color.Secondary" Variant="Variant.Filled">Effectuer un paiement</MudButton>
+        </DialogActions>
+    </MudDialog>
+}
+
+@code {
+    private List<ObligationFiscaleResponse> _obligations;
+    private List<ObligationFiscaleResponse> _filteredObligations => _showActiveOnly 
+        ? _obligations?.Where(o => o.EstActif).ToList() 
+        : _obligations;
+    private Dictionary<Guid, TypeTaxeResponse> _typesTaxes = new();
+    private List<EcheanceDto> _echeances;
+    private bool _loading = true;
+    private string _userId;
+    private Guid? _contribuableId;
+    private string _searchString = "";
+    private bool _showActiveOnly = true;
+    private bool _showDetails = false;
+    private ObligationFiscaleResponse _selectedObligation;
+    private TypeTaxeResponse _selectedTypeTaxe;
+    private const string ApiVersion = "1.0";
+    
+    // Classe pour représenter les échéances
+    public class EcheanceDto
+    {
+        public Guid Id { get; set; }
+        public Guid ObligationFiscaleId { get; set; }
+        public int AnneeImposition { get; set; }
+        public int PeriodeImposition { get; set; }
+        public DateTime DateLimite { get; set; }
+        public decimal Montant { get; set; }
+        public bool EstPayee { get; set; }
+    }
+    
+    // Classe pour la recherche d'échéances
+    public class SearchEcheancesCommand
+    {
+        public int PageNumber { get; set; } = 1;
+        public int PageSize { get; set; } = 100;
+        public Guid? ObligationFiscaleId { get; set; }
+    }
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserData();
+        await LoadTypesTaxes();
+        await LoadObligationsFiscales();
+    }
+    
+    private async Task LoadUserData()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        
+        if (user.Identity.IsAuthenticated)
+        {
+            _userId = user.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            
+            // Rechercher le contribuable associé à l'utilisateur
+            var searchCommand = new SearchContribuableCommand
+            {
+                PageNumber = 1,
+                PageSize = 1,
+                Keyword = _userId
+            };
+            
+            try
+            {
+                var result = await ApiClient.SearchContribuableEndPointsAsync(ApiVersion, searchCommand);
+                if (result?.Items != null && result.Items.Any())
+                {
+                    _contribuableId = result.Items.First().Id;
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Erreur lors de la recherche du contribuable: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+    
+    private async Task LoadTypesTaxes()
+    {
+        try
+        {
+            var searchCommand = new SearchTypeTaxesCommand
+            {
+                PageNumber = 1,
+                PageSize = 100
+            };
+            
+            var result = await ApiClient.SearchTypeTaxeEndPointsAsync(ApiVersion, searchCommand);
+            
+            if (result?.Items != null)
+            {
+                _typesTaxes = result.Items.ToDictionary(t => t.Id);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erreur lors du chargement des types de taxes: {ex.Message}", Severity.Error);
+        }
+    }
+    
+    private async Task LoadObligationsFiscales()
+    {
+        try
+        {
+            _loading = true;
+            
+            if (_contribuableId.HasValue)
+            {
+                var searchCommand = new SearchObligationFiscalesCommand
+                {
+                    PageNumber = 1,
+                    PageSize = 100,
+                    ContribuableId = _contribuableId.Value
+                };
+                
+                var result = await ApiClient.SearchObligationFiscaleEndPointsAsync(ApiVersion, searchCommand);
+                
+                if (result?.Items != null)
+                {
+                    _obligations = result.Items.ToList();
+                }
+            }
+            else
+            {
+                _obligations = new List<ObligationFiscaleResponse>();
+                Snackbar.Add("Impossible de trouver votre profil contribuable", Severity.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erreur lors du chargement des obligations fiscales: {ex.Message}", Severity.Error);
+            _obligations = new List<ObligationFiscaleResponse>();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+    
+    private string GetTypeTaxeName(Guid typeTaxeId)
+    {
+        if (_typesTaxes.TryGetValue(typeTaxeId, out var typeTaxe))
+        {
+            return typeTaxe.Nom;
+        }
+        
+        return "Type inconnu";
+    }
+    
+    private bool FilterObligations(ObligationFiscaleResponse obligation)
+    {
+        if (string.IsNullOrWhiteSpace(_searchString))
+            return true;
+            
+        // Recherche par type de taxe
+        if (_typesTaxes.TryGetValue(obligation.TypeTaxeId, out var typeTaxe) &&
+            typeTaxe.Nom.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+            
+        // Recherche par dates
+        if (obligation.DateDebut.ToString("dd/MM/yyyy").Contains(_searchString))
+            return true;
+            
+        if (obligation.DateFin.HasValue && obligation.DateFin.Value.ToString("dd/MM/yyyy").Contains(_searchString))
+            return true;
+            
+        // Recherche par montant
+        if (obligation.MontantCalcule.ToString().Contains(_searchString) || 
+            (obligation.MontantPersonnalise.HasValue && obligation.MontantPersonnalise.Value.ToString().Contains(_searchString)))
+            return true;
+            
+        // Recherche par statut
+        var statut = obligation.EstActif ? "actif" : "inactif";
+        if (statut.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+            
+        return false;
+    }
+    
+    private async Task ShowObligationDetails(ObligationFiscaleResponse obligation)
+    {
+        _selectedObligation = obligation;
+        
+        if (_typesTaxes.TryGetValue(obligation.TypeTaxeId, out var typeTaxe))
+        {
+            _selectedTypeTaxe = typeTaxe;
+        }
+        
+        // Charger les échéances pour cette obligation
+        await LoadEcheances(obligation.Id);
+        
+        _showDetails = true;
+    }
+    
+    private async Task LoadEcheances(Guid obligationId)
+    {
+        try
+        {
+            var searchCommand = new SearchEcheancesCommand
+            {
+                PageNumber = 1,
+                PageSize = 100,
+                ObligationFiscaleId = obligationId
+            };
+            
+            // Simuler les données d'échéances car l'API n'est pas disponible
+            _echeances = new List<EcheanceDto>
+            {
+                new EcheanceDto
+                {
+                    Id = Guid.NewGuid(),
+                    ObligationFiscaleId = obligationId,
+                    AnneeImposition = DateTime.Now.Year,
+                    PeriodeImposition = 1,
+                    DateLimite = DateTime.Now.AddDays(30),
+                    Montant = 25000,
+                    EstPayee = false
+                },
+                new EcheanceDto
+                {
+                    Id = Guid.NewGuid(),
+                    ObligationFiscaleId = obligationId,
+                    AnneeImposition = DateTime.Now.Year,
+                    PeriodeImposition = 2,
+                    DateLimite = DateTime.Now.AddDays(-15),
+                    Montant = 25000,
+                    EstPayee = true
+                }
+            };
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erreur lors du chargement des échéances: {ex.Message}", Severity.Error);
+            _echeances = new List<EcheanceDto>();
+        }
+    }
+    
+    private Color GetEcheanceStatusColor(EcheanceDto echeance)
+    {
+        if (echeance.EstPayee)
+            return Color.Success;
+            
+        if (echeance.DateLimite < DateTime.Now)
+            return Color.Error;
+            
+        if (echeance.DateLimite < DateTime.Now.AddDays(7))
+            return Color.Warning;
+            
+        return Color.Info;
+    }
+    
+    private string GetEcheanceStatusText(EcheanceDto echeance)
+    {
+        if (echeance.EstPayee)
+            return "Payé";
+            
+        if (echeance.DateLimite < DateTime.Now)
+            return "En retard";
+            
+        if (echeance.DateLimite < DateTime.Now.AddDays(7))
+            return "Bientôt due";
+            
+        return "À venir";
+    }
+} 

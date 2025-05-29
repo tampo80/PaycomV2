@@ -1,0 +1,129 @@
+@using MudBlazor
+@using PayCom.Blazor.Infrastructure.Api
+@using PayCom.Blazor.Client.Pages.Taxes.Models
+@using System.Globalization
+@using MudBlazor.Utilities
+
+@inject ISnackbar Snackbar
+@inject IApiClient ApiClient
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Receipt" Class="mr-3" />
+            @DialogTitle
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_loading)
+        {
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" Class="my-7" />
+        }
+        else if (_taxe != null)
+        {
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudPaper Elevation="0" Class="pa-4 mb-4" Style="background-color: var(--mud-palette-background-grey)">
+                        <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-3">Informations générales</MudText>
+                        <MudGrid>
+                            <MudItem xs="6">
+                                <MudText><b>Année d'imposition:</b> @_taxe.AnneeImposition</MudText>
+                                <MudText><b>Taux:</b> @_taxe.Taux.ToString("P2", CultureInfo.InvariantCulture)</MudText>
+                                <MudText><b>Date d'échéance:</b> @_taxe.DateEcheance.ToString("dd/MM/yyyy")</MudText>
+                            </MudItem>
+                            <MudItem xs="6">
+                                <MudText><b>Unité de mesure:</b> @_taxe.UniteMesure</MudText>
+                                <MudText><b>Prix unitaire:</b> @_taxe.PrixUnitaire.ToString("N0") XOF</MudText>
+                                <MudText><b>Date de création:</b> @_taxe.DateCreation.ToString("dd/MM/yyyy HH:mm")</MudText>
+                            </MudItem>
+                        </MudGrid>
+                    </MudPaper>
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudPaper Elevation="0" Class="pa-4 mb-4" Style="background-color: var(--mud-palette-background-grey)">
+                        <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-3">Informations financières</MudText>
+                        <MudGrid>
+                            <MudItem xs="4">
+                                <MudPaper Elevation="0" Class="pa-3 text-center" Style="background-color: rgba(0, 0, 255, 0.05);">
+                                    <MudText Typo="Typo.subtitle2">Montant dû</MudText>
+                                    <MudText Typo="Typo.h5" Color="Color.Primary">@_taxe.MontantDu.ToString("N0") XOF</MudText>
+                                </MudPaper>
+                            </MudItem>
+                            <MudItem xs="4">
+                                <MudPaper Elevation="0" Class="pa-3 text-center" Style="background-color: rgba(0, 128, 0, 0.05);">
+                                    <MudText Typo="Typo.subtitle2">Montant payé</MudText>
+                                    <MudText Typo="Typo.h5" Color="Color.Success">@_taxe.MontantPaye.ToString("N0") XOF</MudText>
+                                </MudPaper>
+                            </MudItem>
+                            <MudItem xs="4">
+                                <MudPaper Elevation="0" Class="pa-3 text-center" Style="background-color: rgba(255, 0, 0, 0.05);">
+                                    <MudText Typo="Typo.subtitle2">Solde restant</MudText>
+                                    <MudText Typo="Typo.h5" Color="Color.Error">@_taxe.SoldeRestant.ToString("N0") XOF</MudText>
+                                </MudPaper>
+                            </MudItem>
+                        </MudGrid>
+                    </MudPaper>
+                </MudItem>
+
+                @if (!string.IsNullOrEmpty(_taxe.Caracteristiques))
+                {
+                    <MudItem xs="12">
+                        <MudPaper Elevation="0" Class="pa-4" Style="background-color: var(--mud-palette-background-grey)">
+                            <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-3">Caractéristiques</MudText>
+                            <MudText>@_taxe.Caracteristiques</MudText>
+                        </MudPaper>
+                    </MudItem>
+                }
+            </MudGrid>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Error" Class="my-4">Impossible de charger les détails de la taxe</MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Outlined" Color="Color.Primary">Fermer</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public string DialogTitle { get; set; } = "Détails de la taxe";
+    [Parameter] public Guid TaxeId { get; set; }
+
+    private TaxeResponse _taxe;
+    private bool _loading = true;
+    private const string ApiVersion = "1.0";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTaxe();
+    }
+
+    private async Task LoadTaxe()
+    {
+        try
+        {
+            _loading = true;
+            _taxe = await ApiClient.GetTaxeEndPointsAsync(ApiVersion, TaxeId);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erreur lors du chargement des détails: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void Cancel()
+    {
+        if (MudDialog != null)
+        {
+            MudDialog.Cancel();
+        }
+    }
+} 

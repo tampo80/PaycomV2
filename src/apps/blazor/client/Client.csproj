@@ -1,0 +1,48 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+	<PropertyGroup>
+		<TargetFramework>net9.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<RootNamespace>PayCom.Blazor.Client</RootNamespace>
+		<AssemblyName>PayCom.Blazor.Client</AssemblyName>
+		<ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Blazored.LocalStorage" />
+		<PackageReference Include="FluentValidation" />
+		<PackageReference Include="Mapster" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" PrivateAssets="all" />
+		<PackageReference Include="MudBlazor" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\..\api\framework\Core\Core.csproj" />
+		<ProjectReference Include="..\infrastructure\Infrastructure.csproj" />
+		
+	</ItemGroup>
+
+	<ItemGroup>
+		<ServiceWorker Include="wwwroot\service-worker.js" PublishedContent="wwwroot\service-worker.published.js" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <_ContentIncludedByDefault Remove="Pages\Todos\Todos.razor" />
+	  <_ContentIncludedByDefault Remove="Pages\Taxes\Dialogs\EnregistrerPaiementDialog.razor" />
+	  <_ContentIncludedByDefault Remove="Pages\Taxes\Dialogs\PaiementDetailsDialog.razor" />
+	  <_ContentIncludedByDefault Remove="Pages\Taxes\Fiscalite\Contribuables.razor" />
+	  <_ContentIncludedByDefault Remove="Pages\Taxes\HistoriquePaiements.razor" />
+	  <_ContentIncludedByDefault Remove="Pages\Taxes\ListeTaxes.razor" />
+	  <_ContentIncludedByDefault Remove="Pages\Taxes\PaiementsTerrain.razor" />
+	  <_ContentIncludedByDefault Remove="Pages\Taxes\TypesTaxes.razor" />
+	  <_ContentIncludedByDefault Remove="Pages\Catalog\Brands.razor" />
+	  <_ContentIncludedByDefault Remove="Pages\Catalog\Products.razor" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Pages\Taxes\" />
+	</ItemGroup>
+
+</Project>
