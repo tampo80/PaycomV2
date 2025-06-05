@@ -460,54 +460,15 @@
             
         try
         {
-            // Appel à l'API pour dissocier l'utilisateur (mise à jour du contribuable avec UtilisateurId = null)
-            var command = new UpdateContribuableCommand
-            {
-                Id = contribuable.Id,
-                Nom = contribuable.Nom,
-                Prenom = contribuable.Prenom,
-                DateNaissance = contribuable.DateNaissance,
-                Genre = contribuable.Genre.HasValue 
-                    ? MapToApiGenre(contribuable.Genre.Value) 
-                    : PayCom.Blazor.Infrastructure.Api.Genre._0,
-                NumeroIdentification = contribuable.NumeroIdentification,
-                NomCommercial = contribuable.NomCommercial ?? string.Empty,
-                Adresse = contribuable.Adresse,
-                LocalisationGPS = contribuable.LocalisationGPS ?? string.Empty,
-                TypeActivite = contribuable.TypeActivite,
-                ContactPrincipal = contribuable.ContactPrincipal,
-                ContactSecondaire = contribuable.ContactSecondaire ?? string.Empty,
-                Email = contribuable.Email ?? string.Empty,
-                DateEnregistrement = contribuable.DateEnregistrement,
-                UtilisateurId = null, // Dissocier l'utilisateur
-                AgentFiscalId = contribuable.AgentFiscalId,
-                TypeContribuable = MapToApiTypeContribuable(contribuable.TypeContribuable),
-                Statut = MapToApiStatut(contribuable.Statut),
-                
-                // Champs pour personne morale
-                NumeroRegistreCommerce = contribuable.RCCM ?? string.Empty,
-                Nif = contribuable.NIF ?? string.Empty,
-                DateCreationEntreprise = contribuable.DateCreationEntreprise,
-                SecteurActivite = contribuable.SecteurActivite ?? string.Empty,
-                CapitalSocial = contribuable.CapitalSocial.HasValue ? (double)contribuable.CapitalSocial.Value : null,
-                FormeJuridique = contribuable.FormeJuridique ?? string.Empty,
-                RepresentantLegal = contribuable.RepresentantLegal ?? string.Empty
-            };
+            Console.WriteLine($"Envoi de la requête pour dissocier le contribuable: ID={contribuable.Id}");
             
-            var response = await ApiClient.UpdateContribuableEndPointsAsync(ApiVersion, contribuable.Id, command);
-            
-            if (response != null)
-            {
-                // Recharger les données des deux tableaux
-                await _tableAssocies.ReloadServerData();
-                await _tableNonAssocies.ReloadServerData();
-                
-                Snackbar.Add("Utilisateur dissocié avec succès du contribuable", Severity.Success);
-            }
+            // Appel au nouvel endpoint spécifique pour la dissociation
+      
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Erreur lors de la dissociation: {ex.Message}", Severity.Error);
+            Console.WriteLine($"Détails de l'erreur: {ex}");
         }
     }
 } 

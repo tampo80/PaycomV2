@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build-env
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS paycomblazor
 WORKDIR /app
 
 COPY . ./
@@ -6,7 +6,7 @@ RUN dotnet publish ./apps/blazor/client/Client.csproj -c Release -o output
 
 FROM nginx:alpine
 WORKDIR /usr/share/nginx/html
-COPY --from=build-env /app/output/wwwroot .
+COPY --from=paycomblazor /app/output/wwwroot .
 
 COPY ./apps/blazor/nginx.conf /etc/nginx/nginx.conf
 

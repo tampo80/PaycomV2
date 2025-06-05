@@ -40,9 +40,12 @@
                         <MudCardContent>
                             <div class="d-flex flex-column align-center">
                                 <MudAvatar Color="Color.Primary" Size="Size.Large" Class="mb-3">
-                                    @(_agentFiscal.Prenom?.Substring(0, 1))@(_agentFiscal.Nom?.Substring(0, 1))
+                                    @((!string.IsNullOrEmpty(_agentFiscal.Prenom) ? _agentFiscal.Prenom.Substring(0, 1) : "") + (!string.IsNullOrEmpty(_agentFiscal.Nom) ? _agentFiscal.Nom.Substring(0, 1) : "A"))
                                 </MudAvatar>
-                                <MudText Typo="Typo.h5" Class="mt-2">@_agentFiscal.Prenom @_agentFiscal.Nom</MudText>
+                                <MudText Typo="Typo.h5" Class="mt-2">
+                                    @(!string.IsNullOrEmpty(_agentFiscal.Prenom) ? _agentFiscal.Prenom : "") 
+                                    @(!string.IsNullOrEmpty(_agentFiscal.Nom) ? _agentFiscal.Nom : "")
+                                </MudText>
                                 <MudText Typo="Typo.subtitle1" Color="Color.Primary">Agent Fiscal</MudText>
                                 <MudChip T="string" Color="GetStatutColor(_agentFiscal.Statut)" Size="Size.Small" Class="mt-2">
                                     @GetStatutLabel(_agentFiscal.Statut)
@@ -62,7 +65,7 @@
                                     <MudText Typo="Typo.body2"><b>Téléphone:</b> @_agentFiscal.Telephone</MudText>
                                 </MudListItem>
                                 <MudListItem T="string" Icon="@Icons.Material.Filled.CalendarToday" IconColor="Color.Primary">
-                                    <MudText Typo="Typo.body2"><b>Date d'embauche:</b> @_agentFiscal.DateEmbauche.ToString("dd/MM/yyyy")</MudText>
+                                    <MudText Typo="Typo.body2"><b>Date d'embauche:</b> @(_agentFiscal.DateEmbauche.ToString("dd/MM/yyyy"))</MudText>
                                 </MudListItem>
                                 @if (_agentFiscal.DateFinFonction.HasValue)
                                 {
@@ -82,22 +85,22 @@
                             
                             <MudGrid>
                                 <MudItem xs="12" md="6">
-                                    <MudTextField Label="Nom" Value="@_agentFiscal.Nom" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                    <MudTextField Label="Nom" Value="@(!string.IsNullOrEmpty(_agentFiscal.Nom) ? _agentFiscal.Nom : "-")" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
                                 </MudItem>
                                 <MudItem xs="12" md="6">
-                                    <MudTextField Label="Prénom" Value="@_agentFiscal.Prenom" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                    <MudTextField Label="Prénom" Value="@(!string.IsNullOrEmpty(_agentFiscal.Prenom) ? _agentFiscal.Prenom : "-")" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
                                 </MudItem>
                                 <MudItem xs="12" md="6">
-                                    <MudTextField Label="Email" Value="@_agentFiscal.Email" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                    <MudTextField Label="Email" Value="@(!string.IsNullOrEmpty(_agentFiscal.Email) ? _agentFiscal.Email : "-")" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
                                 </MudItem>
                                 <MudItem xs="12" md="6">
-                                    <MudTextField Label="Téléphone" Value="@_agentFiscal.Telephone" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                    <MudTextField Label="Téléphone" Value="@(!string.IsNullOrEmpty(_agentFiscal.Telephone) ? _agentFiscal.Telephone : "-")" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
                                 </MudItem>
                                 <MudItem xs="12" md="6">
-                                    <MudTextField Label="Localisation GPS" Value="@_agentFiscal.LocalisationGPS" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                    <MudTextField Label="Localisation GPS" Value="@(!string.IsNullOrEmpty(_agentFiscal.LocalisationGPS) ? _agentFiscal.LocalisationGPS : "-")" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
                                 </MudItem>
                                 <MudItem xs="12" md="6">
-                                    <MudTextField Label="Identifiant" Value="@_agentFiscal.Identifiant" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                    <MudTextField Label="Identifiant" Value="@(!string.IsNullOrEmpty(_agentFiscal.Identifiant) ? _agentFiscal.Identifiant : "-")" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
                                 </MudItem>
                             </MudGrid>
                         </MudTabPanel>
@@ -126,7 +129,7 @@
                                         </CardHeaderActions>
                                     </MudCardHeader>
                                     <MudCardContent>
-                                        <MudText Typo="Typo.h4" Color="Color.Primary">@_agentFiscal.SoldePortefeuille.ToString("N0") FCFA</MudText>
+                                        <MudText Typo="Typo.h4" Color="Color.Primary">@(_agentFiscal.SoldePortefeuille.ToString("N0")) FCFA</MudText>
                                         <MudText Typo="Typo.caption">Solde actuel</MudText>
                                     </MudCardContent>
                                 </MudCard>
@@ -193,20 +196,48 @@
         {
             _loading = true;
             
-            // Rechercher l'agent fiscal par son utilisateurId
-            var searchCommand = new SearchAgenFiscalsCommand
+            if (!string.IsNullOrEmpty(_userId) && Guid.TryParse(_userId, out Guid userId))
             {
-                PageNumber = 1,
-                PageSize = 1,
-                Keyword = _userId
-            };
-            
-            var result = await ApiClient.SearchAgentFiscalEndPointsAsync(ApiVersion, searchCommand);
-            
-            if (result?.Items != null && result.Items.Any())
+                try
+                {
+                    // Essayer d'utiliser le nouvel endpoint spécifique pour récupérer l'agent fiscal par ID utilisateur
+                    _agentFiscal = await ApiClient.GetAgentFiscalByUserIdEndPointsAsync(ApiVersion, userId);
+                }
+                catch (Exception ex)
+                {
+                    // Si l'API GetAgentFiscalByUserIdEndPointsAsync n'est pas disponible ou échoue,
+                    // revenir à la méthode de recherche
+                    Snackbar.Add($"Utilisation de la méthode de recherche alternative: {ex.Message}", Severity.Info);
+                    
+                    // Rechercher l'agent fiscal par son utilisateurId via la recherche
+                    var searchCommand = new SearchAgenFiscalsCommand
+                    {
+                        PageNumber = 1,
+                        PageSize = 100
+                    };
+                    
+                    var result = await ApiClient.SearchAgentFiscalEndPointsAsync(ApiVersion, searchCommand);
+                    
+                    if (result?.Items != null && result.Items.Any())
+                    {
+                        // Filtrer côté client pour trouver l'agent avec le bon ID utilisateur
+                        _agentFiscal = result.Items.FirstOrDefault(a => a.UtilisateurId?.ToString() == _userId);
+                        
+                        if (_agentFiscal == null)
+                        {
+                            Snackbar.Add("Aucun profil d'agent fiscal n'est associé à votre compte. Veuillez contacter l'administrateur.", Severity.Warning);
+                        }
+                    }
+                    else
+                    {
+                        Snackbar.Add("Aucun agent fiscal trouvé.", Severity.Warning);
+                        _agentFiscal = null;
+                    }
+                }
+            }
+            else
             {
-                // Récupérer les détails de l'agent fiscal
-                _agentFiscal = result.Items.First();
+                Snackbar.Add("Identifiant utilisateur non valide.", Severity.Error);
             }
         }
         catch (Exception ex)

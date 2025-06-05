@@ -12,8 +12,8 @@ public record CreateEcheanceResponse
     public int AnneeImposition { get; init; }
     public int PeriodeImposition { get; init; }
     public DateTime DateEcheance { get; init; }
-    public double MontantBase { get; init; }
-    public double MontantPenalites { get; init; }
-    public double MontantTotal { get; init; }
+    public decimal MontantBase { get; init; }
+    public decimal MontantPenalites { get; init; }
+    public decimal MontantTotal { get; init; }
     public StatutEcheance Statut { get; init; }
 }

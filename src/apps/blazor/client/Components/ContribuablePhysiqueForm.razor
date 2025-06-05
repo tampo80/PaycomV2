@@ -5,11 +5,11 @@
 @inject ISnackbar Snackbar
 
 <MudPaper Elevation="0" Class="pb-4">
-    <MudForm Model="@this" @ref="form">
+    <MudForm Model="@this" @ref="form" @bind-IsValid="@_isValid">
         <style>
             /* Style amélioré pour les onglets secondaires */
             .secondary-tabs .mud-tabs-toolbar {
-                background-color: var(--mud-palette-grey-lighten-5);
+                background-color: white;
                 border-radius: 10px;
                 margin-bottom: 20px;
                 padding: 6px;
@@ -24,6 +24,8 @@
                 transition: all 0.3s ease;
                 font-size: 0.95rem;
                 opacity: 0.8;
+                color: var(--mud-palette-text-primary);
+                background-color: var(--mud-palette-grey-lighten-5);
             }
             
             .secondary-tabs .mud-tab-label {
@@ -48,6 +50,8 @@
             .secondary-tabs .mud-tab:hover:not(.mud-tab-active) {
                 background-color: var(--mud-palette-grey-lighten-3);
                 opacity: 0.95;
+                transform: translateY(-1px);
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
             }
             
             .secondary-tabs .mud-tab-slider {
@@ -61,9 +65,70 @@
                 animation: fadeIn 0.4s ease;
             }
             
+            /* Améliorations des champs de saisie */
+            ::deep .mud-input {
+                transition: all 0.3s ease;
+            }
+            
+            ::deep .mud-input-outlined:focus-within {
+                box-shadow: 0 0 0 3px rgba(var(--mud-palette-primary-rgb), 0.1);
+            }
+            
+            ::deep .mud-input-outlined.mud-shrink {
+                border-color: var(--mud-palette-primary);
+            }
+            
+            /* Style pour les champs valides/invalides */
+            ::deep .valid-field.mud-input-outlined {
+                border-color: var(--mud-palette-success);
+            }
+            
+            ::deep .invalid-field.mud-input-outlined {
+                border-color: var(--mud-palette-error);
+            }
+            
+            /* Animation pour les transitions */
+            .form-appear {
+                animation: formAppear 0.5s ease;
+                opacity: 1;
+            }
+            
             @@keyframes fadeIn {
                 from { opacity: 0; transform: translateY(5px); }
                 to { opacity: 1; transform: translateY(0); }
+            }
+            
+            @@keyframes formAppear {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            
+            /* Indicateurs de progression */
+            .tab-indicator {
+                display: flex;
+                justify-content: center;
+                margin: 15px 0;
+            }
+            
+            .tab-indicator-item {
+                width: 12px;
+                height: 12px;
+                margin: 0 8px;
+                border-radius: 50%;
+                background-color: var(--mud-palette-grey-lighten-3);
+                transition: all 0.3s ease;
+            }
+            
+            .tab-indicator-item.active {
+                background-color: var(--mud-palette-primary);
+                transform: scale(1.2);
+                box-shadow: 0 0 0 2px rgba(var(--mud-palette-primary-rgb), 0.2);
+            }
+            
+            /* Styles pour les onglets actifs - texte blanc */
+            .secondary-tabs .mud-tabs-toolbar .mud-tab-active .mud-tab-label {
+                color: white;
+                font-weight: 600;
             }
         </style>
     
@@ -74,177 +139,258 @@
                 Class="mt-4 secondary-tabs"
                 Rounded="true"
                 Border="false"
+                ActivePanelIndex="@_activeTabIndex"
+                ActivePanelIndexChanged="HandleTabChanged"
+                Outlined="true"
                 Centered="true">
             <MudTabPanel Text="Informations personnelles" Icon="@Icons.Material.Filled.Person">
-                <MudGrid Spacing="2">
-                    <MudItem xs="12" md="6">
-                        <MudTextField @bind-Value="Nom" 
-                                    Label="Nom" 
-                                    Variant="Variant.Outlined"
-                                    Required="true" 
-                                    RequiredError="Le nom est requis"
-                                    Adornment="Adornment.Start"
-                                    AdornmentIcon="@Icons.Material.Filled.Person"
-                                    AdornmentColor="Color.Primary"
-                                    HelperText="Nom de famille du contribuable"
-                                    Counter="100" />
-                    </MudItem>
-                    
-                    <MudItem xs="12" md="6">
-                        <MudTextField @bind-Value="Prenom" 
-                                    Label="Prénom" 
-                                    Variant="Variant.Outlined"
-                                    Required="true" 
-                                    RequiredError="Le prénom est requis"
-                                    Adornment="Adornment.Start"
-                                    AdornmentIcon="@Icons.Material.Filled.Person"
-                                    AdornmentColor="Color.Primary"
-                                    HelperText="Prénom du contribuable"
-                                    Counter="100" />
-                    </MudItem>
-                    
-                    <MudItem xs="12" md="6">
-                        <MudDatePicker @bind-Date="DateNaissance" 
-                                     Label="Date de naissance" 
-                                     Variant="Variant.Outlined"
-                                     Required="true"
-                                     RequiredError="La date de naissance est requise"
-                                     Adornment="Adornment.Start"
-                                     AdornmentIcon="@Icons.Material.Filled.CalendarMonth"
-                                     AdornmentColor="Color.Primary"
-                                     HelperText="Date de naissance du contribuable"
-                                     Placeholder="Sélectionnez une date" />
-                    </MudItem>
-                    
-                    <MudItem xs="12" md="6">
-                        <MudSelect @bind-Value="Genre" 
-                                 Label="Genre" 
-                                 Variant="Variant.Outlined"
-                                 Required="true"
-                                 RequiredError="Le genre est requis"
-                                 Adornment="Adornment.Start"
-                                 AdornmentIcon="@Icons.Material.Filled.Person"
-                                 AdornmentColor="Color.Primary"
-                                 HelperText="Genre du contribuable">
-                            <MudSelectItem Value="@GenreType.Homme">Homme</MudSelectItem>
-                            <MudSelectItem Value="@GenreType.Femme">Femme</MudSelectItem>
-                        </MudSelect>
-                    </MudItem>
-                </MudGrid>
+                <MudCard Elevation="0" Class="form-appear">
+                    <MudCardContent>
+                        <MudGrid Spacing="2">
+                            <MudItem xs="12" md="6">
+                                <MudTextField Value="@Nom" 
+                                            Label="Nom" 
+                                            Variant="Variant.Outlined"
+                                            Required="true" 
+                                            RequiredError="Le nom est requis"
+                                            Adornment="Adornment.Start"
+                                            AdornmentIcon="@Icons.Material.Filled.Person"
+                                            AdornmentColor="Color.Primary"
+                                            HelperText="Nom de famille du contribuable"
+                                            Counter="100"
+                                            Immediate="true"
+                                            ValueChanged="@((string val) => { Nom = val; OnValueChanged(); })" 
+                                            Validation="@(new Func<string, string>(ValidateRequired))" />
+                            </MudItem>
+                            
+                            <MudItem xs="12" md="6">
+                                <MudTextField Value="@Prenom" 
+                                            Label="Prénom" 
+                                            Variant="Variant.Outlined"
+                                            Required="true" 
+                                            RequiredError="Le prénom est requis"
+                                            Adornment="Adornment.Start"
+                                            AdornmentIcon="@Icons.Material.Filled.Person"
+                                            AdornmentColor="Color.Primary"
+                                            HelperText="Prénom du contribuable"
+                                            Counter="100"
+                                            Immediate="true"
+                                            ValueChanged="@((string val) => { Prenom = val; OnValueChanged(); })"
+                                            Validation="@(new Func<string, string>(ValidateRequired))" />
+                            </MudItem>
+                            
+                            <MudItem xs="12" md="6">
+                                <MudDatePicker Date="@DateNaissance" 
+                                             Label="Date de naissance" 
+                                             Variant="Variant.Outlined"
+                                             Required="true"
+                                             RequiredError="La date de naissance est requise"
+                                             Adornment="Adornment.Start"
+                                             AdornmentIcon="@Icons.Material.Filled.CalendarMonth"
+                                             AdornmentColor="Color.Primary"
+                                             HelperText="Date de naissance du contribuable"
+                                             Placeholder="Sélectionnez une date"
+                                             DateFormat="dd/MM/yyyy"
+                                             DateChanged="@((DateTime? date) => { DateNaissance = date; OnValueChanged(); })" />
+                            </MudItem>
+                            
+                            <MudItem xs="12" md="6">
+                                <MudSelect Value="@Genre" 
+                                         Label="Genre" 
+                                         Variant="Variant.Outlined"
+                                         Required="true"
+                                         RequiredError="Le genre est requis"
+                                         Adornment="Adornment.Start"
+                                         AdornmentIcon="@Icons.Material.Filled.Person"
+                                         AdornmentColor="Color.Primary" 
+                                         ValueChanged="@((GenreType val) => { Genre = val; OnValueChanged(); })"
+                                         HelperText="Genre du contribuable">
+                                    <MudSelectItem Value="@GenreType.Homme">Homme</MudSelectItem>
+                                    <MudSelectItem Value="@GenreType.Femme">Femme</MudSelectItem>
+                                </MudSelect>
+                            </MudItem>
+                        </MudGrid>
+                    </MudCardContent>
+                    <MudCardActions Class="pt-2">
+                        <MudButton Variant="Variant.Filled" 
+                                 Color="Color.Primary"
+                                 EndIcon="@Icons.Material.Filled.ArrowForward"
+                                 OnClick="@(() => NavigateToNextTab(1))">
+                            Suivant
+                        </MudButton>
+                    </MudCardActions>
+                </MudCard>
             </MudTabPanel>
 
             <MudTabPanel Text="Identification" Icon="@Icons.Material.Filled.Badge">
-                <MudGrid Spacing="2">
-                    <MudItem xs="12" md="6">
-                        <MudTextField @bind-Value="NumeroIdentification" 
-                                    Label="Numéro d'identification" 
-                                    Variant="Variant.Outlined"
-                                    Required="true"
-                                    RequiredError="Le numéro d'identification est requis"
-                                    Adornment="Adornment.Start"
-                                    AdornmentIcon="@Icons.Material.Filled.Badge"
-                                    AdornmentColor="Color.Primary"
-                                    HelperText="Numéro d'identification unique (généré automatiquement)"
-                                    Counter="50" />
-                    </MudItem>
-                    
-                    <MudItem xs="12" md="6">
-                        <MudDatePicker @bind-Date="DateEnregistrement" 
-                                     Label="Date d'enregistrement" 
-                                     Variant="Variant.Outlined"
-                                     Required="true"
-                                     RequiredError="La date d'enregistrement est requise"
-                                     Adornment="Adornment.Start"
-                                     AdornmentIcon="@Icons.Material.Filled.CalendarToday"
-                                     AdornmentColor="Color.Primary"
-                                     HelperText="Date d'enregistrement du contribuable"
-                                     Placeholder="Sélectionnez une date" />
-                    </MudItem>
-                    
-                    <MudItem xs="12" md="6">
-                        <MudSelect @bind-Value="Statut" 
-                                 Label="Statut" 
-                                 Variant="Variant.Outlined"
-                                 Required="true"
-                                 RequiredError="Le statut est requis"
-                                 Adornment="Adornment.Start"
-                                 AdornmentIcon="@Icons.Material.Filled.VerifiedUser"
-                                 AdornmentColor="Color.Primary"
-                                 HelperText="Statut du contribuable">
-                            <MudSelectItem Value="@StatutContribuableType.Actif">Actif</MudSelectItem>
-                            <MudSelectItem Value="@StatutContribuableType.Inactif">Inactif</MudSelectItem>
-                            <MudSelectItem Value="@StatutContribuableType.EnAttente">En attente</MudSelectItem>
-                        </MudSelect>
-                    </MudItem>
+                <MudCard Elevation="0" Class="form-appear">
+                    <MudCardContent>
+                        <MudGrid Spacing="2">
+                            <MudItem xs="12" md="6">
+                                <MudTextField Value="@NumeroIdentification" 
+                                            Label="Numéro d'identification" 
+                                            Variant="Variant.Outlined"
+                                            Required="true"
+                                            RequiredError="Le numéro d'identification est requis"
+                                            Adornment="Adornment.Start"
+                                            AdornmentIcon="@Icons.Material.Filled.Badge"
+                                            AdornmentColor="Color.Primary"
+                                            HelperText="Numéro d'identification unique (généré automatiquement)"
+                                            Counter="50"
+                                            Immediate="true"
+                                            ValueChanged="@((string val) => { NumeroIdentification = val; OnValueChanged(); })"
+                                            Validation="@(new Func<string, string>(ValidateRequired))" />
+                            </MudItem>
+                            
+                            <MudItem xs="12" md="6">
+                                <MudDatePicker Date="@DateEnregistrement" 
+                                             Label="Date d'enregistrement" 
+                                             Variant="Variant.Outlined"
+                                             Required="true"
+                                             RequiredError="La date d'enregistrement est requise"
+                                             Adornment="Adornment.Start"
+                                             AdornmentIcon="@Icons.Material.Filled.CalendarToday"
+                                             AdornmentColor="Color.Primary"
+                                             HelperText="Date d'enregistrement du contribuable"
+                                             Placeholder="Sélectionnez une date"
+                                             DateFormat="dd/MM/yyyy" 
+                                             DateChanged="@((DateTime? date) => { DateEnregistrement = date; OnValueChanged(); })" />
+                            </MudItem>
+                            
+                            <MudItem xs="12" md="6">
+                                <MudSelect Value="@Statut" 
+                                         Label="Statut" 
+                                         Variant="Variant.Outlined"
+                                         Required="true"
+                                         RequiredError="Le statut est requis"
+                                         Adornment="Adornment.Start"
+                                         AdornmentIcon="@Icons.Material.Filled.VerifiedUser"
+                                         AdornmentColor="Color.Primary"
+                                         HelperText="Statut du contribuable"
+                                         ValueChanged="@((StatutContribuableType val) => { Statut = val; OnValueChanged(); })">
+                                    <MudSelectItem Value="@StatutContribuableType.Actif">Actif</MudSelectItem>
+                                    <MudSelectItem Value="@StatutContribuableType.Inactif">Inactif</MudSelectItem>
+                                    <MudSelectItem Value="@StatutContribuableType.EnAttente">En attente</MudSelectItem>
+                                </MudSelect>
+                            </MudItem>
 
-                    <MudItem xs="12" md="6">
-                        <MudTextField @bind-Value="TypeActivite" 
-                                    Label="Type d'activité" 
-                                    Variant="Variant.Outlined"
-                                    Required="true"
-                                    RequiredError="Le type d'activité est requis"
-                                    Adornment="Adornment.Start"
-                                    AdornmentIcon="@Icons.Material.Filled.Work"
-                                    AdornmentColor="Color.Primary"
-                                    HelperText="Type d'activité professionnelle"
-                                    Counter="100" />
-                    </MudItem>
-                </MudGrid>
+                            <MudItem xs="12" md="6">
+                                <MudTextField Value="@TypeActivite" 
+                                            Label="Type d'activité" 
+                                            Variant="Variant.Outlined"
+                                            Required="true"
+                                            RequiredError="Le type d'activité est requis"
+                                            Adornment="Adornment.Start"
+                                            AdornmentIcon="@Icons.Material.Filled.Work"
+                                            AdornmentColor="Color.Primary"
+                                            HelperText="Type d'activité professionnelle"
+                                            Counter="100"
+                                            Immediate="true"
+                                            ValueChanged="@((string val) => { TypeActivite = val; OnValueChanged(); })"
+                                            Validation="@(new Func<string, string>(ValidateRequired))" />
+                            </MudItem>
+                        </MudGrid>
+                    </MudCardContent>
+                    <MudCardActions Class="pt-2">
+                        <MudButton Variant="Variant.Outlined" 
+                                 Color="Color.Default"
+                                 StartIcon="@Icons.Material.Filled.ArrowBack"
+                                 OnClick="@(() => _activeTabIndex = 0)">
+                            Précédent
+                        </MudButton>
+                        <MudSpacer />
+                        <MudButton Variant="Variant.Filled"
+                                 Color="Color.Primary"
+                                 EndIcon="@Icons.Material.Filled.ArrowForward"
+                                 OnClick="@(() => NavigateToNextTab(2))">
+                            Suivant
+                        </MudButton>
+                    </MudCardActions>
+                </MudCard>
             </MudTabPanel>
 
             <MudTabPanel Text="Contact" Icon="@Icons.Material.Filled.ContactPhone">
-                <MudGrid Spacing="2">
-                    <MudItem xs="12">
-                        <MudTextField @bind-Value="Adresse" 
-                                    Label="Adresse" 
-                                    Variant="Variant.Outlined"
-                                    Required="true"
-                                    RequiredError="L'adresse est requise"
-                                    Adornment="Adornment.Start"
-                                    AdornmentIcon="@Icons.Material.Filled.Home"
-                                    AdornmentColor="Color.Primary"
-                                    HelperText="Adresse complète du contribuable"
-                                    Counter="200"
-                                    Lines="2" />
-                    </MudItem>
-                    
-                    <MudItem xs="12" md="6">
-                        <MudTextField @bind-Value="ContactPrincipal" 
-                                    Label="Contact principal" 
-                                    Variant="Variant.Outlined"
-                                    Required="true"
-                                    RequiredError="Le contact principal est requis"
-                                    Adornment="Adornment.Start"
-                                    AdornmentIcon="@Icons.Material.Filled.Phone"
-                                    AdornmentColor="Color.Primary"
-                                    HelperText="Numéro de téléphone principal"
-                                    Counter="50" />
-                    </MudItem>
-                    
-                    <MudItem xs="12" md="6">
-                        <MudTextField @bind-Value="ContactSecondaire" 
-                                    Label="Contact secondaire" 
-                                    Variant="Variant.Outlined"
-                                    Adornment="Adornment.Start"
-                                    AdornmentIcon="@Icons.Material.Filled.PhoneAndroid"
-                                    AdornmentColor="Color.Secondary"
-                                    HelperText="Numéro de téléphone secondaire (optionnel)"
-                                    Counter="50" />
-                    </MudItem>
-                    
-                    <MudItem xs="12" md="6">
-                        <MudTextField @bind-Value="Email" 
-                                    Label="Email" 
-                                    Variant="Variant.Outlined"
-                                    Adornment="Adornment.Start"
-                                    AdornmentIcon="@Icons.Material.Filled.Email"
-                                    AdornmentColor="Color.Primary"
-                                    HelperText="Adresse email du contribuable (optionnelle)"
-                                    Counter="100" />
-                    </MudItem>
-                </MudGrid>
+                <MudCard Elevation="0" Class="form-appear">
+                    <MudCardContent>
+                        <MudGrid Spacing="2">
+                            <MudItem xs="12">
+                                <MudTextField Value="@Adresse" 
+                                            Label="Adresse" 
+                                            Variant="Variant.Outlined"
+                                            Required="true"
+                                            RequiredError="L'adresse est requise"
+                                            Adornment="Adornment.Start"
+                                            AdornmentIcon="@Icons.Material.Filled.Home"
+                                            AdornmentColor="Color.Primary"
+                                            HelperText="Adresse complète du contribuable"
+                                            Counter="200"
+                                            Lines="2"
+                                            Immediate="true"
+                                            ValueChanged="@((string val) => { Adresse = val; OnValueChanged(); })"
+                                            Validation="@(new Func<string, string>(ValidateRequired))" />
+                            </MudItem>
+                            
+                            <MudItem xs="12" md="6">
+                                <MudTextField Value="@ContactPrincipal" 
+                                            Label="Contact principal" 
+                                            Variant="Variant.Outlined"
+                                            Required="true"
+                                            RequiredError="Le contact principal est requis"
+                                            Adornment="Adornment.Start"
+                                            AdornmentIcon="@Icons.Material.Filled.Phone"
+                                            AdornmentColor="Color.Primary"
+                                            HelperText="Numéro de téléphone principal"
+                                            Counter="50"
+                                            Immediate="true"
+                                            ValueChanged="@((string val) => { ContactPrincipal = val; OnValueChanged(); })"
+                                            Validation="@(new Func<string, string>(ValidateRequired))" />
+                            </MudItem>
+                            
+                            <MudItem xs="12" md="6">
+                                <MudTextField Value="@ContactSecondaire" 
+                                            Label="Contact secondaire" 
+                                            Variant="Variant.Outlined"
+                                            Adornment="Adornment.Start"
+                                            AdornmentIcon="@Icons.Material.Filled.PhoneAndroid"
+                                            AdornmentColor="Color.Secondary"
+                                            HelperText="Numéro de téléphone secondaire (optionnel)"
+                                            ValueChanged="@((string val) => { ContactSecondaire = val; OnValueChanged(); })"
+                                            Counter="50" />
+                            </MudItem>
+                            
+                            <MudItem xs="12" md="6">
+                                <MudTextField Value="@Email" 
+                                            Label="Email" 
+                                            Variant="Variant.Outlined"
+                                            Adornment="Adornment.Start"
+                                            AdornmentIcon="@Icons.Material.Filled.Email"
+                                            AdornmentColor="Color.Primary"
+                                            HelperText="Adresse email du contribuable (optionnelle)"
+                                            ValueChanged="@((string val) => { Email = val; OnValueChanged(); })"
+                                            Counter="100" />
+                            </MudItem>
+                        </MudGrid>
+                    </MudCardContent>
+                    <MudCardActions Class="pt-2">
+                        <MudButton Variant="Variant.Outlined" 
+                                 Color="Color.Default"
+                                 StartIcon="@Icons.Material.Filled.ArrowBack"
+                                 OnClick="@(() => _activeTabIndex = 1)">
+                            Précédent
+                        </MudButton>
+                    </MudCardActions>
+                </MudCard>
             </MudTabPanel>
         </MudTabs>
+        
+        <div class="tab-indicator">
+            @for (int i = 0; i < 3; i++)
+            {
+                int tabIndex = i;
+                <div class="tab-indicator-item @(tabIndex == _activeTabIndex ? "active" : "")" 
+                     @onclick="() => _activeTabIndex = tabIndex"></div>
+            }
+        </div>
 
         @if (!string.IsNullOrEmpty(_errorMessage))
         {
@@ -257,31 +403,6 @@
         }
 
         <MudDivider Class="my-4" />
-
-        <MudStack Row="true" Justify="Justify.FlexEnd">
-            <MudButton Variant="Variant.Outlined" 
-                      Color="Color.Error"
-                      StartIcon="@Icons.Material.Filled.Cancel" 
-                      Size="Size.Medium">
-                Annuler
-            </MudButton>
-            <MudButton OnClick="Submit" 
-                      Variant="Variant.Filled" 
-                      Color="Color.Primary" 
-                      StartIcon="@Icons.Material.Filled.Save"
-                      Size="Size.Medium"
-                      Disabled="@_processing">
-                @if (_processing)
-                {
-                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
-                    <span class="ms-2">Traitement...</span>
-                }
-                else
-                {
-                    @("Enregistrer")
-                }
-            </MudButton>
-        </MudStack>
     </MudForm>
 </MudPaper>
 
@@ -295,8 +416,9 @@
 
 @code {
     [Parameter] public EventCallback<Guid> OnSuccess { get; set; }
+    [Parameter] public EventCallback<bool> IsValidChanged { get; set; }
 
-    private MudForm form;
+    private MudForm form = new();
     private string Nom { get; set; } = string.Empty;
     private string Prenom { get; set; } = string.Empty;
     private DateTime? DateNaissance { get; set; } = DateTime.Now.AddYears(-30);
@@ -313,26 +435,143 @@
     private string _result = string.Empty;
     private string _errorMessage = string.Empty;
     private bool _processing = false;
+    private bool _isValid = false;
+    private int _activeTabIndex = 0;
     
     private const string ApiVersion = "1.0";
     
-    private async Task Submit()
+    // Ajout d'une propriété qui expose l'état de validité du formulaire
+    public bool IsValid => _isValid && ValidateAllTabs();
+    
+    private bool _validationInitialized = false;
+    private bool _hasInteracted = false;
+    
+    protected override void OnInitialized()
+    {
+        // Générer un numéro d'identification unique
+        NumeroIdentification = "PP-" + DateTime.Now.Ticks.ToString().Substring(10);
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Ne pas lancer la validation dès le chargement initial
+            _validationInitialized = true;
+        }
+    }
+    
+    private void HandleTabChanged(int index)
+    {
+        _activeTabIndex = index;
+        StateHasChanged();
+    }
+    
+    private bool ValidateTabOne()
+    {
+        // Validation onglet 1 (Informations personnelles)
+        return !string.IsNullOrWhiteSpace(Nom) && 
+               !string.IsNullOrWhiteSpace(Prenom) && 
+               DateNaissance.HasValue && 
+               DateNaissance.Value <= DateTime.Now;
+    }
+    
+    private bool ValidateTabTwo()
+    {
+        // Validation onglet 2 (Identification)
+        return !string.IsNullOrWhiteSpace(NumeroIdentification) && 
+               DateEnregistrement.HasValue &&
+               !string.IsNullOrWhiteSpace(TypeActivite);
+    }
+    
+    private bool ValidateTabThree()
+    {
+        // Validation onglet 3 (Contact)
+        return !string.IsNullOrWhiteSpace(Adresse) && 
+               !string.IsNullOrWhiteSpace(ContactPrincipal) &&
+               (string.IsNullOrWhiteSpace(Email) || Email.Contains('@'));
+    }
+    
+    private bool ValidateAllTabs()
+    {
+        return ValidateTabOne() && ValidateTabTwo() && ValidateTabThree();
+    }
+    
+    private async Task NavigateToNextTab(int nextTabIndex)
+    {
+        // Vérifier que l'onglet courant est valide avant de naviguer
+        bool isCurrentTabValid = false;
+        
+        switch (_activeTabIndex)
+        {
+            case 0:
+                isCurrentTabValid = ValidateTabOne();
+                break;
+            case 1:
+                isCurrentTabValid = ValidateTabTwo();
+                break;
+            case 2:
+                isCurrentTabValid = ValidateTabThree();
+                break;
+        }
+        
+        if (isCurrentTabValid)
+        {
+            _activeTabIndex = nextTabIndex;
+            StateHasChanged();
+        }
+        else 
+        {
+            _hasInteracted = true;
+            await ValidateFormAsync();
+            _errorMessage = "Veuillez remplir tous les champs obligatoires de cet onglet avant de continuer.";
+        }
+    }
+    
+    private string ValidateRequired(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return "Ce champ est requis";
+        return string.Empty;
+    }
+    
+    // Déclenche la validation après chaque changement important
+    private async Task OnValueChanged()
+    {
+        _hasInteracted = true;
+        await ValidateFormAsync();
+    }
+    
+    private async Task ValidateFormAsync()
+    {
+        if (!_validationInitialized) return;
+        
+        await Task.Delay(100); // Donner du temps au formulaire pour s'initialiser
+        await form.Validate();
+        bool isValid = _isValid && ValidateAllTabs();
+        await IsValidChanged.InvokeAsync(isValid);
+        
+        // Mise à jour des états visuels si nécessaire
+        if (!isValid && _hasInteracted)
+        {
+            _errorMessage = "Veuillez remplir tous les champs obligatoires dans tous les onglets.";
+        }
+        else
+        {
+            _errorMessage = string.Empty;
+        }
+        StateHasChanged();
+    }
+    
+    public async Task Submit()
     {
         if (_processing) return;
         
-        form.Validate();
+        await form.Validate();
         
-        // Validation basique
-        if (string.IsNullOrWhiteSpace(Nom) ||
-            string.IsNullOrWhiteSpace(Prenom) ||
-            !DateNaissance.HasValue ||
-            string.IsNullOrWhiteSpace(NumeroIdentification) ||
-            !DateEnregistrement.HasValue ||
-            string.IsNullOrWhiteSpace(Adresse) ||
-            string.IsNullOrWhiteSpace(ContactPrincipal) ||
-            string.IsNullOrWhiteSpace(TypeActivite))
+        if (!_isValid || !ValidateAllTabs())
         {
-            _errorMessage = "Veuillez remplir tous les champs obligatoires.";
+            _errorMessage = "Veuillez remplir tous les champs obligatoires dans tous les onglets.";
             return;
         }
         

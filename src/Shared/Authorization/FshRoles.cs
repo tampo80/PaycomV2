@@ -8,13 +8,15 @@ public static class FshRoles
     public const string Basic = nameof(Basic);
     public const string AgentFiscal = nameof(AgentFiscal);
     public const string Contribuable = nameof(Contribuable);
+    public const string AdministrateurFiscal = nameof(AdministrateurFiscal);
 
     public static IReadOnlyList<string> DefaultRoles { get; } = new ReadOnlyCollection<string>(new[]
     {
         Admin,
         Basic,
         AgentFiscal,
-        Contribuable
+        Contribuable,
+        AdministrateurFiscal
     });
 
     public static bool IsDefault(string roleName) => DefaultRoles.Any(r => r == roleName);

@@ -10,11 +10,11 @@ public class TransactionPaiement : AuditableEntity, IAggregateRoot
 {
     public string CodeTransaction { get; private set; } = string.Empty;
     public DateTime Date { get; private set; }
-    public double Montant { get; private set; }
+    public decimal Montant { get; private set; }
     public ModePaiement ModePaiement { get; private set; } 
     public string FournisseurPaiement { get; private set; } = string.Empty; // Orange, MTN, Visa, Mastercard, etc.
     public string NumeroReference { get; private set; } = string.Empty; // Numéro de téléphone, 4 derniers chiffres de carte, etc.
-    public double Frais { get; private set; }
+    public decimal Frais { get; private set; }
     public StatutPaiement Statut { get; private set; }
     public string ReferenceBancaire { get; private set; } = string.Empty; // Référence du côté de la banque/opérateur
     public string DonneesTechniques { get; private set; } = string.Empty; // JSON avec données techniques (API response)
@@ -34,9 +34,9 @@ public class TransactionPaiement : AuditableEntity, IAggregateRoot
 
     private TransactionPaiement() { }
 
-    public TransactionPaiement(Guid id, string codeTransaction, DateTime date, double montant, 
+    public TransactionPaiement(Guid id, string codeTransaction, DateTime date, decimal montant, 
         ModePaiement modePaiement, string fournisseurPaiement, string numeroReference,
-        double frais, StatutPaiement statut, string referenceBancaire, string donneesTechniques, Paiement paiement,
+        decimal frais, StatutPaiement statut, string referenceBancaire, string donneesTechniques, Paiement paiement,
         string banqueEmettrice, string numeroCompte, DateTime? dateVirement, string referenceVirement,
         Guid? agentCollecteurId, bool estPaiementTerrain, string lieuCollecte, Guid? sessionCollecteId)
     {
@@ -63,9 +63,9 @@ public class TransactionPaiement : AuditableEntity, IAggregateRoot
         QueueDomainEvent(new TransactionPaiementCreated{TransactionPaiement = this});
     }
 
-    public static TransactionPaiement Create(string codeTransaction, DateTime date, double montant, 
+    public static TransactionPaiement Create(string codeTransaction, DateTime date, decimal montant, 
         ModePaiement modePaiement, string fournisseurPaiement, string numeroReference,
-        double frais, StatutPaiement statut, string referenceBancaire, string donneesTechniques, Paiement paiement,
+        decimal frais, StatutPaiement statut, string referenceBancaire, string donneesTechniques, Paiement paiement,
         string banqueEmettrice = "", string numeroCompte = "", DateTime? dateVirement = null, string referenceVirement = "",
         Guid? agentCollecteurId = null, bool estPaiementTerrain = false, string lieuCollecte = "", Guid? sessionCollecteId = null)
     {
@@ -76,8 +76,8 @@ public class TransactionPaiement : AuditableEntity, IAggregateRoot
             agentCollecteurId, estPaiementTerrain, lieuCollecte, sessionCollecteId);
     }
     
-    public static TransactionPaiement CreateVirementBancaire(string codeTransaction, DateTime date, double montant,
-        string fournisseurPaiement, string numeroReference, double frais, string referenceBancaire, Paiement paiement,
+    public static TransactionPaiement CreateVirementBancaire(string codeTransaction, DateTime date, decimal montant,
+        string fournisseurPaiement, string numeroReference, decimal frais, string referenceBancaire, Paiement paiement,
         string banqueEmettrice, string numeroCompte, DateTime dateVirement, string referenceVirement)
     {
         return new TransactionPaiement(
@@ -87,8 +87,8 @@ public class TransactionPaiement : AuditableEntity, IAggregateRoot
             null, false, "", null);
     }
     
-    public static TransactionPaiement CreatePaiementEspeces(string codeTransaction, DateTime date, double montant,
-        string numeroReference, double frais, Paiement paiement,
+    public static TransactionPaiement CreatePaiementEspeces(string codeTransaction, DateTime date, decimal montant,
+        string numeroReference, decimal frais, Paiement paiement,
         Guid agentCollecteurId, string lieuCollecte, Guid sessionCollecteId)
     {
         return new TransactionPaiement(
@@ -98,9 +98,9 @@ public class TransactionPaiement : AuditableEntity, IAggregateRoot
             agentCollecteurId, true, lieuCollecte, sessionCollecteId);
     }
     
-    public TransactionPaiement Update(string codeTransaction, DateTime date, double montant, 
+    public TransactionPaiement Update(string codeTransaction, DateTime date, decimal montant, 
         ModePaiement modePaiement, string fournisseurPaiement, string numeroReference,
-        double frais, StatutPaiement statut, string referenceBancaire, string donneesTechniques, Paiement paiement,
+        decimal frais, StatutPaiement statut, string referenceBancaire, string donneesTechniques, Paiement paiement,
         string banqueEmettrice, string numeroCompte, DateTime? dateVirement, string referenceVirement,
         Guid? agentCollecteurId, bool estPaiementTerrain, string lieuCollecte, Guid? sessionCollecteId)
     {

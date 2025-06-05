@@ -28,7 +28,7 @@ public class TypeTaxeResponse
     public string Description { get; set; } = string.Empty;
     public bool EstPeriodique { get; set; }
     public string FrequencePaiement { get; set; } = string.Empty;
-    public double MontantBase { get; set; }
+    public decimal MontantBase { get; set; }
     public string UniteMesure { get; set; } = string.Empty;
     public bool NecessiteInspection { get; set; }
 }
@@ -84,7 +84,7 @@ public class TaxeService : ITaxeService
     public async Task<decimal> GetTotalTaxesAsync()
     {
         // TODO: Implémenter l'appel API réel
-        return 0;
+        return 0M;
     }
 
     public async Task<int> GetSessionsActivesAsync()
@@ -116,12 +116,12 @@ public class TaxeService : ITaxeService
             {
                 Id = Guid.NewGuid(),
                 AnneeImposition = 2023,
-                Taux = 5.5,
+                Taux = 5.5M,
                 DateEcheance = new DateTime(2023, 12, 31),
-                MontantDu = 150000,
-                MontantPaye = 50000,
-                SoldeRestant = 100000,
-                PrixUnitaire = 15000,
+                MontantDu = 150000M,
+                MontantPaye = 50000M,
+                SoldeRestant = 100000M,
+                PrixUnitaire = 15000M,
                 UniteMesure = "m²",
                 Caracteristiques = "Taxe foncière",
                 TypeTaxeId = Guid.NewGuid(),
@@ -133,12 +133,12 @@ public class TaxeService : ITaxeService
             {
                 Id = Guid.NewGuid(),
                 AnneeImposition = 2023,
-                Taux = 3.2,
+                Taux = 3.2M,
                 DateEcheance = new DateTime(2023, 10, 15),
-                MontantDu = 75000,
-                MontantPaye = 75000,
-                SoldeRestant = 0,
-                PrixUnitaire = 7500,
+                MontantDu = 75000M,
+                MontantPaye = 75000M,
+                SoldeRestant = 0M,
+                PrixUnitaire = 7500M,
                 UniteMesure = "Unité",
                 Caracteristiques = "Taxe professionnelle",
                 TypeTaxeId = Guid.NewGuid(),
@@ -150,12 +150,12 @@ public class TaxeService : ITaxeService
             {
                 Id = Guid.NewGuid(),
                 AnneeImposition = 2024,
-                Taux = 7.0,
+                Taux = 7.0M,
                 DateEcheance = new DateTime(2024, 06, 30),
-                MontantDu = 250000,
-                MontantPaye = 0,
-                SoldeRestant = 250000,
-                PrixUnitaire = 25000,
+                MontantDu = 250000M,
+                MontantPaye = 0M,
+                SoldeRestant = 250000M,
+                PrixUnitaire = 25000M,
                 UniteMesure = "m²",
                 Caracteristiques = "Grande propriété",
                 TypeTaxeId = Guid.NewGuid(),
@@ -197,12 +197,12 @@ public class TaxeService : ITaxeService
         {
             Id = id,
             AnneeImposition = 2023,
-            Taux = 5.5,
+            Taux = 5.5M,
             DateEcheance = new DateTime(2023, 12, 31),
-            MontantDu = 150000,
-            MontantPaye = 50000,
-            SoldeRestant = 100000,
-            PrixUnitaire = 15000,
+            MontantDu = 150000M,
+            MontantPaye = 50000M,
+            SoldeRestant = 100000M,
+            PrixUnitaire = 15000M,
             UniteMesure = "m²",
             Caracteristiques = "Taxe foncière",
             TypeTaxeId = Guid.NewGuid(),

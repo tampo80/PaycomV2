@@ -512,14 +512,14 @@ namespace PayCom.WebApi.Migrations.PostgreSQL.Taxe
                     b.Property<Guid?>("LastModifiedBy")
                         .HasColumnType("uuid");
 
-                    b.Property<double>("MontantBase")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("MontantBase")
+                        .HasColumnType("numeric");
 
-                    b.Property<double>("MontantPenalites")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("MontantPenalites")
+                        .HasColumnType("numeric");
 
-                    b.Property<double>("MontantTotal")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("MontantTotal")
+                        .HasColumnType("numeric");
 
                     b.Property<Guid>("ObligationFiscaleId")
                         .HasColumnType("uuid");
@@ -772,8 +772,11 @@ namespace PayCom.WebApi.Migrations.PostgreSQL.Taxe
                     b.Property<Guid?>("DeletedBy")
                         .HasColumnType("uuid");
 
-                    b.Property<double>("FraisTransaction")
-                        .HasColumnType("double precision");
+                    b.Property<Guid>("EcheanceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("FraisTransaction")
+                        .HasColumnType("numeric");
 
                     b.Property<string>("InformationsSupplementaires")
                         .IsRequired()
@@ -788,8 +791,8 @@ namespace PayCom.WebApi.Migrations.PostgreSQL.Taxe
                     b.Property<int>("ModePaiement")
                         .HasColumnType("integer");
 
-                    b.Property<double>("Montant")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("Montant")
+                        .HasColumnType("numeric");
 
                     b.Property<int>("Statut")
                         .HasColumnType("integer");
@@ -800,6 +803,8 @@ namespace PayCom.WebApi.Migrations.PostgreSQL.Taxe
                         .HasColumnType("character varying(64)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("EcheanceId");
 
                     b.ToTable("Paiements", "taxe");
 
@@ -1105,14 +1110,24 @@ namespace PayCom.WebApi.Migrations.PostgreSQL.Taxe
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("CollecteTerrainSessionId")
+                    b.Property<Guid?>("AgentFiscalId")
                         .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CollecteTerrainSessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Commentaire")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<DateTimeOffset>("Created")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("CreatedBy")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTimeOffset?>("Deleted")
                         .HasColumnType("timestamp with time zone");
@@ -1142,10 +1157,17 @@ namespace PayCom.WebApi.Migrations.PostgreSQL.Taxe
                     b.Property<int>("ModePaiement")
                         .HasColumnType("integer");
 
-                    b.Property<double>("MontantPercu")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("Montant")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("MontantPercu")
+                        .HasColumnType("numeric");
 
                     b.Property<string>("PhotoPreuve")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Reference")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -1157,7 +1179,12 @@ namespace PayCom.WebApi.Migrations.PostgreSQL.Taxe
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int>("Statut")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("AgentFiscalId");
 
                     b.HasIndex("CollecteTerrainSessionId");
 
@@ -1212,8 +1239,8 @@ namespace PayCom.WebApi.Migrations.PostgreSQL.Taxe
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<double>("Frais")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("Frais")
+                        .HasColumnType("numeric");
 
                     b.Property<DateTimeOffset>("LastModified")
                         .HasColumnType("timestamp with time zone");
@@ -1228,8 +1255,8 @@ namespace PayCom.WebApi.Migrations.PostgreSQL.Taxe
                     b.Property<int>("ModePaiement")
                         .HasColumnType("integer");
 
-                    b.Property<double>("Montant")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("Montant")
+                        .HasColumnType("numeric");
 
                     b.Property<string>("NumeroCompte")
                         .IsRequired()
@@ -1315,8 +1342,8 @@ namespace PayCom.WebApi.Migrations.PostgreSQL.Taxe
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<double>("TauxBase")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("TauxBase")
+                        .HasColumnType("numeric");
 
                     b.Property<string>("UniteMesure")
                         .IsRequired()
@@ -1558,6 +1585,17 @@ namespace PayCom.WebApi.Migrations.PostgreSQL.Taxe
                     b.Navigation("Utilisateur");
                 });
 
+            modelBuilder.Entity("PayCom.WebApi.Taxe.Domain.Paiement", b =>
+                {
+                    b.HasOne("PayCom.WebApi.Taxe.Domain.Echeance", "Echeance")
+                        .WithMany("Paiements")
+                        .HasForeignKey("EcheanceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Echeance");
+                });
+
             modelBuilder.Entity("PayCom.WebApi.Taxe.Domain.PaiementTerrain", b =>
                 {
                     b.HasOne("PayCom.WebApi.Taxe.Domain.AgentFiscal", "Agent")
@@ -1606,11 +1644,13 @@ namespace PayCom.WebApi.Migrations.PostgreSQL.Taxe
 
             modelBuilder.Entity("PayCom.WebApi.Taxe.Domain.TransactionCollecte", b =>
                 {
-                    b.HasOne("PayCom.WebApi.Taxe.Domain.CollecteTerrainSession", "Session")
+                    b.HasOne("PayCom.WebApi.Taxe.Domain.AgentFiscal", "AgentFiscal")
+                        .WithMany()
+                        .HasForeignKey("AgentFiscalId");
+
+                    b.HasOne("PayCom.WebApi.Taxe.Domain.CollecteTerrainSession", "CollecteTerrainSession")
                         .WithMany("Transactions")
-                        .HasForeignKey("CollecteTerrainSessionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("CollecteTerrainSessionId");
 
                     b.HasOne("PayCom.WebApi.Taxe.Domain.Echeance", "Echeance")
                         .WithMany("Transactions")
@@ -1618,9 +1658,11 @@ namespace PayCom.WebApi.Migrations.PostgreSQL.Taxe
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Echeance");
+                    b.Navigation("AgentFiscal");
 
-                    b.Navigation("Session");
+                    b.Navigation("CollecteTerrainSession");
+
+                    b.Navigation("Echeance");
                 });
 
             modelBuilder.Entity("PayCom.WebApi.Taxe.Domain.TransactionPaiement", b =>
@@ -1652,6 +1694,8 @@ namespace PayCom.WebApi.Migrations.PostgreSQL.Taxe
 
             modelBuilder.Entity("PayCom.WebApi.Taxe.Domain.Echeance", b =>
                 {
+                    b.Navigation("Paiements");
+
                     b.Navigation("Transactions");
                 });
 

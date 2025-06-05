@@ -12,24 +12,24 @@ public class TaxeDto
 
     [Required(ErrorMessage = "Le taux est requis")]
     [Range(0, 100, ErrorMessage = "Le taux doit être compris entre 0 et 100")]
-    public double Taux { get; set; }
+    public decimal Taux { get; set; }
 
     [Required(ErrorMessage = "La date d'échéance est requise")]
     public DateTime DateEcheance { get; set; } = DateTime.Now.AddMonths(1);
 
     [Required(ErrorMessage = "Le montant dû est requis")]
     [Range(0, double.MaxValue, ErrorMessage = "Le montant dû doit être supérieur ou égal à 0")]
-    public double MontantDu { get; set; }
+    public decimal MontantDu { get; set; }
 
     [Range(0, double.MaxValue, ErrorMessage = "Le montant payé doit être supérieur ou égal à 0")]
-    public double MontantPaye { get; set; }
+    public decimal MontantPaye { get; set; }
 
     [Range(0, double.MaxValue, ErrorMessage = "Le solde restant doit être supérieur ou égal à 0")]
-    public double SoldeRestant { get; set; }
+    public decimal SoldeRestant { get; set; }
 
     [Required(ErrorMessage = "Le prix unitaire est requis")]
     [Range(0, double.MaxValue, ErrorMessage = "Le prix unitaire doit être supérieur ou égal à 0")]
-    public double PrixUnitaire { get; set; }
+    public decimal PrixUnitaire { get; set; }
 
     [Required(ErrorMessage = "L'unité de mesure est requise")]
     [StringLength(50, ErrorMessage = "L'unité de mesure ne doit pas dépasser 50 caractères")]

@@ -45,22 +45,25 @@
                                 <MudAvatar Color="Color.Primary" Size="Size.Large" Class="mb-3">
                                     @if (_contribuable.TypeContribuable == TypeContribuable._0) // Personne physique
                                     {
-                                        @(_contribuable.Prenom?.Substring(0, 1))@(_contribuable.Nom?.Substring(0, 1))
+                                        @((!string.IsNullOrEmpty(_contribuable.Prenom) ? _contribuable.Prenom.Substring(0, 1) : "") + (!string.IsNullOrEmpty(_contribuable.Nom) ? _contribuable.Nom.Substring(0, 1) : ""))
                                     }
                                     else // Personne morale
                                     {
-                                        @(_contribuable.Nom?.Substring(0, 1))
+                                        @(!string.IsNullOrEmpty(_contribuable.Nom) ? _contribuable.Nom.Substring(0, 1) : "E")
                                     }
                                 </MudAvatar>
                                 
                                 @if (_contribuable.TypeContribuable == TypeContribuable._0) // Personne physique
                                 {
-                                    <MudText Typo="Typo.h5" Class="mt-2">@_contribuable.Prenom @_contribuable.Nom</MudText>
+                                    <MudText Typo="Typo.h5" Class="mt-2">
+                                        @(!string.IsNullOrEmpty(_contribuable.Prenom) ? _contribuable.Prenom : "") 
+                                        @(!string.IsNullOrEmpty(_contribuable.Nom) ? _contribuable.Nom : "")
+                                    </MudText>
                                     <MudText Typo="Typo.subtitle1" Color="Color.Primary">Contribuable - Personne Physique</MudText>
                                 }
                                 else // Personne morale
                                 {
-                                    <MudText Typo="Typo.h5" Class="mt-2">@_contribuable.Nom</MudText>
+                                    <MudText Typo="Typo.h5" Class="mt-2">@(!string.IsNullOrEmpty(_contribuable.Nom) ? _contribuable.Nom : "Entreprise")</MudText>
                                     <MudText Typo="Typo.subtitle1" Color="Color.Primary">Contribuable - Personne Morale</MudText>
                                 }
                                 
@@ -111,28 +114,28 @@
                             {
                                 <MudGrid>
                                     <MudItem xs="12" md="6">
-                                        <MudTextField Label="Nom" Value="@_contribuable.Nom" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                        <MudTextField Label="Nom" Value="@(!string.IsNullOrEmpty(_contribuable.Nom) ? _contribuable.Nom : "-")" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
                                     </MudItem>
                                     <MudItem xs="12" md="6">
-                                        <MudTextField Label="Prénom" Value="@_contribuable.Prenom" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                        <MudTextField Label="Prénom" Value="@(!string.IsNullOrEmpty(_contribuable.Prenom) ? _contribuable.Prenom : "-")" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
                                     </MudItem>
                                     <MudItem xs="12" md="6">
-                                        <MudTextField Label="Date de naissance" Value="@_contribuable.DateNaissance?.ToString("dd/MM/yyyy")" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                        <MudTextField Label="Date de naissance" Value="@(_contribuable.DateNaissance.HasValue ? _contribuable.DateNaissance.Value.ToString("dd/MM/yyyy") : "-")" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
                                     </MudItem>
                                     <MudItem xs="12" md="6">
                                         <MudTextField Label="Genre" Value="@GetGenreLabel(_contribuable.Genre)" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
                                     </MudItem>
                                     <MudItem xs="12" md="6">
-                                        <MudTextField Label="Adresse" Value="@_contribuable.Adresse" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                        <MudTextField Label="Adresse" Value="@(!string.IsNullOrEmpty(_contribuable.Adresse) ? _contribuable.Adresse : "-")" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
                                     </MudItem>
                                     <MudItem xs="12" md="6">
-                                        <MudTextField Label="Type d'activité" Value="@_contribuable.TypeActivite" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                        <MudTextField Label="Type d'activité" Value="@(!string.IsNullOrEmpty(_contribuable.TypeActivite) ? _contribuable.TypeActivite : "-")" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
                                     </MudItem>
                                     <MudItem xs="12" md="6">
-                                        <MudTextField Label="Email" Value="@_contribuable.Email" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                        <MudTextField Label="Email" Value="@(!string.IsNullOrEmpty(_contribuable.Email) ? _contribuable.Email : "-")" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
                                     </MudItem>
                                     <MudItem xs="12" md="6">
-                                        <MudTextField Label="Numéro d'identification" Value="@_contribuable.NumeroIdentification" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                        <MudTextField Label="Numéro d'identification" Value="@(!string.IsNullOrEmpty(_contribuable.NumeroIdentification) ? _contribuable.NumeroIdentification : "-")" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
                                     </MudItem>
                                 </MudGrid>
                             }
@@ -140,28 +143,28 @@
                             {
                                 <MudGrid>
                                     <MudItem xs="12" md="6">
-                                        <MudTextField Label="Raison sociale" Value="@_contribuable.Nom" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                        <MudTextField Label="Raison sociale" Value="@(!string.IsNullOrEmpty(_contribuable.Nom) ? _contribuable.Nom : "-")" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
                                     </MudItem>
                                     <MudItem xs="12" md="6">
-                                        <MudTextField Label="Nom commercial" Value="@_contribuable.NomCommercial" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                        <MudTextField Label="Nom commercial" Value="@(!string.IsNullOrEmpty(_contribuable.NomCommercial) ? _contribuable.NomCommercial : "-")" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
                                     </MudItem>
                                     <MudItem xs="12" md="6">
-                                        <MudTextField Label="RCCM" Value="@_contribuable.NumeroRegistreCommerce" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                        <MudTextField Label="RCCM" Value="@(!string.IsNullOrEmpty(_contribuable.NumeroRegistreCommerce) ? _contribuable.NumeroRegistreCommerce : "-")" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
                                     </MudItem>
                                     <MudItem xs="12" md="6">
                                         <MudTextField Label="NIF" Value="@_contribuable.Nif" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
                                     </MudItem>
                                     <MudItem xs="12" md="6">
-                                        <MudTextField Label="Date de création" Value="@_contribuable.DateCreationEntreprise?.ToString("dd/MM/yyyy")" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                        <MudTextField Label="Date de création" Value="@(_contribuable.DateCreationEntreprise.HasValue ? _contribuable.DateCreationEntreprise.Value.ToString("dd/MM/yyyy") : "-")" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
                                     </MudItem>
                                     <MudItem xs="12" md="6">
-                                        <MudTextField Label="Secteur d'activité" Value="@_contribuable.SecteurActivite" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                        <MudTextField Label="Secteur d'activité" Value="@(!string.IsNullOrEmpty(_contribuable.SecteurActivite) ? _contribuable.SecteurActivite : "-")" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
                                     </MudItem>
                                     <MudItem xs="12" md="6">
-                                        <MudTextField Label="Forme juridique" Value="@_contribuable.FormeJuridique" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                        <MudTextField Label="Forme juridique" Value="@(!string.IsNullOrEmpty(_contribuable.FormeJuridique) ? _contribuable.FormeJuridique : "-")" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
                                     </MudItem>
                                     <MudItem xs="12" md="6">
-                                        <MudTextField Label="Représentant légal" Value="@_contribuable.RepresentantLegal" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                                        <MudTextField Label="Représentant légal" Value="@(!string.IsNullOrEmpty(_contribuable.RepresentantLegal) ? _contribuable.RepresentantLegal : "-")" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
                                     </MudItem>
                                     <MudItem xs="12" md="6">
                                         <MudTextField Label="Capital social" Value="@(_contribuable.CapitalSocial.HasValue ? $"{_contribuable.CapitalSocial.Value:N0} FCFA" : "-")" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
@@ -263,20 +266,23 @@
         {
             _loading = true;
             
-            // Rechercher le contribuable par son utilisateurId
-            var searchCommand = new SearchContribuableCommand
+            if (!string.IsNullOrEmpty(_userId) && Guid.TryParse(_userId, out Guid userId))
             {
-                PageNumber = 1,
-                PageSize = 1,
-                Keyword = _userId // Utiliser le Keyword pour filtrer par ID utilisateur
-            };
-            
-            var result = await ApiClient.SearchContribuableEndPointsAsync(ApiVersion, searchCommand);
-            
-            if (result?.Items != null && result.Items.Any())
+                try
+                {
+                    // Utiliser le nouvel endpoint spécifique pour récupérer le contribuable par ID utilisateur
+                    _contribuable = await ApiClient.GetContribuableByUserIdEndPointsAsync(ApiVersion, userId);
+                }
+                catch (Exception ex) when (ex.Message.Contains("trouvé"))
+                {
+                    // Gérer le cas où aucun contribuable n'est associé à cet utilisateur
+                    Snackbar.Add("Aucun profil contribuable n'est associé à votre compte. Veuillez contacter l'administration fiscale.", Severity.Warning);
+                    _contribuable = null;
+                }
+            }
+            else
             {
-                // Récupérer les détails du contribuable
-                _contribuable = result.Items.First();
+                Snackbar.Add("Identifiant utilisateur non valide.", Severity.Error);
             }
         }
         catch (Exception ex)

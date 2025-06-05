@@ -32,7 +32,7 @@ public sealed class CreateTypeTaxeHandler(
             request.Description,
             true, // EstPeriodique par défaut
             frequencePaiement,
-            (double)request.MontantBase,
+            Convert.ToDecimal(request.MontantBase),
             "Unité", // UniteMesure par défaut
             false // NecessiteInspection par défaut
         );

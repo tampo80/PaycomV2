@@ -9,7 +9,7 @@ namespace PayCom.WebApi.Taxe.Application.Notifications.Search.v1;
 public class SearchNotificationCommand : PaginationFilter, IRequest<PagedList<NotificationResponse>>
 {
     public Guid Id { get; set; }
-    public string Type { get; set; }
+    public string Type { get; set; } = string.Empty;
     public DateTime DateEnvoi { get; set; }
-    public string Contenu { get; set; }
+    public string Contenu { get; set; } = string.Empty;
 }

@@ -15,7 +15,7 @@ public record CreateEcheanceCommand : IRequest<CreateEcheanceResponse>
     public int AnneeImposition { get; init; }
     public int PeriodeImposition { get; init; }
     public DateTime DateEcheance { get; init; }
-    public double MontantBase { get; init; }
-    public double MontantPenalites { get; init; } = 0.0;
+    public decimal MontantBase { get; init; }
+    public decimal MontantPenalites { get; init; } = 0.0m;
     public StatutEcheance Statut { get; init; } = StatutEcheance.EnAttente;
 }

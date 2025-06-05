@@ -2,6 +2,7 @@
 @using MudBlazor
 @using PayCom.Blazor.Client.Components
 @using System.Text.Json
+@inject NavigationManager NavigationManager
 
 <PageTitle>Nouveau Contribuable - PayCom</PageTitle>
 
@@ -207,12 +208,17 @@
 </MudContainer>
 
 @code {
-    [Inject] private NavigationManager NavigationManager { get; set; }
     [Inject] private ISnackbar Snackbar { get; set; }
     
     private int _activeTabIndex = 0;
     private bool _showHelpPanel = true;
     private bool _processing = false;
+    
+    protected override void OnInitialized()
+    {
+        // Rediriger vers la nouvelle page pour personne physique par défaut
+        NavigationManager.NavigateTo("/contribuables/nouveau-personne-physique");
+    }
     
     private void OnTabChanged(int index)
     {

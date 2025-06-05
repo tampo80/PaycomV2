@@ -1,6 +1,13 @@
                 <MudNavGroup Title="Taxes" Icon="@Icons.Material.Filled.Receipt" Expanded="false">
+                    <MudNavLink Href="/contribuable/dashboard" Match="NavLinkMatch.All">Tableau de bord</MudNavLink>
                     <MudNavLink Href="/taxes/taxes" Match="NavLinkMatch.All">Gestion des taxes</MudNavLink>
                     <MudNavLink Href="/taxes/liste" Match="NavLinkMatch.All">Liste des taxes</MudNavLink>
                     <MudNavLink Href="/types-taxes" Match="NavLinkMatch.All">Types de taxes</MudNavLink>
                     <MudNavLink Href="/taxes/obligations-fiscales" Match="NavLinkMatch.All">Obligations fiscales</MudNavLink>
+                    <MudNavGroup Title="Contribuables" Icon="@Icons.Material.Filled.People" Expanded="false">
+                        <MudNavLink Href="/contribuables/personnes-physiques" Match="NavLinkMatch.All">Personnes physiques</MudNavLink>
+                        <MudNavLink Href="/contribuables/personnes-morales" Match="NavLinkMatch.All">Personnes morales</MudNavLink>
+                        <MudNavLink Href="/contribuables/nouveau-personne-physique" Match="NavLinkMatch.All">Nouvelle personne physique</MudNavLink>
+                        <MudNavLink Href="/contribuables/nouveau-personne-morale" Match="NavLinkMatch.All">Nouvelle personne morale</MudNavLink>
+                    </MudNavGroup>
                 </MudNavGroup> 

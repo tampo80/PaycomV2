@@ -2,20 +2,20 @@ using FSH.Framework.Core.Domain;
 using FSH.Framework.Core.Domain.Contracts;
 using PayCom.WebApi.Taxe.Domain.Events.TransactionCollecteEvents;
 using Shared.Enums;
+using FSH.Framework.Core.Domain.Events;
 
+namespace PayCom.WebApi.Taxe.Domain;
 
-namespace  PayCom.WebApi.Taxe.Domain;
-
-public class TransactionCollecte : AuditableEntity, IAggregateRoot
+public class TransactionCollecte : TransactionBase, IAggregateRoot
 {
-    public Guid CollecteTerrainSessionId { get; private set; }
-    public virtual CollecteTerrainSession Session { get; private set; } = default!;
-    
     public Guid EcheanceId { get; private set; }
     public virtual Echeance Echeance { get; private set; } = default!;
     
-    public double MontantPercu { get; private set; }
+    public decimal MontantPercu { get; private set; }
     public ModePaiement ModePaiement { get; private set; }
+    public string Commentaire { get; private set; } = string.Empty;
+    public Guid? CollecteTerrainSessionId { get; private set; }
+    public virtual CollecteTerrainSession? CollecteTerrainSession { get; private set; }
     public string ReferenceTransaction { get; private set; } = string.Empty;
     public DateTime HorodatageTransaction { get; private set; }
     public string LocalisationGPS { get; private set; } = string.Empty;
@@ -25,116 +25,80 @@ public class TransactionCollecte : AuditableEntity, IAggregateRoot
 
     private TransactionCollecte() { }
 
-    public TransactionCollecte(Guid id, Guid collecteTerrainSessionId, Guid echeanceId, double montantPercu, 
-                              ModePaiement modePaiement, string referenceTransaction, DateTime horodatageTransaction, 
-                              string localisationGPS, bool estSynchronise, string signatureContribuable, string photoPreuve)
+    public TransactionCollecte(Guid id, DateTime date, decimal montant, string reference, 
+                              Guid echeanceId, decimal montantPercu, ModePaiement modePaiement,
+                              string commentaire, Guid? agentFiscalId, Guid? collecteTerrainSessionId,
+                              StatutTransaction statut = StatutTransaction.EnAttente) 
+        : base(id, date, montant, reference, statut, agentFiscalId)
     {
-        Id = id;
-        CollecteTerrainSessionId = collecteTerrainSessionId;
+        if (montantPercu <= 0)
+            throw new DomainException("Le montant perçu doit être supérieur à zéro.");
+            
         EcheanceId = echeanceId;
         MontantPercu = montantPercu;
         ModePaiement = modePaiement;
-        ReferenceTransaction = referenceTransaction;
-        HorodatageTransaction = horodatageTransaction;
-        LocalisationGPS = localisationGPS;
-        EstSynchronise = estSynchronise;
-        SignatureContribuable = signatureContribuable;
-        PhotoPreuve = photoPreuve;
+        Commentaire = commentaire;
+        CollecteTerrainSessionId = collecteTerrainSessionId;
         
-        QueueDomainEvent(new TransactionCollecteCreated { Transaction = this });
+        QueueDomainEvent(new TransactionCollecteCreated { TransactionCollecte = this });
     }
 
-    public static TransactionCollecte Create(Guid collecteTerrainSessionId, Guid echeanceId, double montantPercu, 
-                                           ModePaiement modePaiement, string referenceTransaction, 
-                                           string localisationGPS, string signatureContribuable, string photoPreuve)
+    public static TransactionCollecte Create(DateTime date, decimal montant, string reference,
+                                            Guid echeanceId, decimal montantPercu, ModePaiement modePaiement,
+                                            string commentaire, Guid? agentFiscalId, Guid? collecteTerrainSessionId)
     {
-        return new TransactionCollecte(
-            Guid.NewGuid(), 
-            collecteTerrainSessionId, 
-            echeanceId, 
-            montantPercu, 
-            modePaiement, 
-            referenceTransaction, 
-            DateTime.UtcNow, 
-            localisationGPS, 
-            false, // Non synchronisé par défaut
-            signatureContribuable, 
-            photoPreuve
-        );
+        return new TransactionCollecte(Guid.NewGuid(), date, montant, reference, echeanceId,
+                                      montantPercu, modePaiement, commentaire, agentFiscalId, collecteTerrainSessionId);
     }
 
-    public TransactionCollecte Update(Guid collecteTerrainSessionId, Guid echeanceId, double montantPercu, 
-                                    ModePaiement modePaiement, string referenceTransaction, DateTime horodatageTransaction, 
-                                    string localisationGPS, bool estSynchronise, string signatureContribuable, string photoPreuve)
+    public TransactionCollecte Update(decimal montantPercu, string commentaire)
     {
         bool isUpdated = false;
 
-        if (CollecteTerrainSessionId != collecteTerrainSessionId)
-        {
-            CollecteTerrainSessionId = collecteTerrainSessionId;
-            isUpdated = true;
-        }
-
-        if (EcheanceId != echeanceId)
-        {
-            EcheanceId = echeanceId;
-            isUpdated = true;
-        }
-
         if (MontantPercu != montantPercu)
         {
+            if (montantPercu <= 0)
+                throw new DomainException("Le montant perçu doit être supérieur à zéro.");
+                
             MontantPercu = montantPercu;
+            Montant = montantPercu; // On met à jour aussi la propriété de base
             isUpdated = true;
         }
 
-        if (ModePaiement != modePaiement)
+        if (Commentaire != commentaire)
         {
-            ModePaiement = modePaiement;
-            isUpdated = true;
-        }
-
-        if (ReferenceTransaction != referenceTransaction)
-        {
-            ReferenceTransaction = referenceTransaction;
-            isUpdated = true;
-        }
-
-        if (HorodatageTransaction != horodatageTransaction)
-        {
-            HorodatageTransaction = horodatageTransaction;
-            isUpdated = true;
-        }
-
-        if (LocalisationGPS != localisationGPS)
-        {
-            LocalisationGPS = localisationGPS;
-            isUpdated = true;
-        }
-
-        if (EstSynchronise != estSynchronise)
-        {
-            EstSynchronise = estSynchronise;
-            isUpdated = true;
-        }
-
-        if (SignatureContribuable != signatureContribuable)
-        {
-            SignatureContribuable = signatureContribuable;
-            isUpdated = true;
-        }
-
-        if (PhotoPreuve != photoPreuve)
-        {
-            PhotoPreuve = photoPreuve;
+            Commentaire = commentaire;
             isUpdated = true;
         }
 
         if (isUpdated)
         {
-            QueueDomainEvent(new TransactionCollecteUpdated { Transaction = this });
+            QueueDomainEvent(new TransactionCollecteUpdated { TransactionCollecte = this });
         }
-
+        
         return this;
+    }
+
+    public override void ChangerStatut(StatutTransaction nouveauStatut)
+    {
+        if (Statut != nouveauStatut)
+        {
+            var ancienStatut = Statut;
+            Statut = nouveauStatut;
+            
+            QueueDomainEvent(new TransactionCollecteStatutChange {
+                TransactionCollecte = this,
+                AncienStatut = ancienStatut,
+                NouveauStatut = nouveauStatut
+            });
+            
+            // Mise à jour de la session de collecte si nécessaire
+            if (nouveauStatut == StatutTransaction.Validee && CollecteTerrainSession != null)
+            {
+                // Avertissement : ceci peut créer des effets secondaires imprévisibles
+                // En pratique, cette mise à jour devrait être gérée via un gestionnaire d'événement
+            }
+        }
     }
 
     public void MarquerSynchronisee()

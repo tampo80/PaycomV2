@@ -12,24 +12,24 @@ public class UpdateTaxeCommand
     
     [Required]
     [Range(0, 100)]
-    public double Taux { get; set; }
+    public decimal Taux { get; set; }
     
     [Required]
     public DateTime DateEcheance { get; set; }
     
     [Required]
     [Range(0, double.MaxValue)]
-    public double MontantDu { get; set; }
+    public decimal MontantDu { get; set; }
     
     [Range(0, double.MaxValue)]
-    public double MontantPaye { get; set; }
+    public decimal MontantPaye { get; set; }
     
     [Range(0, double.MaxValue)]
-    public double SoldeRestant { get; set; }
+    public decimal SoldeRestant { get; set; }
     
     [Required]
     [Range(0, double.MaxValue)]
-    public double PrixUnitaire { get; set; }
+    public decimal PrixUnitaire { get; set; }
     
     [Required]
     public string UniteMesure { get; set; } = string.Empty;

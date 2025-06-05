@@ -12,9 +12,9 @@ public class SearchTransactionPaiementCommand : PaginationFilter, IRequest<Paged
     public Guid Id { get; set; }
     public string CodeTransaction { get; set; }
     public DateTime Date { get; set; }
-    public double Montant { get; set; }
+    public decimal Montant { get; set; }
     public ModePaiement ModePaiement { get; set; }
-    public double Frais { get; set; }
+    public decimal Frais { get; set; }
     public StatutPaiement Statut { get; set; } 
     public Paiement Paiement { get; set; } 
 }

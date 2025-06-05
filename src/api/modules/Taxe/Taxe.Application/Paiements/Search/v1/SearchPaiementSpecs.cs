@@ -11,6 +11,6 @@ public class SearchPaiementSpecs : EntitiesByPaginationFilterSpec<Paiement, Paie
 {
     public SearchPaiementSpecs(SearchPaiementCommand command) : base(command)
         => Query.OrderBy(p => p.InformationsSupplementaires, !command.HasOrderBy())
-            .Where(p => p.InformationsSupplementaires.Contains(command.Keyword),
+            .Where(p => command.Keyword != null && p.InformationsSupplementaires.Contains(command.Keyword),
                 !string.IsNullOrEmpty(command.Keyword));
 }

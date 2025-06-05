@@ -16,6 +16,10 @@ public class DeleteVillageHandler(
     public async Task Handle(DeleteVillageCommand request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+        
+        if (request.Id == null)
+            throw new ArgumentException("L'ID du village ne peut pas être null", nameof(request.Id));
+            
         var village = await repository.GetByIdAsync(request.Id.Value, cancellationToken);
         _ = village ?? throw new VillageNotFoundException(request.Id);
         await repository.DeleteAsync(village, cancellationToken);

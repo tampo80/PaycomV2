@@ -12,6 +12,8 @@ using PayCom.WebApi.Taxe.Application.Contribuables.Search.v1;
 using PayCom.WebApi.Taxe.Application.Contribuables.Update.v1;
 using PayCom.WebApi.Taxe.Application.Contribuables.AssocierUtilisateur.v1;
 using PayCom.WebApi.Taxe.Application.Contribuables.AssocierAgentFiscal.v1;
+using PayCom.WebApi.Taxe.Application.Contribuables.GetByUserId.v1;
+using PayCom.WebApi.Taxe.Application.Contribuables.DissocierUtilisateur.v1;
 
 namespace PayCom.WebApi.Taxe.Infrastructure.EndPoints.v1;
 
@@ -87,7 +89,7 @@ public static class GetContribuableEndPoints
             .WithSummary("gets a Contribuable")
             .WithDescription("gets a Contribuable")
             .Produces<ContribuableResponse>()
-            .RequirePermission("Permissions.Contribuables.Get")
+            .RequirePermission("Permissions.Contribuables.Read")
             .MapToApiVersion(1);
     }
 }
@@ -106,7 +108,7 @@ public static class SearchContribuableEndPoints
             .WithSummary("searches for Contribuables")
             .WithDescription("searches for Contribuables")
             .Produces<PagedList<ContribuableResponse>>()
-            .RequirePermission("Permissions.Contribuables.Search")
+            .RequirePermission("Permissions.Contribuables.Read")
             .MapToApiVersion(1);
     }
 }
@@ -125,7 +127,7 @@ public static class AssocierUtilisateurContribuableEndPoints
             .WithSummary("Associer un utilisateur à un contribuable")
             .WithDescription("Associe un compte utilisateur à un contribuable pour permettre la connexion")
             .Produces<AssocierUtilisateurContribuableResponse>()
-            .RequirePermission("Permissions.Contribuables.GererUtilisateurs")
+            .RequirePermission("Permissions.Contribuables.Manage")
             .MapToApiVersion(1);
     }
 }
@@ -144,7 +146,52 @@ public static class AssocierAgentFiscalContribuableEndPoints
             .WithSummary("Associer un agent fiscal à un contribuable")
             .WithDescription("Associe un agent fiscal à un contribuable pour la gestion fiscale")
             .Produces<AssocierAgentFiscalContribuableResponse>()
-            .RequirePermission("Permissions.Contribuables.GererAgents")
+            .RequirePermission("Permissions.Contribuables.Manage")
+            .MapToApiVersion(1);
+    }
+}
+
+public static class GetContribuableByUserIdEndPoints
+{
+    internal static RouteHandlerBuilder MapContribuableGetByUserIdEndpoint(this IEndpointRouteBuilder endpoints)
+    {
+        return endpoints
+            .MapGet("/utilisateur/{userId:guid}", async (Guid userId, ISender mediator) =>
+            {
+                var response = await mediator.Send(new GetContribuableByUserIdRequest(userId));
+                return Results.Ok(response);
+            })
+            .WithName(nameof(GetContribuableByUserIdEndPoints))
+            .WithSummary("Récupère un contribuable par son ID utilisateur")
+            .WithDescription("Recherche et retourne un contribuable associé à l'ID utilisateur spécifié")
+            .Produces<ContribuableResponse>()
+            .RequirePermission("Permissions.Contribuables.Read")
+            .MapToApiVersion(1);
+    }
+}
+
+public static class DissocierUtilisateurContribuableEndPoints
+{
+    internal static RouteHandlerBuilder MapDissocierUtilisateurContribuableEndpoint(this IEndpointRouteBuilder endpoints)
+    {
+        return endpoints
+            .MapPost("/{id:guid}/dissocier-utilisateur", async (Guid id, ISender mediator) =>
+            {
+                var command = new DissocierUtilisateurContribuableCommand(id);
+                var result = await mediator.Send(command);
+
+                if (!result.Succeeded)
+                {
+                    return Results.BadRequest(new { detail = result.Message });
+                }
+
+                return Results.Ok(result);
+            })
+            .WithName(nameof(DissocierUtilisateurContribuableEndPoints))
+            .WithSummary("Dissocier un utilisateur d'un contribuable")
+            .WithDescription("Permet de dissocier un compte utilisateur d'un contribuable")
+            .Produces<DissocierUtilisateurContribuableResponse>()
+            .RequirePermission("Permissions.Contribuables.Manage")
             .MapToApiVersion(1);
     }
 }

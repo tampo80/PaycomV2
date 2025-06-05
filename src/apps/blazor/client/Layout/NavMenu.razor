@@ -15,13 +15,10 @@
                 Mon profil
             </MudNavLink>
             
-            <!-- Mes obligations fiscales -->
-            @if (_canViewObligationsFiscales)
-            {
-                <MudNavLink IconColor="Color.Primary" Href="/contribuable/mes-obligations" Icon="@Icons.Material.Filled.Assignment" Class="fsh-nav-child">
-                    Mes obligations fiscales
-                </MudNavLink>
-            }
+            <!-- Mes obligations fiscales - Toujours visible pour les contribuables -->
+            <MudNavLink IconColor="Color.Primary" Href="/contribuable/mes-obligations" Icon="@Icons.Material.Filled.Assignment" Class="fsh-nav-child">
+                Mes obligations fiscales
+            </MudNavLink>
             
             <!-- Mes paiements -->
             <MudNavGroup Title="Mes paiements" IconColor="Color.Primary" Icon="@Icons.Material.Filled.Payments" Class="fsh-nav-child">
@@ -65,12 +62,18 @@
                     <MudNavLink IconColor="Color.Primary" Href="/contribuables/liste" Icon="@Icons.Material.Filled.FormatListBulleted" Class="fsh-nav-child">
                         Tous les contribuables
                     </MudNavLink>
-                    <MudNavLink IconColor="Color.Primary" Href="/contribuables/nouveau" Icon="@Icons.Material.Filled.PersonAdd" Class="fsh-nav-child">
-                        Nouveau contribuable
+                    <MudNavLink IconColor="Color.Primary" Href="/contribuables/nouveau-personne-physique" Icon="@Icons.Material.Filled.PersonAdd" Class="fsh-nav-child">
+                        Nouvelle personne physique
                     </MudNavLink>
-                    <MudNavLink IconColor="Color.Primary" Href="/contribuables/associations" Icon="@Icons.Material.Filled.Link" Class="fsh-nav-child">
-                        Gérer les associations
+                    <MudNavLink IconColor="Color.Primary" Href="/contribuables/nouveau-personne-morale" Icon="@Icons.Material.Filled.Business" Class="fsh-nav-child">
+                        Nouvelle personne morale
                     </MudNavLink>
+                    @if (_isAdministrateurFiscal || _isAdmin)
+                    {
+                        <MudNavLink IconColor="Color.Primary" Href="/contribuables/associations" Icon="@Icons.Material.Filled.Link" Class="fsh-nav-child">
+                            Gérer les associations
+                        </MudNavLink>
+                    }
                 </MudNavGroup>
             }
             
@@ -89,7 +92,7 @@
             
             <!-- Paiements et transactions -->
             <MudNavGroup Title="Paiements" IconColor="Color.Primary" Icon="@Icons.Material.Filled.Payments" Class="fsh-nav-child">
-                <MudNavLink IconColor="Color.Primary" Href="/paiements/historique" Icon="@Icons.Material.Filled.ReceiptLong" Class="fsh-nav-child">
+                <MudNavLink IconColor="Color.Primary" Href="/taxes/historique-paiements" Icon="@Icons.Material.Filled.ReceiptLong" Class="fsh-nav-child">
                     Historique des paiements
                 </MudNavLink>
                 <MudNavLink IconColor="Color.Primary" Href="/paiements/nouveau" Icon="@Icons.Material.Filled.AddCard" Class="fsh-nav-child">
@@ -112,6 +115,12 @@
                 <MudNavGroup Title="Taxes" IconColor="Color.Primary" Icon="@Icons.Material.Filled.Receipt" Class="fsh-nav-child">
                     <MudNavLink IconColor="Color.Primary" Href="/taxes/tableau-de-bord" Icon="@Icons.Material.Filled.Dashboard" Class="fsh-nav-child">
                         Tableau de bord des taxes
+                    </MudNavLink>
+                    <MudNavLink IconColor="Color.Primary" Href="/taxes/calendrier-fiscal" Icon="@Icons.Material.Filled.CalendarMonth" Class="fsh-nav-child">
+                        Calendrier fiscal
+                    </MudNavLink>
+                    <MudNavLink IconColor="Color.Primary" Href="/taxes/historique-paiements" Icon="@Icons.Material.Filled.Receipt" Class="fsh-nav-child">
+                        Historique des paiements
                     </MudNavLink>
                     <MudNavLink IconColor="Color.Primary" Href="/taxes/liste" Icon="@Icons.Material.Filled.ListAlt" Class="fsh-nav-child">
                         Liste des taxes
@@ -149,6 +158,9 @@
             
             <!-- Échéances et pénalités -->
             <MudNavGroup Title="Échéances et pénalités" IconColor="Color.Primary" Icon="@Icons.Material.Filled.EventNote" Class="fsh-nav-child">
+                <MudNavLink IconColor="Color.Primary" Href="/taxes/calendrier-fiscal" Icon="@Icons.Material.Filled.DateRange" Class="fsh-nav-child">
+                    Calendrier fiscal
+                </MudNavLink>
                 <MudNavLink IconColor="Color.Primary" Href="/echeances" Icon="@Icons.Material.Filled.DateRange" Class="fsh-nav-child">
                     Échéances
                 </MudNavLink>

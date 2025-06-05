@@ -4,5 +4,5 @@ namespace  PayCom.WebApi.Taxe.Domain.Events.TransactionCollecteEvents;
 
 public record TransactionCollecteUpdated : DomainEvent
 {
-    public TransactionCollecte Transaction { get; init; } = default!;
+    public TransactionCollecte TransactionCollecte { get; init; } = default!;
 } 

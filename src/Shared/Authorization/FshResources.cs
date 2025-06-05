@@ -22,4 +22,5 @@ public static class FshResources
     public const string ObligationsFiscales = nameof(ObligationsFiscales);
     public const string TypesTaxe = nameof(TypesTaxe);
     public const string Taxes = nameof(Taxes);
+    public const string AdminFiscal = nameof(AdminFiscal);
 }

@@ -11,7 +11,7 @@ public class TypeTaxeResponse
     public string Description { get; set; } = string.Empty;
     public bool EstPeriodique { get; set; }
     public string FrequencePaiement { get; set; } = string.Empty;
-    public double MontantBase { get; set; }
+    public decimal MontantBase { get; set; }
     public string UniteMesure { get; set; } = string.Empty;
     public bool NecessiteInspection { get; set; }
 } 

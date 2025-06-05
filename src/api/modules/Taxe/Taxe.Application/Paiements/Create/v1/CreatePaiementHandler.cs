@@ -16,8 +16,15 @@ public sealed class CreatePaiementHandler(
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
-        var paiement = Paiement.Create(request.Date, request.Montant, request.CodeTransaction, request.DateTransaction,
-            request.FraisTransaction, request.InformationsSupplementaires);
+        var paiement = Paiement.Create(
+            request.Date, 
+            request.Montant, 
+            request.CodeTransaction, 
+            request.DateTransaction,
+            request.FraisTransaction, 
+            request.InformationsSupplementaires,
+            request.EcheanceId);
+            
         await repository.AddAsync(paiement, cancellationToken);
         logger.LogInformation("Paiement créé {paiementId}", paiement.Id);
         return new CreatePaiementResponse(paiement.Id);

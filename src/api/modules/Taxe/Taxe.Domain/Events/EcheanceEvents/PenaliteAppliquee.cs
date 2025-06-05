@@ -5,5 +5,5 @@ namespace  PayCom.WebApi.Taxe.Domain.Events.EcheanceEvents;
 public record PenaliteAppliquee : DomainEvent
 {
     public Echeance Echeance { get; init; } = default!;
-    public double MontantPenalite { get; init; }
+    public decimal MontantPenalite { get; init; }
 } 

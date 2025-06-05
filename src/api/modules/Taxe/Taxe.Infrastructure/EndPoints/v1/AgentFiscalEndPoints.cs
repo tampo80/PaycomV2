@@ -11,6 +11,7 @@ using PayCom.WebApi.Taxe.Application.AgentFiscals.Get.v1;
 using PayCom.WebApi.Taxe.Application.AgentFiscals.Search.v1;
 using PayCom.WebApi.Taxe.Application.AgentFiscals.Update.v1;
 using PayCom.WebApi.Taxe.Application.AgentFiscals.AssocierUtilisateur.v1;
+using PayCom.WebApi.Taxe.Application.AgentFiscals.GetByUserId.v1;
 
 namespace PayCom.WebApi.Taxe.Infrastructure.EndPoints.v1;
 
@@ -125,6 +126,25 @@ public static class AssocierUtilisateurAgentEndPoints
             .WithDescription("Associe un compte utilisateur à un agent fiscal pour permettre la connexion")
             .Produces<AssocierUtilisateurAgentResponse>()
             .RequirePermission("Permissions.AgentFiscals.GererUtilisateurs")
+            .MapToApiVersion(1);
+    }
+}
+
+public static class GetAgentFiscalByUserIdEndPoints
+{
+    internal static RouteHandlerBuilder MapAgentFiscalGetByUserIdEndpoint(this IEndpointRouteBuilder endpoints)
+    {
+        return endpoints
+            .MapGet("/utilisateur/{userId:guid}", async (Guid userId, ISender mediator) =>
+            {
+                var response = await mediator.Send(new GetAgentFiscalByUserIdRequest(userId));
+                return Results.Ok(response);
+            })
+            .WithName(nameof(GetAgentFiscalByUserIdEndPoints))
+            .WithSummary("Récupère un agent fiscal par son ID utilisateur")
+            .WithDescription("Recherche et retourne un agent fiscal associé à l'ID utilisateur spécifié")
+            .Produces<AgentFiscalResponse>()
+            .RequirePermission("Permissions.AgentFiscals.View")
             .MapToApiVersion(1);
     }
 }

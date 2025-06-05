@@ -8,17 +8,23 @@ namespace  PayCom.WebApi.Taxe.Domain;
 public class Paiement : AuditableEntity, IAggregateRoot
 {
     public DateTime Date { get; private set; }
-    public double Montant { get; private set; }
-     public ModePaiement ModePaiement { get; private set; } // Enum type
+    public decimal Montant { get; private set; }
+    public ModePaiement ModePaiement { get; private set; } // Enum type
     public string CodeTransaction { get; private set; } = string.Empty;
     public DateTime DateTransaction { get; private set; }
     public StatutPaiement Statut { get; private set; } // Enum type
-    public double FraisTransaction { get; private set; }
+    public decimal FraisTransaction { get; private set; }
     public string InformationsSupplementaires { get; private set; } = string.Empty;
+    
+    // Relations ajoutées
+    public Guid EcheanceId { get; private set; }
+    public virtual Echeance Echeance { get; private set; } = default!;
 
     private Paiement() { }
 
-    public Paiement(Guid id, DateTime date, double montant, string codeTransaction, DateTime dateTransaction, double fraisTransaction, string informationsSupplementaires)
+    public Paiement(Guid id, DateTime date, decimal montant, string codeTransaction, 
+        DateTime dateTransaction, decimal fraisTransaction, string informationsSupplementaires,
+        Guid echeanceId)
     {
         Id = id;
         Date = date;
@@ -27,16 +33,22 @@ public class Paiement : AuditableEntity, IAggregateRoot
         DateTransaction = dateTransaction;
         FraisTransaction = fraisTransaction;
         InformationsSupplementaires = informationsSupplementaires;
+        EcheanceId = echeanceId;
+        Statut = StatutPaiement.Enregistre;
         
-        QueueDomainEvent( new PaiementCreated{Paiement = this});
+        QueueDomainEvent(new PaiementCreated{Paiement = this});
     }
 
-    public static Paiement Create(DateTime date, double montant, string codeTransaction, DateTime dateTransaction, double fraisTransaction, string informationsSupplementaires)
+    public static Paiement Create(DateTime date, decimal montant, string codeTransaction, 
+        DateTime dateTransaction, decimal fraisTransaction, string informationsSupplementaires,
+        Guid echeanceId)
     {
-        return new Paiement(Guid.NewGuid(),date, montant, codeTransaction, dateTransaction, fraisTransaction, informationsSupplementaires);
+        return new Paiement(Guid.NewGuid(), date, montant, codeTransaction, dateTransaction, 
+            fraisTransaction, informationsSupplementaires, echeanceId);
     }
 
-    public Paiement Update(DateTime date, double montant, string codeTransaction, DateTime dateTransaction, double fraisTransaction, string informationsSupplementaires)
+    public Paiement Update(DateTime date, decimal montant, string codeTransaction, 
+        DateTime dateTransaction, decimal fraisTransaction, string informationsSupplementaires)
     {
         bool isUpdated = false;
 
@@ -83,5 +95,17 @@ public class Paiement : AuditableEntity, IAggregateRoot
         return this;
     }
 
-   
+    public void ChangerStatut(StatutPaiement nouveauStatut)
+    {
+        if (Statut != nouveauStatut)
+        {
+            var ancienStatut = Statut;
+            Statut = nouveauStatut;
+            QueueDomainEvent(new PaiementStatutChange { 
+                Paiement = this, 
+                AncienStatut = ancienStatut,
+                NouveauStatut = nouveauStatut
+            });
+        }
+    }
 }

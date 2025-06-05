@@ -4,5 +4,5 @@ namespace  PayCom.WebApi.Taxe.Domain.Events.TransactionPaiementEvents;
 
 public sealed record TransactionPaiementCreated : DomainEvent
 {
-    public TransactionPaiement? TransactionPaiement { get; set; }
+    public TransactionPaiement TransactionPaiement { get; init; } = default!;
 }

@@ -269,12 +269,12 @@
                         var apiCommand = new PayCom.Blazor.Infrastructure.Api.CreateTaxeCommand
                         {
                             AnneeImposition = Model.AnneeImposition,
-                            Taux = Model.Taux,
+                            Taux = (double)Model.Taux,
                             DateEcheance = Model.DateEcheance,
-                            MontantDu = Model.MontantDu,
-                            MontantPaye = Model.MontantPaye,
-                            SoldeRestant = Model.SoldeRestant,
-                            PrixUnitaire = Model.PrixUnitaire,
+                            MontantDu = (double)Model.MontantDu,
+                            MontantPaye = (double)Model.MontantPaye,
+                            SoldeRestant = (double)Model.SoldeRestant,
+                            PrixUnitaire = (double)Model.PrixUnitaire,
                             UniteMesure = Model.UniteMesure,
                             Caracteristiques = Model.Caracteristiques,
                             DateCreation = DateTime.Now,

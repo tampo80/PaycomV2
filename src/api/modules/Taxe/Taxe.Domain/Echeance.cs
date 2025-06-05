@@ -2,7 +2,7 @@ using FSH.Framework.Core.Domain;
 using FSH.Framework.Core.Domain.Contracts;
 using PayCom.WebApi.Taxe.Domain.Events.EcheanceEvents;
 using Shared.Enums;
-
+using System.Linq;
 
 namespace  PayCom.WebApi.Taxe.Domain;
 
@@ -14,20 +14,28 @@ public class Echeance : AuditableEntity, IAggregateRoot
     public int AnneeImposition { get; private set; }
     public int PeriodeImposition { get; private set; } // Numéro du trimestre, mois, etc.
     public DateTime DateEcheance { get; private set; }
-    public double MontantBase { get; private set; }
-    public double MontantPenalites { get; private set; }
-    public double MontantTotal { get; private set; }
+    public decimal MontantBase { get; private set; }
+    public decimal MontantPenalites { get; private set; }
+    public decimal MontantTotal { get; private set; }
     public StatutEcheance Statut { get; private set; }
 
-    // Navigation property pour les transactions
+    // Navigation properties
     private readonly List<TransactionCollecte> _transactions = new();
     public virtual IReadOnlyCollection<TransactionCollecte> Transactions => _transactions.AsReadOnly();
+    
+    // Ajout de la collection des paiements
+    private readonly List<Paiement> _paiements = new();
+    public virtual IReadOnlyCollection<Paiement> Paiements => _paiements.AsReadOnly();
 
     private Echeance() { }
 
     public Echeance(Guid id, Guid obligationFiscaleId, int anneeImposition, int periodeImposition, 
-                   DateTime dateEcheance, double montantBase, double montantPenalites, StatutEcheance statut)
+                   DateTime dateEcheance, decimal montantBase, decimal montantPenalites, StatutEcheance statut)
     {
+        // Validation des entrées
+        if (dateEcheance <= DateTime.MinValue)
+            throw new DomainException("La date d'échéance doit être valide.");
+            
         Id = id;
         ObligationFiscaleId = obligationFiscaleId;
         AnneeImposition = anneeImposition;
@@ -42,15 +50,19 @@ public class Echeance : AuditableEntity, IAggregateRoot
     }
 
     public static Echeance Create(Guid obligationFiscaleId, int anneeImposition, int periodeImposition, 
-                                DateTime dateEcheance, double montantBase, double montantPenalites, StatutEcheance statut)
+                                DateTime dateEcheance, decimal montantBase, decimal montantPenalites, StatutEcheance statut)
     {
         return new Echeance(Guid.NewGuid(), obligationFiscaleId, anneeImposition, periodeImposition, 
                            dateEcheance, montantBase, montantPenalites, statut);
     }
 
     public Echeance Update(Guid obligationFiscaleId, int anneeImposition, int periodeImposition, 
-                          DateTime dateEcheance, double montantBase, double montantPenalites, StatutEcheance statut)
+                          DateTime dateEcheance, decimal montantBase, decimal montantPenalites, StatutEcheance statut)
     {
+        // Validation des entrées
+        if (dateEcheance <= DateTime.MinValue)
+            throw new DomainException("La date d'échéance doit être valide.");
+            
         bool isUpdated = false;
 
         if (ObligationFiscaleId != obligationFiscaleId)
@@ -99,14 +111,14 @@ public class Echeance : AuditableEntity, IAggregateRoot
         return this;
     }
 
-    public void CalculerMontant(double tauxBase, double quantite)
+    public void CalculerMontant(decimal tauxBase, decimal quantite)
     {
         MontantBase = tauxBase * quantite;
         MontantTotal = MontantBase + MontantPenalites;
         QueueDomainEvent(new MontantEcheanceCalcule { Echeance = this });
     }
 
-    public void AppliquerPenalite(double montantPenalite)
+    public void AppliquerPenalite(decimal montantPenalite)
     {
         if (montantPenalite > 0)
         {
@@ -119,9 +131,28 @@ public class Echeance : AuditableEntity, IAggregateRoot
     public void EnregistrerTransaction(TransactionCollecte transaction)
     {
         _transactions.Add(transaction);
+        MettreAJourStatut();
+    }
+    
+    public void EnregistrerPaiement(Paiement paiement)
+    {
+        if (paiement.EcheanceId != Id)
+            throw new DomainException("Ce paiement n'est pas associé à cette échéance.");
+            
+        _paiements.Add(paiement);
+        MettreAJourStatut();
         
-        // Mettre à jour le statut en fonction du paiement
-        double totalPaye = _transactions.Sum(t => t.MontantPercu);
+        QueueDomainEvent(new PaiementEnregistre { Echeance = this, Paiement = paiement });
+    }
+    
+    private void MettreAJourStatut()
+    {
+        // Calculer le montant total payé (transactions + paiements)
+        decimal totalTransactions = _transactions.Sum(t => t.MontantPercu);
+        decimal totalPaiements = _paiements.Sum(p => p.Montant);
+        decimal totalPaye = totalTransactions + totalPaiements;
+        
+        StatutEcheance ancienStatut = Statut;
         
         if (totalPaye >= MontantTotal)
         {
@@ -132,6 +163,21 @@ public class Echeance : AuditableEntity, IAggregateRoot
             Statut = StatutEcheance.PaiementPartiel;
         }
         
-        QueueDomainEvent(new TransactionEnregistree { Echeance = this, Transaction = transaction });
+        /*  if (Statut != ancienStatut)
+        {
+            QueueDomainEvent(new EcheanceStatutChange { 
+                Echeance = this,
+                AncienStatut = ancienStatut,
+                NouveauStatut = Statut
+            });
+        }*/
+    }
+} 
+
+// Classe d'exception pour le domaine
+public class DomainException : Exception
+{
+    public DomainException(string message) : base(message)
+    {
     }
 } 

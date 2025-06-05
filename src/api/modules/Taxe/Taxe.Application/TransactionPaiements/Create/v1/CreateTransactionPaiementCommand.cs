@@ -12,7 +12,7 @@ public record CreateTransactionPaiementCommand(
     [property: DefaultValue("2025-01-01")]
     DateTime Date,
     [property: DefaultValue(1000.0)] 
-    double Montant,
+    decimal Montant,
     [property: DefaultValue(ModePaiement.MobileMoney)] 
     ModePaiement ModePaiement,
     [property: DefaultValue("Orange")] 
@@ -20,7 +20,7 @@ public record CreateTransactionPaiementCommand(
     [property: DefaultValue("0123456789")] 
     string NumeroReference,
     [property: DefaultValue(10.0)] 
-    double Frais,
+    decimal Frais,
     [property: DefaultValue(StatutPaiement.Reussi)] 
     StatutPaiement Statut,
     [property: DefaultValue("REF123456789")] 

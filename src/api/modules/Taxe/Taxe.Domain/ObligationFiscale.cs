@@ -1,6 +1,8 @@
 using FSH.Framework.Core.Domain;
 using FSH.Framework.Core.Domain.Contracts;
 using PayCom.WebApi.Taxe.Domain.Events.ObligationFiscaleEvents;
+using PayCom.WebApi.Taxe.Domain.ValueObjects;
+using Shared.Enums;
 
 
 namespace  PayCom.WebApi.Taxe.Domain;
@@ -31,6 +33,9 @@ public class ObligationFiscale : AuditableEntity, IAggregateRoot
     public ObligationFiscale(Guid id, Guid contribuableId, Guid typeTaxeId, Guid communeId, DateTime dateDebut, 
                             DateTime? dateFin, string referenceProprieteBien, string localisationGPS, bool estActif)
     {
+        // Validation des entrées
+        ValiderDates(dateDebut, dateFin);
+        
         Id = id;
         ContribuableId = contribuableId;
         TypeTaxeId = typeTaxeId;
@@ -54,6 +59,9 @@ public class ObligationFiscale : AuditableEntity, IAggregateRoot
     public ObligationFiscale Update(Guid contribuableId, Guid typeTaxeId, Guid communeId, DateTime dateDebut, 
                                   DateTime? dateFin, string referenceProprieteBien, string localisationGPS, bool estActif)
     {
+        // Validation des entrées
+        ValiderDates(dateDebut, dateFin);
+        
         bool isUpdated = false;
 
         if (ContribuableId != contribuableId)
@@ -102,6 +110,12 @@ public class ObligationFiscale : AuditableEntity, IAggregateRoot
         {
             EstActif = estActif;
             isUpdated = true;
+            
+            // Mettre à jour la date de fin si on désactive
+            if (!estActif && DateFin == null)
+            {
+                DateFin = DateTime.UtcNow;
+            }
         }
 
         if (isUpdated)
@@ -132,8 +146,79 @@ public class ObligationFiscale : AuditableEntity, IAggregateRoot
         }
     }
 
-    public void AjouterEcheance(Echeance echeance)
+    public Echeance AjouterEcheance(int anneeImposition, int periodeImposition, 
+                                   DateTime dateEcheance, decimal montantBase, decimal montantPenalites)
     {
+        // Vérifier si l'échéance existe déjà
+        var echeanceExistante = _echeances
+            .FirstOrDefault(e => e.AnneeImposition == anneeImposition && e.PeriodeImposition == periodeImposition);
+            
+        if (echeanceExistante != null)
+            throw new DomainException($"Une échéance existe déjà pour la période {periodeImposition}/{anneeImposition}");
+            
+        // Créer la nouvelle échéance
+        var echeance = Echeance.Create(
+            Id, 
+            anneeImposition, 
+            periodeImposition, 
+            dateEcheance, 
+            montantBase, 
+            montantPenalites, 
+            StatutEcheance.EnAttente
+        );
+        
         _echeances.Add(echeance);
+        
+        QueueDomainEvent(new EcheanceAjoutee { ObligationFiscale = this, Echeance = echeance });
+        
+        return echeance;
+    }
+    
+    // Méthode pour générer automatiquement les échéances en fonction du TypeTaxe
+    public void GenererEcheances(TypeTaxe typeTaxe, DateTime dateDebut, DateTime? dateFin, decimal montantBase)
+    {
+        if (!typeTaxe.EstPeriodique)
+            throw new DomainException("Impossible de générer des échéances pour une taxe non périodique.");
+            
+        var finPeriode = dateFin ?? dateDebut.AddYears(1);
+        var dateEcheance = dateDebut;
+        var montantPenalites = 0m;
+        
+        while (dateEcheance < finPeriode)
+        {
+            var periodeImposition = typeTaxe.FrequencePaiement switch
+            {
+                FrequencePaiement.Mensuel => dateEcheance.Month,
+                FrequencePaiement.Trimestriel => ((dateEcheance.Month - 1) / 3) + 1,
+                FrequencePaiement.Semestriel => ((dateEcheance.Month - 1) / 6) + 1,
+                _ => 1 // Annuelle
+            };
+            
+            try
+            {
+                AjouterEcheance(
+                    dateEcheance.Year,
+                    periodeImposition,
+                    dateEcheance,
+                    montantBase,
+                    montantPenalites
+                );
+            }
+            catch (DomainException)
+            {
+                // Ignorer si l'échéance existe déjà
+            }
+            
+            dateEcheance = typeTaxe.CalculerProchaineEcheance(dateEcheance);
+        }
+    }
+    
+    private void ValiderDates(DateTime debut, DateTime? fin)
+    {
+        if (debut == default)
+            throw new DomainException("La date de début est obligatoire.");
+            
+        if (fin.HasValue && fin.Value <= debut)
+            throw new DomainException("La date de fin doit être postérieure à la date de début.");
     }
 } 

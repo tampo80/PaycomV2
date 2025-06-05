@@ -13,9 +13,9 @@ public record CreateTransactionCollecteCommand : IRequest<CreateTransactionColle
     
     public Guid? SessionId { get; init; }
     [Range(0.01, double.MaxValue, ErrorMessage = "Le montant payé doit être supérieur à zéro")]
-    public double MontantPaye { get; init; }
+    public decimal MontantPaye { get; init; }
     [StringLength(50)]
-    public string ModePaiement { get; init; }
+    public string ModePaiement { get; init; } = string.Empty;
     [StringLength(100)]
     public string? ReferencePaiement { get; init; }
     [StringLength(500)]

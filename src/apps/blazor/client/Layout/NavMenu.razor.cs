@@ -42,16 +42,18 @@ public partial class NavMenu
     private bool _isAdmin;
     private bool _isAgentFiscal;
     private bool _isContribuable;
+    private bool _isAdministrateurFiscal;
     
     // Hiérarchie des rôles
     private bool HasRoleContribuable => _isContribuable || _isAdmin;
     private bool HasRoleAgentFiscal => _isAgentFiscal || _isAdmin;
+    private bool HasRoleAdminFiscal => _isAdministrateurFiscal || _isAdmin;
     
     // Groupes de permissions avec hiérarchie
     private bool CanViewAdministrationGroup => _canViewUsers || _canViewRoles || _canViewTenants || _isAdmin;
     private bool CanViewEspaceContribuableGroup => HasRoleContribuable;
     private bool CanViewEspaceAgentFiscalGroup => HasRoleAgentFiscal;
-    private bool CanViewAdministrationFiscaleGroup => _canViewTaxes || _canViewAgentFiscals || _isAdmin;
+    private bool CanViewAdministrationFiscaleGroup => HasRoleAdminFiscal;
     private bool CanViewParametresSystemeGroup => _canViewCommunes || _canViewRegions || _isAdmin;
 
     protected override async Task OnInitializedAsync()
@@ -68,9 +70,10 @@ public partial class NavMenu
         _isAdmin = user.IsInRole(FshRoles.Admin);
         _isAgentFiscal = user.IsInRole(FshRoles.AgentFiscal);
         _isContribuable = user.IsInRole(FshRoles.Contribuable);
+        _isAdministrateurFiscal = user.IsInRole(FshRoles.AdministrateurFiscal);
 
-        Console.WriteLine($"Rôles utilisateur - Admin: {_isAdmin}, AgentFiscal: {_isAgentFiscal}, Contribuable: {_isContribuable}");
-        Console.WriteLine($"HasRoleAgentFiscal: {HasRoleAgentFiscal}, HasRoleContribuable: {HasRoleContribuable}");
+        Console.WriteLine($"Rôles utilisateur - Admin: {_isAdmin}, AgentFiscal: {_isAgentFiscal}, Contribuable: {_isContribuable}, AdministrateurFiscal: {_isAdministrateurFiscal}");
+        Console.WriteLine($"HasRoleAgentFiscal: {HasRoleAgentFiscal}, HasRoleContribuable: {HasRoleContribuable}, HasRoleAdminFiscal: {HasRoleAdminFiscal}");
         
         // Permissions générales
         _canViewHangfire = await AuthService.HasPermissionAsync(user, FshActions.View, FshResources.Hangfire);
@@ -84,10 +87,10 @@ public partial class NavMenu
         _canViewAuditTrails = await AuthService.HasPermissionAsync(user, FshActions.View, FshResources.AuditTrails);
         
         // Permissions spécifiques au module Taxe avec hiérarchie des rôles
-        _canViewContribuables = await AuthService.HasPermissionAsync(user, FshActions.View, FshResources.Contribuables) || HasRoleAgentFiscal;
+        _canViewContribuables = await AuthService.HasPermissionAsync(user, FshActions.Read, FshResources.Contribuables) || HasRoleAgentFiscal;
         _canViewAgentFiscals = await AuthService.HasPermissionAsync(user, FshActions.View, FshResources.AgentFiscals) || _isAdmin;
-        _canViewTaxes = await AuthService.HasPermissionAsync(user, FshActions.View, FshResources.Taxes) || HasRoleAgentFiscal;
-        _canViewObligationsFiscales = await AuthService.HasPermissionAsync(user, FshActions.View, FshResources.ObligationsFiscales) || HasRoleAgentFiscal || HasRoleContribuable;
+        _canViewTaxes = await AuthService.HasPermissionAsync(user, FshActions.Read, FshResources.Taxes) || HasRoleAgentFiscal;
+        _canViewObligationsFiscales = await AuthService.HasPermissionAsync(user, FshActions.Read, FshResources.ObligationsFiscales) || HasRoleAgentFiscal || HasRoleContribuable;
         _canViewRegions = await AuthService.HasPermissionAsync(user, FshActions.View, FshResources.Regions) || _isAdmin;
         _canViewCommunes = await AuthService.HasPermissionAsync(user, FshActions.View, FshResources.Communes) || _isAdmin;
         

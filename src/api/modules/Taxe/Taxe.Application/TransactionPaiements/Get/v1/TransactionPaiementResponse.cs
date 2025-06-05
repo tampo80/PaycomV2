@@ -8,8 +8,8 @@ public record TransactionPaiementResponse(
     Guid Id,
     string CodeTransaction,
     DateTime Date,
-    double Montant,
+    decimal Montant,
     ModePaiement ModePaiement,
-    double Frais,
+    decimal Frais,
     StatutPaiement Statut,
     Paiement Paiement);

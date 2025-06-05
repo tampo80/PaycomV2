@@ -148,8 +148,8 @@
                                           ErrorText="@(GetFieldErrorText("Genre"))"
                                           HelperText="Genre du contribuable"
                                           Validation="@(new Func<GenreType?, IEnumerable<string>>(ValidateGenre))">
-                                    <MudSelectItem T="GenreType?" Value="GenreType.Homme">Homme</MudSelectItem>
-                                    <MudSelectItem T="GenreType?" Value="GenreType.Femme">Femme</MudSelectItem>
+                                    <MudSelectItem Value="@(GenreType.Homme)">Homme</MudSelectItem>
+                                    <MudSelectItem Value="@(GenreType.Femme)">Femme</MudSelectItem>
                                 </MudSelect>
                             </MudItem>
                         }

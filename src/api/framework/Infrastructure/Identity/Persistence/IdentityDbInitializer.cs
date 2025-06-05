@@ -58,34 +58,29 @@ internal sealed class IdentityDbInitializer(
         // Assigner les permissions de base au rôle Basic
         if (roles.TryGetValue(FshRoles.Basic, out var basicRole))
         {
-            await AssignPermissionsToRoleAsync(context, FshPermissions.Basic, basicRole);
+            // Utiliser la collection de permissions prédéfinie pour le rôle Basic
+            await AssignPermissionsToRoleAsync(context, FshPermissions.BasicRole, basicRole);
         }
         
         // Assigner les permissions spécifiques au rôle Contribuable
         if (roles.TryGetValue(FshRoles.Contribuable, out var contribuableRole))
         {
-            var contribuablePermissions = FshPermissions.All
-                .Where(p => 
-                    p.Resource == FshResources.ObligationsFiscales || 
-                    p.Resource == FshResources.Contribuables && p.Action == FshActions.View ||
-                    p.Resource == FshResources.Dashboard && p.Action == FshActions.View)
-                .ToList();
-                
-            await AssignPermissionsToRoleAsync(context, contribuablePermissions, contribuableRole);
+            // Utiliser la collection de permissions prédéfinie pour les contribuables
+            await AssignPermissionsToRoleAsync(context, FshPermissions.Contribuable, contribuableRole);
         }
         
         // Assigner les permissions spécifiques au rôle Agent Fiscal
         if (roles.TryGetValue(FshRoles.AgentFiscal, out var agentFiscalRole))
         {
-            var agentFiscalPermissions = FshPermissions.All
-                .Where(p => 
-                    p.Resource == FshResources.Contribuables ||
-                    p.Resource == FshResources.ObligationsFiscales ||
-                    p.Resource == FshResources.Taxes ||
-                    p.Resource == FshResources.Dashboard && p.Action == FshActions.View)
-                .ToList();
-                
-            await AssignPermissionsToRoleAsync(context, agentFiscalPermissions, agentFiscalRole);
+            // Utiliser la collection de permissions prédéfinie pour les agents fiscaux
+            await AssignPermissionsToRoleAsync(context, FshPermissions.AgentFiscal, agentFiscalRole);
+        }
+        
+        // Assigner les permissions spécifiques au rôle Administrateur Fiscal
+        if (roles.TryGetValue(FshRoles.AdministrateurFiscal, out var adminFiscalRole))
+        {
+            // Utiliser la collection de permissions prédéfinie pour l'administrateur fiscal
+            await AssignPermissionsToRoleAsync(context, FshPermissions.AdministrateurFiscal, adminFiscalRole);
         }
         
         // Assigner toutes les permissions au rôle Admin (sauf celles de Root)
@@ -180,6 +175,12 @@ internal sealed class IdentityDbInitializer(
         {
             logger.LogInformation("Assigning AgentFiscal Role to Admin User for '{TenantId}' Tenant.", multiTenantContextAccessor.MultiTenantContext.TenantInfo?.Id);
             await userManager.AddToRoleAsync(adminUser, FshRoles.AgentFiscal);
+        }
+        
+        if (!await userManager.IsInRoleAsync(adminUser, FshRoles.AdministrateurFiscal))
+        {
+            logger.LogInformation("Assigning AdministrateurFiscal Role to Admin User for '{TenantId}' Tenant.", multiTenantContextAccessor.MultiTenantContext.TenantInfo?.Id);
+            await userManager.AddToRoleAsync(adminUser, FshRoles.AdministrateurFiscal);
         }
     }
 }

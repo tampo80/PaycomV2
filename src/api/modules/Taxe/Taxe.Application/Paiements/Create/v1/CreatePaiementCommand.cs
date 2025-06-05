@@ -12,13 +12,16 @@ public record CreatePaiementCommand : IRequest<CreatePaiementResponse>
     [Required]
     public DateTime Date { get; init; }
     
-    public double Montant { get; init; }
+    public decimal Montant { get; init; }
     public ModePaiement ModePaiement { get; init; }
     [StringLength(100)]
-    public string CodeTransaction { get; init; }
+    public string CodeTransaction { get; init; } = string.Empty;
     public DateTime DateTransaction { get; init; }
     public StatutPaiement Statut { get; init; } = StatutPaiement.EnAttente;
-    public double FraisTransaction { get; init; } = 0.0;
+    public decimal FraisTransaction { get; init; } = 0.0m;
     [StringLength(500)]
-    public string InformationsSupplementaires { get; init; }
+    public string InformationsSupplementaires { get; init; } = string.Empty;
+    
+    [Required]
+    public Guid EcheanceId { get; init; }
 }

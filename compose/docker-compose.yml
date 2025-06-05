@@ -2,10 +2,10 @@ version: "4" #on wsl linux replace 3.8
 name: paycom #on wsl linux replace with export COMPOSE_PROJECT_NAME=paycom before docker-compose up command
 
 services:
-  webapi:
+  paycomwebapi:
     image: ${FSH_DOTNETSTARTERKIT_WEBAPI_IMAGE}
     pull_policy: always
-    container_name: webapi
+    container_name: paycomwebapi
     networks:
       - paycom
     environment:
@@ -31,7 +31,7 @@ services:
       OpenTelemetryOptions__Endpoint: http://otel-collector:4317
       RateLimitOptions__EnableRateLimiting: "false"
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
-      OTEL_SERVICE_NAME: FSH.Starter.WebApi.Host
+      OTEL_SERVICE_NAME: PayCom.WebApi.Host
     volumes:
       - ~/.aspnet/https:/https:ro #on wsl linux
       #- /mnt/c/Users/eduar/.aspnet/https:/https:ro
@@ -43,13 +43,13 @@ services:
         condition: service_healthy
     restart: on-failure
 
-  blazor:
+  paycomblazor:
     image: ${FSH_DOTNETSTARTERKIT_BLAZOR_IMAGE}
     pull_policy: always
-    container_name: blazor
+    container_name: paycomblazor
     environment:
       Frontend_FSHStarterBlazorClient_Settings__AppSettingsTemplate: /usr/share/nginx/html/appsettings.json.TEMPLATE
-      Frontend_FSHStarterBlazorClient_Settings__AppSettingsJson: /usr/share/nginx/html/appsettings.json
+      Frontend_FSHStarterBlazorconClient_Settings__AppSettingsJson: /usr/share/nginx/html/appsettings.json
       FSHStarterBlazorClient_ApiBaseUrl: https://localhost:7000
       ApiBaseUrl: https://localhost:7000
     networks:

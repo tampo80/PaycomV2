@@ -44,6 +44,7 @@ public static class TaxeModule
            agentFiscalGroup.MapAgentFiscalDeleteEndpoint();
            agentFiscalGroup.MapAgentFiscalSearchEndpoint();
            agentFiscalGroup.MapAssocierUtilisateurAgentEndpoint();
+           agentFiscalGroup.MapAgentFiscalGetByUserIdEndpoint();
 
            var communeGroup = app.MapGroup("communes").WithTags("communes");
            communeGroup.MapCommuneCreationEndpoint();
@@ -60,6 +61,7 @@ public static class TaxeModule
            contribuablesGroup.MapContribuableDeleteEndpoint();
            contribuablesGroup.MapAssocierUtilisateurContribuableEndpoint();
            contribuablesGroup.MapAssocierAgentFiscalContribuableEndpoint();
+           contribuablesGroup.MapContribuableGetByUserIdEndpoint();
            
            var penaliteGroup = app.MapGroup("penalites").WithTags("penalites");
            penaliteGroup.MapPenaliteCreationEndpoint();

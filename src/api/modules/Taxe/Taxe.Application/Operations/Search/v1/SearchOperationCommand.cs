@@ -11,6 +11,6 @@ public class SearchOperationCommand : PaginationFilter, IRequest<PagedList<Opera
 {
     public Guid Id { get; set; }
     public DateTime Date { get; set; }
-    public string Description { get; set; }
-    public UserDetail Utilisateur { get; set; }
+    public string Description { get; set; } = string.Empty;
+    public UserDetail Utilisateur { get; set; } = default!;
 }

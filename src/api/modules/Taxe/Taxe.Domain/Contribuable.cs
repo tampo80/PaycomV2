@@ -3,7 +3,6 @@ using FSH.Framework.Core.Domain.Contracts;
 using PayCom.WebApi.Taxe.Domain.Events.ContribuableEvents;
 using Shared.Enums;
 
-
 namespace  PayCom.WebApi.Taxe.Domain;
 
 public class Contribuable : AuditableEntity, IAggregateRoot
@@ -168,6 +167,23 @@ public class Contribuable : AuditableEntity, IAggregateRoot
         {
             AgentFiscalId = agentFiscalId;
             QueueDomainEvent(new ContribuableAgentFiscalAssocie { Contribuable = this });
+        }
+    }
+    
+    /// <summary>
+    /// Dissocie l'utilisateur associé au contribuable
+    /// </summary>
+    public void DissocierUtilisateur()
+    {
+        if (UtilisateurId != null)
+        {
+            var ancienUtilisateurId = UtilisateurId.Value;
+            UtilisateurId = null;
+            QueueDomainEvent(new ContribuableUtilisateurDissocie
+            {
+                Contribuable = this,
+                UtilisateurId = ancienUtilisateurId
+            });
         }
     }
 }
