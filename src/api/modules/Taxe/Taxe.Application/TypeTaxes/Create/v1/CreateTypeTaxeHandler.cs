@@ -20,21 +20,20 @@ public sealed class CreateTypeTaxeHandler(
         string code = $"TX-{Guid.NewGuid().ToString().Substring(0, 8).ToUpper()}";
         
         // Convertir la chaîne FrequencePaiement en enum
-        if (!Enum.TryParse<FrequencePaiement>(request.FrequencePaiement, out var frequencePaiement))
-        {
-            frequencePaiement = FrequencePaiement.Mensuel; // Valeur par défaut
-        }
+        
+           
+        
         
         // Créer un nouveau type de taxe
         var typeTaxe = PayCom.WebApi.Taxe.Domain.TypeTaxe.Create(
             code,
             request.Nom,
             request.Description,
-            true, // EstPeriodique par défaut
-            frequencePaiement,
-            Convert.ToDecimal(request.MontantBase),
+            request.EstPeriodique,
+            request.FrequencePaiement,
+            request.MontantBase,
             "Unité", // UniteMesure par défaut
-            false // NecessiteInspection par défaut
+            request.NecessiteInspection
         );
         
         // Sauvegarder dans la base de données

@@ -12,6 +12,9 @@ using PayCom.WebApi.Taxe.Application.CollecteTerrainSessions.Search.v1;
 using PayCom.WebApi.Taxe.Application.CollecteTerrainSessions.Update.v1;
 using PayCom.WebApi.Taxe.Application.CollecteTerrainSessions.Demarrer.v1;
 using PayCom.WebApi.Taxe.Application.CollecteTerrainSessions.Cloturer.v1;
+using PayCom.WebApi.Taxe.Application.CollecteTerrainSessions.Stop.v1;
+using PayCom.WebApi.Taxe.Application.CollecteTerrainSessions.GenerateReport.v1;
+using PayCom.WebApi.Taxe.Application.CollecteTerrainSessions.GetTransactions.v1;
 
 namespace PayCom.WebApi.Taxe.Infrastructure.EndPoints.v1;
 
@@ -147,5 +150,72 @@ public static class CloturerSessionEndPoints
             .Produces<CloturerSessionResponse>()
             .RequirePermission("Permissions.CollecteTerrainSessions.Cloturer")
             .MapToApiVersion(1);
+    }
+}
+
+public static class StopCollecteTerrainSessionEndPoints
+{
+    internal static RouteHandlerBuilder MapStopCollecteTerrainSessionEndpoint(this IEndpointRouteBuilder endpoints)
+    {
+        return endpoints
+            .MapPost("/{id:guid}/stop", async (Guid id, [FromBody] StopCollecteTerrainSessionCommand command, ISender mediator) =>
+            {
+                command.SessionId = id;
+                var response = await mediator.Send(command);
+                return Results.Ok(response);
+            })
+            .WithName(nameof(StopCollecteTerrainSessionEndPoints))
+            .WithSummary("Arrêter une session de collecte")
+            .WithDescription("Arrête une session de collecte terrain en cours")
+            .Produces<StopCollecteTerrainSessionResponse>()
+            .RequirePermission("Permissions.CollecteTerrainSessions.Stop")
+            .MapToApiVersion(1);
+    }
+}
+
+public static class GenerateCollecteReportEndPoints
+{
+    internal static RouteHandlerBuilder MapGenerateCollecteReportEndpoint(this IEndpointRouteBuilder endpoints)
+    {
+        return endpoints
+            .MapPost("/rapports", async ([FromBody] GenerateCollecteReportCommand command, ISender mediator) =>
+            {
+                var response = await mediator.Send(command);
+                return Results.File(
+                    response.Content,
+                    response.ContentType,
+                    response.FileName
+                );
+            })
+            .WithName(nameof(GenerateCollecteReportEndPoints))
+            .WithSummary("Générer un rapport de collecte")
+            .WithDescription("Génère un rapport détaillé des collectes pour une période donnée")
+            .Produces<byte[]>()
+            .RequirePermission("Permissions.CollecteTerrainSessions.GenerateReport")
+            .MapToApiVersion(1);
+    }
+}
+
+public static class GetCollecteTerrainSessionTransactionsEndPoints
+{
+    public static void MapGetCollecteTerrainSessionTransactionsEndpoint(this IEndpointRouteBuilder app)
+    {
+        app.MapPost("/api/v1/collecte-terrain-sessions/{id}/transactions", async (
+            Guid id,
+            ISender sender,
+            CancellationToken cancellationToken) =>
+        {
+            var command = new GetCollecteTerrainSessionTransactionsCommand { SessionId = id };
+            var result = await sender.Send(command, cancellationToken);
+            return Results.Ok(result);
+        })
+        .WithName("GetCollecteTerrainSessionTransactions")
+        .WithTags("CollecteTerrainSessions")
+        .WithSummary("Récupère les transactions d'une session de collecte")
+        .WithDescription("Récupère la liste des transactions associées à une session de collecte")
+        .Produces<GetCollecteTerrainSessionTransactionsResponse>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status404NotFound)
+        .RequireAuthorization("CollecteTerrainSessions.Read")
+        .MapToApiVersion(1);
     }
 } 

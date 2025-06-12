@@ -74,6 +74,13 @@ internal sealed class IdentityDbInitializer(
         {
             // Utiliser la collection de permissions prédéfinie pour les agents fiscaux
             await AssignPermissionsToRoleAsync(context, FshPermissions.AgentFiscal, agentFiscalRole);
+            
+            // S'assurer que les permissions de collecte de terrain sont incluses
+            var collectePermissions = FshPermissions.All
+                .Where(p => p.Resource == FshResources.CollecteTerrainSessions)
+                .ToList();
+            
+            await AssignPermissionsToRoleAsync(context, collectePermissions, agentFiscalRole);
         }
         
         // Assigner les permissions spécifiques au rôle Administrateur Fiscal
@@ -81,6 +88,13 @@ internal sealed class IdentityDbInitializer(
         {
             // Utiliser la collection de permissions prédéfinie pour l'administrateur fiscal
             await AssignPermissionsToRoleAsync(context, FshPermissions.AdministrateurFiscal, adminFiscalRole);
+            
+            // S'assurer que les permissions de collecte de terrain sont incluses
+            var collectePermissions = FshPermissions.All
+                .Where(p => p.Resource == FshResources.CollecteTerrainSessions)
+                .ToList();
+            
+            await AssignPermissionsToRoleAsync(context, collectePermissions, adminFiscalRole);
         }
         
         // Assigner toutes les permissions au rôle Admin (sauf celles de Root)
@@ -88,6 +102,13 @@ internal sealed class IdentityDbInitializer(
         {
             // L'administrateur hérite toutes les permissions non-root
             await AssignPermissionsToRoleAsync(context, FshPermissions.Admin, adminRole);
+            
+            // S'assurer que les permissions de collecte de terrain sont incluses
+            var collectePermissions = FshPermissions.All
+                .Where(p => p.Resource == FshResources.CollecteTerrainSessions)
+                .ToList();
+            
+            await AssignPermissionsToRoleAsync(context, collectePermissions, adminRole);
             
             // Si c'est le tenant root, ajouter aussi les permissions root
             if (multiTenantContextAccessor.MultiTenantContext.TenantInfo?.Id == TenantConstants.Root.Id)

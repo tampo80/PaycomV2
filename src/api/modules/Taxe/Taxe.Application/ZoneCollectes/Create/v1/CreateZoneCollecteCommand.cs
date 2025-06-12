@@ -10,5 +10,6 @@ public record CreateZoneCollecteCommand(
     string Nom,
     [property: DefaultValue("Description de la zone")]
     string Description,
-    [property: DefaultValue("ID de la commune")]
-    Guid CommuneId) : IRequest<CreateZoneCollecteResponse>; 
+    Guid CommuneId,
+    [property: DefaultValue("")]
+    string DelimitationGeoJSON = "") : IRequest<CreateZoneCollecteResponse>; 

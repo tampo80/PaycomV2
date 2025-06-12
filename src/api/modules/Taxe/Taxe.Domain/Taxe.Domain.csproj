@@ -9,4 +9,9 @@
     <ProjectReference Include="..\..\..\framework\Core\Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="NetTopologySuite" Version="2.5.0" />
+    <PackageReference Include="NetTopologySuite.IO.GeoJSON" Version="2.5.0" />
+  </ItemGroup>
+
 </Project>

@@ -7,13 +7,13 @@ using MediatR;
 using PayCom.WebApi.Taxe.Application.ZoneCollectes.Get.v1;
 
 namespace PayCom.WebApi.Taxe.Application.ZoneCollectes.Search.v1;
-public record SearchZoneCollectesCommand(
-    [property: DefaultValue(1)]
-    int PageIndex = 1,
-    [property: DefaultValue(10)]
-    int PageSize = 10,
-    [property: DefaultValue("")]
-    string? SortBy = null,
-    string? SearchTerm = null,
-    [property: DefaultValue(null)]
-    Guid? CommuneId = null) : IRequest<PagedList<ZoneCollecteResponse>>; 
+
+public sealed class  SearchZoneCollectesCommand : PaginationFilter, IRequest<PagedList<GetZoneCollecteResponse>>
+{
+    public string? SearchTerm { get; set; }
+    public Guid? CommuneId { get; set; }
+    
+   
+    
+ 
+} 

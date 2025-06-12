@@ -179,8 +179,7 @@
             {
                 PageNumber = 1,
                 PageSize = 50,
-                OrderBy = new List<string> { "Nom" },
-                
+                OrderBy = new List<string> { "Nom" }
             };
             
             LogDebugInfo($"Requête: PageNumber={command.PageNumber}, PageSize={command.PageSize}, Keyword={command.Keyword}");
@@ -212,7 +211,7 @@
                         ContactPrincipal = c.ContactPrincipal ?? string.Empty,
                         ContactSecondaire = c.ContactSecondaire ?? string.Empty,
                         Email = c.Email ?? string.Empty,
-                        DateEnregistrement = c.DateEnregistrement != null ? c.DateEnregistrement : DateTime.Now,
+                        DateEnregistrement = c.DateEnregistrement ?? DateTime.Now,
                         Statut = MapStatut(c.Statut),
                         UtilisateurId = c.UtilisateurId,
                         AgentFiscalId = c.AgentFiscalId,

@@ -4,7 +4,7 @@ using PayCom.WebApi.Taxe.Domain.Enums;
 using PayCom.WebApi.Taxe.Domain;
 
 namespace PayCom.WebApi.Taxe.Application.Communes.Get.v1;
-public class GetCommuneByIdSpec : Specification<Commune, GetCommuneByIdResponse>, ISingleResultSpecification
+public class GetCommuneByIdSpec : Specification<Commune, GetCommuneByIdResponse>, ISingleResultSpecification<Commune>
 {
     public GetCommuneByIdSpec(Guid id)
     {

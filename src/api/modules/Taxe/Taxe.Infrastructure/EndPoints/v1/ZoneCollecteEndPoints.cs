@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Routing;
 using PayCom.WebApi.Taxe.Application.ZoneCollectes.Create.v1;
 using PayCom.WebApi.Taxe.Application.ZoneCollectes.Delete.v1;
 using PayCom.WebApi.Taxe.Application.ZoneCollectes.Get.v1;
+using PayCom.WebApi.Taxe.Application.ZoneCollectes.GetByCommuneId.v1;
 using PayCom.WebApi.Taxe.Application.ZoneCollectes.Search.v1;
 using PayCom.WebApi.Taxe.Application.ZoneCollectes.Update.v1;
 using PayCom.WebApi.Taxe.Application.ZoneCollectes.AssignerAgent.v1;
@@ -27,7 +28,7 @@ public static class CreateZoneCollecteEndPoints
             })
             .WithName(nameof(CreateZoneCollecteEndPoints))
             .WithSummary("Créer une zone de collecte")
-            .WithDescription("Crée une nouvelle zone de collecte dans le système")
+            .WithDescription("Crée une nouvelle zone de collecte")
             .Produces<CreateZoneCollecteResponse>()
             .RequirePermission("Permissions.ZonesCollecte.Create")
             .MapToApiVersion(1);
@@ -42,13 +43,13 @@ public static class UpdateZoneCollecteEndPoints
             .MapPut("/{id:guid}", async (Guid id, UpdateZoneCollecteCommand request, ISender mediator) =>
             {
                 if (id != request.Id) return Results.BadRequest();
-                var response = await mediator.Send(request);
-                return Results.Ok(response);
+                await mediator.Send(request);
+                return Results.NoContent();
             })
             .WithName(nameof(UpdateZoneCollecteEndPoints))
             .WithSummary("Mettre à jour une zone de collecte")
             .WithDescription("Met à jour les informations d'une zone de collecte existante")
-            .Produces<UpdateZoneCollecteResponse>()
+            .Produces(StatusCodes.Status204NoContent)
             .RequirePermission("Permissions.ZonesCollecte.Update")
             .MapToApiVersion(1);
     }
@@ -86,7 +87,7 @@ public static class GetZoneCollecteEndPoints
             .WithName(nameof(GetZoneCollecteEndPoints))
             .WithSummary("Obtenir une zone de collecte")
             .WithDescription("Récupère les détails d'une zone de collecte spécifique")
-            .Produces<ZoneCollecteResponse>()
+            .Produces<GetZoneCollecteResponse>()
             .RequirePermission("Permissions.ZonesCollecte.Get")
             .MapToApiVersion(1);
     }
@@ -104,9 +105,28 @@ public static class SearchZoneCollecteEndPoints
             })
             .WithName(nameof(SearchZoneCollecteEndPoints))
             .WithSummary("Rechercher des zones de collecte")
-            .WithDescription("Recherche et liste les zones de collecte selon les critères spécifiés")
-            .Produces<PagedList<ZoneCollecteResponse>>()
+            .WithDescription("Recherche et liste des zones de collecte selon les critères spécifiés")
+            .Produces<PagedList<GetZoneCollecteResponse>>()
             .RequirePermission("Permissions.ZonesCollecte.Search")
+            .MapToApiVersion(1);
+    }
+}
+
+public static class GetZoneCollecteByCommuneEndPoints
+{
+    internal static RouteHandlerBuilder MapZoneCollecteGetByCommuneIdEndpoint(this IEndpointRouteBuilder endpoints)
+    {
+        return endpoints
+            .MapGet("/commune/{communeId:guid}", async (Guid communeId, ISender mediator) =>
+            {
+                var response = await mediator.Send(new GetZoneCollectesByCommuneIdRequest(communeId));
+                return Results.Ok(response);
+            })
+            .WithName(nameof(GetZoneCollecteByCommuneEndPoints))
+            .WithSummary("Obtenir les zones de collecte d'une commune")
+            .WithDescription("Récupère toutes les zones de collecte associées à une commune")
+            .Produces<List<GetZoneCollecteResponse>>()
+            .RequirePermission("Permissions.ZonesCollecte.Get")
             .MapToApiVersion(1);
     }
 }

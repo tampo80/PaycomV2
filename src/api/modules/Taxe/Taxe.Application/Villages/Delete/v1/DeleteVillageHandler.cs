@@ -6,7 +6,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PayCom.WebApi.Taxe.Domain;
 using PayCom.WebApi.Taxe.Domain.Exceptions;
-using PayCom.WebApi.Taxe.Domain.Exceptions;
 
 namespace PayCom.WebApi.Taxe.Application.Villages.Delete.v1;
 public class DeleteVillageHandler(

@@ -79,6 +79,14 @@ public static class FshPermissions
         new("View Contribuables", FshActions.View, FshResources.Contribuables),
         new("Search Contribuables", FshActions.Search, FshResources.Contribuables),
         
+        //ZonesCollecte
+        new("View ZonesCollecte", FshActions.View, FshResources.ZonesCollecte),
+        new("Search ZonesCollecte", FshActions.Search, FshResources.ZonesCollecte),
+        new("Create ZonesCollecte", FshActions.Create, FshResources.ZonesCollecte),
+        new("Update ZonesCollecte", FshActions.Update, FshResources.ZonesCollecte),
+        new("Delete ZonesCollecte", FshActions.Delete, FshResources.ZonesCollecte),
+        new("GererAgents ZonesCollecte", FshActions.GererAgents, FshResources.ZonesCollecte),
+        
         //Communes
         new("View Communes", FshActions.View, FshResources.Communes),
         new("Search Communes", FshActions.Search, FshResources.Communes),
@@ -130,6 +138,16 @@ public static class FshPermissions
         new("Manage Fiscalite", FshActions.Manage, FshResources.AdminFiscal),
         new("Validate Declarations", FshActions.Valider, FshResources.AdminFiscal),
         new("Manage Anomalies", FshActions.GererAnomalies, FshResources.AdminFiscal),
+        
+        //CollecteTerrainSessions
+        new("View CollecteTerrainSessions", FshActions.View, FshResources.CollecteTerrainSessions),
+        new("Search CollecteTerrainSessions", FshActions.Search, FshResources.CollecteTerrainSessions),
+        new("Create CollecteTerrainSessions", FshActions.Create, FshResources.CollecteTerrainSessions),
+        new("Update CollecteTerrainSessions", FshActions.Update, FshResources.CollecteTerrainSessions),
+        new("Delete CollecteTerrainSessions", FshActions.Delete, FshResources.CollecteTerrainSessions),
+        new("Cloturer CollecteTerrainSessions", FshActions.Cloturer, FshResources.CollecteTerrainSessions),
+        new("Demarrer CollecteTerrainSessions", FshActions.Demarrer, FshResources.CollecteTerrainSessions),
+        new("Get CollecteTerrainSessions", FshActions.Get, FshResources.CollecteTerrainSessions),
     ];
 
     public static IReadOnlyList<FshPermission> All { get; } = new ReadOnlyCollection<FshPermission>(AllPermissions);
@@ -144,6 +162,8 @@ public static class FshPermissions
         p.Resource == FshResources.ObligationsFiscales ||
         p.Resource == FshResources.Taxes ||
         p.Resource == FshResources.TypesTaxe ||
+        p.Resource == FshResources.CollecteTerrainSessions ||
+        p.Resource == FshResources.ZonesCollecte ||
         (p.Resource == FshResources.AgentFiscals && 
             (p.Action == FshActions.View || 
              p.Action == FshActions.Search || 
@@ -177,6 +197,11 @@ public static class FshPermissions
         p.Resource == FshResources.Contribuables ||
         p.Resource == FshResources.ObligationsFiscales ||
         p.Resource == FshResources.Taxes ||
+        p.Resource == FshResources.CollecteTerrainSessions ||
+        (p.Resource == FshResources.ZonesCollecte && 
+            (p.Action == FshActions.View || 
+             p.Action == FshActions.Search ||
+             p.Action == FshActions.Read)) ||
         (p.Resource == FshResources.AgentFiscals && 
             (p.Action == FshActions.View || 
              p.Action == FshActions.Search ||

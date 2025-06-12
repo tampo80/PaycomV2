@@ -47,6 +47,22 @@ public static class CommuneEndpoints
             .MapToApiVersion(1);
     }
 
+    internal static RouteHandlerBuilder MapCommuneGetAllEndpoint(this IEndpointRouteBuilder endpoints)
+    {
+        return endpoints
+            .MapGet("/", async ([AsParameters] GetAllCommunesQuery request, ISender mediator) =>
+            {
+                var response = await mediator.Send(request);
+                return Results.Ok(response);
+            })
+            .WithName("GetAllCommunesEndpoint")
+            .WithSummary("Get all communes")
+            .WithDescription("Get a paginated list of communes with filtering and sorting options")
+            .Produces<GetAllCommunesResponse>()
+            .RequirePermission("Permissions.Communes.Get")
+            .MapToApiVersion(1);
+    }
+
     internal static RouteHandlerBuilder MapCommuneUpdateEndpoint(this IEndpointRouteBuilder endpoints)
     {
         return endpoints

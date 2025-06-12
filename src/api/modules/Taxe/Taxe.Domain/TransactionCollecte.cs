@@ -35,10 +35,12 @@ public class TransactionCollecte : TransactionBase, IAggregateRoot
             throw new DomainException("Le montant perçu doit être supérieur à zéro.");
             
         EcheanceId = echeanceId;
-        MontantPercu = montantPercu;
+        MontantPercu = montantPercu > 0 ? montantPercu : montant;
         ModePaiement = modePaiement;
         Commentaire = commentaire;
         CollecteTerrainSessionId = collecteTerrainSessionId;
+        HorodatageTransaction = DateTime.UtcNow;
+        EstSynchronise = false;
         
         QueueDomainEvent(new TransactionCollecteCreated { TransactionCollecte = this });
     }
@@ -119,5 +121,26 @@ public class TransactionCollecte : TransactionBase, IAggregateRoot
                $"Montant: {MontantPercu}\n" +
                $"Mode: {ModePaiement}\n" +
                $"Référence: {ReferenceTransaction}";
+    }
+
+    public void SetLocalisation(string localisation)
+    {
+        LocalisationGPS = localisation;
+    }
+
+    public void MarquerCommeSynchronise()
+    {
+        EstSynchronise = true;
+        QueueDomainEvent(new TransactionCollecteSynchronisee { TransactionCollecte = this });
+    }
+
+    public void AjouterSignature(string signature)
+    {
+        SignatureContribuable = signature;
+    }
+
+    public void AjouterPhotoPreuve(string photoUrl)
+    {
+        PhotoPreuve = photoUrl;
     }
 } 

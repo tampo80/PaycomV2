@@ -1473,6 +1473,10 @@ namespace PayCom.WebApi.Migrations.PostgreSQL.Taxe
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<DateTimeOffset>("LastModified")
                         .HasColumnType("timestamp with time zone");
 

@@ -6,11 +6,11 @@ using MediatR;
 
 namespace PayCom.WebApi.Taxe.Application.ZoneCollectes.Update.v1;
 public record UpdateZoneCollecteCommand(
-    [property: DefaultValue("ID de la zone")]
     Guid Id,
-    [property: DefaultValue("Nom de la zone")]
+    [property: DefaultValue("Nom de la zone de collecte")]
     string Nom,
     [property: DefaultValue("Description de la zone")]
     string Description,
-    [property: DefaultValue("ID de la commune")]
-    Guid CommuneId) : IRequest<UpdateZoneCollecteResponse>; 
+    Guid CommuneId,
+    [property: DefaultValue("")]
+    string DelimitationGeoJSON = "") : IRequest<UpdateGetZoneCollecteResponse>; 

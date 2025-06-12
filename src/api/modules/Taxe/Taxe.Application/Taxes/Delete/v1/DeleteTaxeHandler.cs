@@ -15,8 +15,10 @@ public class DeleteTaxeHandler(
     public async Task Handle(DeleteTaxeCommand request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
-        var taxe = await repository.GetByIdAsync(request.Id, cancellationToken);
-        _ = taxe ?? throw new TaxeNotFoundException(request.Id);
+        ArgumentNullException.ThrowIfNull(request.Id);
+        
+        var taxe = await repository.GetByIdAsync(request.Id.Value, cancellationToken);
+        _ = taxe ?? throw new TaxeNotFoundException(request.Id.Value);
         await repository.DeleteAsync(taxe, cancellationToken);
         logger.LogInformation("Taxe avec l'id: {Id} supprimée.", request.Id);
     }

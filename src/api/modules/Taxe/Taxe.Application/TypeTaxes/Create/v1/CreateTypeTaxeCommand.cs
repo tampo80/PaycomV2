@@ -3,6 +3,7 @@ using PayCom.WebApi.Taxe.Domain.Events;
 using PayCom.WebApi.Taxe.Domain.Enums;
 using PayCom.WebApi.Taxe.Domain;
 using MediatR;
+using Shared.Enums;
 
 namespace PayCom.WebApi.Taxe.Application.TypeTaxes.Create.v1;
 public record CreateTypeTaxeCommand(
@@ -12,4 +13,8 @@ public record CreateTypeTaxeCommand(
     string Description,
     [property: DefaultValue(0.0)]
     decimal MontantBase,
-    string FrequencePaiement) : IRequest<CreateTypeTaxeResponse>; 
+    FrequencePaiement FrequencePaiement,
+    [property: DefaultValue(false)]
+    bool EstPeriodique,
+    [property: DefaultValue(false)]
+    bool NecessiteInspection) : IRequest<CreateTypeTaxeResponse>;

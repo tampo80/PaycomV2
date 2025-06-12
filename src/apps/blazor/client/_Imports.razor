@@ -17,13 +17,13 @@
 @using PayCom.Blazor.Client.Components.EntityTable
 @using PayCom.Blazor.Infrastructure.Auth
 @using MudBlazor
+@using MudBlazor.Services
 @using Blazored.LocalStorage
 @using PayCom.Blazor.Infrastructure.Api
-@using PayCom.Blazor.Client.Components.ThemeManager;
-
+@using PayCom.Blazor.Client.Components.ThemeManager
 @using PayCom.Blazor.Client.Pages.Auth
-
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
 
 @attribute [Authorize]
 
@@ -33,18 +33,4 @@
 @inject IClientPreferenceManager ClientPreferences
 
 
-@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
-
-@* MudBlazor *@
-@using MudBlazor
-@using MudBlazor.Services
-
-@* Paycom Shared *@
-@using PayCom.Blazor.Infrastructure.Api
-
-@* Paycom Client Components *@
-@using PayCom.Blazor.Client.Components
-@using PayCom.Blazor.Client.Components.EntityTable
-@using PayCom.Blazor.Client.Components.Common
-@using PayCom.Blazor.Client.Components.Dialogs
 

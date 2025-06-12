@@ -1,4 +1,5 @@
 ﻿namespace PayCom.Shared.Authorization;
+
 public static class FshActions
 {
     public const string View = nameof(View);
@@ -16,4 +17,8 @@ public static class FshActions
     public const string GererAgents = nameof(GererAgents);
     public const string Valider = nameof(Valider);
     public const string GererAnomalies = nameof(GererAnomalies);
+    public const string Cloturer = nameof(Cloturer);
+    public const string Demarrer = nameof(Demarrer);
+    public const string Get = nameof(Get);
+    public const string All = nameof(All);
 }

@@ -4,4 +4,4 @@ using PayCom.WebApi.Taxe.Domain.Enums;
 using PayCom.WebApi.Taxe.Domain;
 
 namespace PayCom.WebApi.Taxe.Application.ZoneCollectes.Get.v1;
-public record GetZoneCollecteRequest(Guid Id) : IRequest<ZoneCollecteResponse>; 
+public record GetZoneCollecteRequest(Guid Id) : IRequest<GetZoneCollecteResponse>; 

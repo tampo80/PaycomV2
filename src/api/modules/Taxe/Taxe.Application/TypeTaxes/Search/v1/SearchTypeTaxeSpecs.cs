@@ -33,8 +33,8 @@ public class SearchTypeTaxeSpecs : Specification<TypeTaxe, TypeTaxeResponse>
             Nom = typeTaxe.Nom,
             Description = typeTaxe.Description,
             EstPeriodique = typeTaxe.EstPeriodique,
-            FrequencePaiement = typeTaxe.FrequencePaiement.ToString(),
-            MontantBase = typeTaxe.TauxBase,
+            FrequencePaiement = typeTaxe.FrequencePaiement,
+            //MontantBase = typeTaxe.TauxBase,
             UniteMesure = typeTaxe.UniteMesure,
             NecessiteInspection = typeTaxe.NecessiteInspection
         });

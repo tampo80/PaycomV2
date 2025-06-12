@@ -5,6 +5,7 @@
 @using PayCom.Blazor.Client.Components
 @using PayCom.Blazor.Infrastructure.Api
 @using Microsoft.AspNetCore.Components
+@using PayCom.Blazor.Client.Pages.Parametres.Localisation.Models
 
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
@@ -320,10 +321,10 @@
             BackdropClick = false
         };
         var parameters = new DialogParameters();
-        parameters.Add("Model", new CommuneDialog.CommuneDto());
+        parameters.Add("Model", new CommuneDto());
         parameters.Add("DialogTitle", "Nouvelle Commune");
         parameters.Add("ButtonText", "Ajouter");
-        parameters.Add("OnValidSubmit", EventCallback.Factory.Create<CommuneDialog.CommuneDto>(this, SaveCommune));
+        parameters.Add("OnValidSubmit", EventCallback.Factory.Create<CommuneDto>(this, SaveCommune));
 
         var dialogReference = await DialogService.ShowAsync<CommuneDialog>("Nouvelle Commune", parameters, options);
         // Récupérer l'instance du dialogue pour pouvoir y accéder plus tard
@@ -333,7 +334,7 @@
         }
     }
     
-    private async Task SaveCommune(CommuneDialog.CommuneDto commune)
+    private async Task SaveCommune(CommuneDto commune)
     {
         try
         {
@@ -470,7 +471,7 @@
             FullWidth = true,
             BackdropClick = false
         };
-        var communeDto = new CommuneDialog.CommuneDto
+        var communeDto = new CommuneDto
         {
             Id = commune.Id,
             Nom = commune.Nom,
@@ -498,7 +499,7 @@
         parameters.Add("Model", communeDto);
         parameters.Add("DialogTitle", "Modifier la commune");
         parameters.Add("ButtonText", "Mettre à jour");
-        parameters.Add("OnValidSubmit", EventCallback.Factory.Create<CommuneDialog.CommuneDto>(this, SaveEditedCommune));
+        parameters.Add("OnValidSubmit", EventCallback.Factory.Create<CommuneDto>(this, SaveEditedCommune));
 
         var dialogReference = await DialogService.ShowAsync<CommuneDialog>("Modifier la commune", parameters, options);
         // Récupérer l'instance du dialogue pour pouvoir y accéder plus tard
@@ -508,7 +509,7 @@
         }
     }
     
-    private async Task SaveEditedCommune(CommuneDialog.CommuneDto commune)
+    private async Task SaveEditedCommune(CommuneDto commune)
     {
         try
         {
@@ -682,29 +683,6 @@
     }
 
     // Classe pour les données des communes
-    public class CommuneDto
-    {
-        public Guid Id { get; set; }
-        public string Nom { get; set; } = string.Empty;
-        public TypeCommune Type { get; set; }
-        public string Code { get; set; } = string.Empty;
-        public int NombreSecteurs { get; set; }
-        public int NombreArrondissements { get; set; }
-        public TypeChefLieu TypeChefLieu { get; set; }
-        public string LogoUrl { get; set; } = string.Empty;
-        public string AdresseSiege { get; set; } = string.Empty;
-        public string Contact { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
-        public string SiteWeb { get; set; } = string.Empty;
-        public Guid RegionId { get; set; }
-        public string NomRegion { get; set; } = string.Empty;
-        public string CodeTenant { get; set; } = string.Empty;
-        public bool EstTenantActif { get; set; }
-        public string NomCentreAdmin { get; set; } = string.Empty;
-        public string AdresseCentreAdmin { get; set; } = string.Empty;
-        public string ContactCentreAdmin { get; set; } = string.Empty;
-        public string EmailCentreAdmin { get; set; } = string.Empty;
-        public string ResponsableCentreAdmin { get; set; } = string.Empty;
-        public DateTime CreatedOn { get; set; }
-    }
+    
+
 } 

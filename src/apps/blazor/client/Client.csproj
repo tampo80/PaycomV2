@@ -12,10 +12,12 @@
 	<ItemGroup>
 		<PackageReference Include="Blazored.LocalStorage" />
 		<PackageReference Include="FluentValidation" />
+		<PackageReference Include="Blazored.FluentValidation" />
 		<PackageReference Include="Mapster" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" PrivateAssets="all" />
 		<PackageReference Include="MudBlazor" />
+		<PackageReference Include="System.Text.Encodings.Web" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -39,10 +41,16 @@
 	  <_ContentIncludedByDefault Remove="Pages\Taxes\TypesTaxes.razor" />
 	  <_ContentIncludedByDefault Remove="Pages\Catalog\Brands.razor" />
 	  <_ContentIncludedByDefault Remove="Pages\Catalog\Products.razor" />
+	  <_ContentIncludedByDefault Remove="Pages\Collecte\Dialogs\DetailsPaiementDialog.razor" />
+	  <_ContentIncludedByDefault Remove="Pages\Collecte\Dialogs\DetailsTaxeDialog.razor" />
+	  <_ContentIncludedByDefault Remove="Pages\Collecte\NouvelleSession.razor" />
+	  <_ContentIncludedByDefault Remove="Pages\Collecte\PaiementsTerrain.razor" />
+	  <_ContentIncludedByDefault Remove="Pages\Collecte\Sessions.razor" />
+	  <_ContentIncludedByDefault Remove="Pages\Collecte\SynchronisationHorsLigne.razor" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="Pages\Taxes\" />
+	  <Folder Include="Services\" />
 	</ItemGroup>
 
 </Project>

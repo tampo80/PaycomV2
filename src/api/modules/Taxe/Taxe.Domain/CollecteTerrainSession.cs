@@ -122,13 +122,14 @@ public class CollecteTerrainSession : AuditableEntity, IAggregateRoot
 
     public void Annuler(string raison)
     {
-        if (Statut == StatutSession.EnCours)
-        {
-            Statut = StatutSession.Annulee;
-            DateFin = DateTime.UtcNow;
-            Notes = raison;
-            QueueDomainEvent(new SessionCollecteAnnulee { Session = this, Raison = raison });
-        }
+        if (Statut != StatutSession.EnCours)
+            throw new InvalidOperationException("Seules les sessions en cours peuvent être annulées");
+
+        Statut = StatutSession.Annulee;
+        DateFin = DateTime.UtcNow;
+        Notes = $"{Notes}\nAnnulée le {DateFin:dd/MM/yyyy HH:mm} - Raison: {raison}";
+        
+        QueueDomainEvent(new SessionCollecteAnnulee { Session = this, Raison = raison });
     }
 
     public void AjouterTransaction(TransactionCollecte transaction)
@@ -137,6 +138,22 @@ public class CollecteTerrainSession : AuditableEntity, IAggregateRoot
         {
             _transactions.Add(transaction);
             QueueDomainEvent(new TransactionAjouteeSession { Session = this, Transaction = transaction });
+        }
+    }
+
+    public void Cloturer(string notes = "")
+    {
+        if (Statut == StatutSession.EnCours)
+        {
+            Statut = StatutSession.Terminee;
+            DateFin = DateTime.UtcNow;
+            
+            if (!string.IsNullOrWhiteSpace(notes))
+            {
+                Notes = notes;
+            }
+            
+            QueueDomainEvent(new SessionCollecteCloturee { Session = this });
         }
     }
 } 

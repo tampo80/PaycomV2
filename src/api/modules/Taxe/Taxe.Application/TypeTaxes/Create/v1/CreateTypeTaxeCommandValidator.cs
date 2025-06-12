@@ -19,9 +19,7 @@ public class CreateTypeTaxeCommandValidator : AbstractValidator<CreateTypeTaxeCo
             .NotEmpty().WithMessage("Le montant de base est obligatoire")
             .GreaterThanOrEqualTo(0).WithMessage("Le montant de base doit être positif ou nul");
             
-        RuleFor(p => p.FrequencePaiement)
-            .NotEmpty().WithMessage("La fréquence de paiement est obligatoire")
-            .Must(BeValidFrequencePaiement).WithMessage("La fréquence de paiement spécifiée n'est pas valide");
+       
     }
     
     private bool BeValidFrequencePaiement(string frequencePaiement)

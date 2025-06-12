@@ -234,9 +234,9 @@
                 Snackbar.Add("Région ajoutée avec succès", Severity.Success);
                 
                 // Fermer le dialogue seulement en cas de succès
-                if (_regionDialog != null)
+                if (_regionDialog != null && _regionDialog.MudDialog != null)
                 {
-                    _regionDialog.MudDialog?.Close(DialogResult.Ok(region));
+                    _regionDialog.MudDialog.Close(DialogResult.Ok(region));
                 }
             }
             catch (ApiException ex)
@@ -358,9 +358,9 @@
                 Snackbar.Add("Région mise à jour avec succès", Severity.Success);
                 
                 // Fermer le dialogue seulement en cas de succès
-                if (_regionDialog != null)
+                if (_regionDialog != null && _regionDialog.MudDialog != null)
                 {
-                    _regionDialog.MudDialog?.Close(DialogResult.Ok(region));
+                    _regionDialog.MudDialog.Close(DialogResult.Ok(region));
                 }
             }
             catch (ApiException ex)

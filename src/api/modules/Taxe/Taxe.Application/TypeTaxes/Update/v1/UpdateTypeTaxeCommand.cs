@@ -15,5 +15,8 @@ public record UpdateTypeTaxeCommand(
     string Description,
     [property: DefaultValue(0)]
     decimal MontantBase,
-   // [property: DefaultValue(FrequencePaiement.Mensuelle)]
-    FrequencePaiement FrequencePaiement) : IRequest<UpdateTypeTaxeResponse>; 
+    FrequencePaiement FrequencePaiement,
+    [property: DefaultValue(false)]
+    bool EstPeriodique,
+    [property: DefaultValue(false)]
+    bool NecessiteInspection) : IRequest<UpdateTypeTaxeResponse>;

@@ -23,4 +23,6 @@ public static class FshResources
     public const string TypesTaxe = nameof(TypesTaxe);
     public const string Taxes = nameof(Taxes);
     public const string AdminFiscal = nameof(AdminFiscal);
+    public const string CollecteTerrainSessions = nameof(CollecteTerrainSessions);
+    public const string ZonesCollecte = nameof(ZonesCollecte);
 }

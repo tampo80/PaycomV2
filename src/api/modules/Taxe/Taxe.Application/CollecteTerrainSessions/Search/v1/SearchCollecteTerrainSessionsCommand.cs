@@ -7,13 +7,42 @@ using MediatR;
 using PayCom.WebApi.Taxe.Application.CollecteTerrainSessions.Get.v1;
 
 namespace PayCom.WebApi.Taxe.Application.CollecteTerrainSessions.Search.v1;
-public record SearchCollecteTerrainSessionsCommand(
-    [property: DefaultValue(1)]
-    int PageIndex = 1,
-    [property: DefaultValue(10)]
-    int PageSize = 10,
-    [property: DefaultValue("")]
-    string? SortBy = null,
-    [property: DefaultValue(null)]
-    Guid? AgentId = null,
-    Guid? ZoneId = null) : IRequest<PagedList<CollecteTerrainSessionResponse>>; 
+
+public class SearchCollecteTerrainSessionsCommand : PaginationFilter, IRequest<PagedList<CollecteTerrainSessionResponse>>
+{
+    public string? SearchTerm { get; set; }
+    public DateTime? DateDebut { get; set; }
+    public DateTime? DateFin { get; set; }
+    public Guid? AgentFiscalId { get; set; }
+    public Guid? ZoneCollecteId { get; set; }
+    public Guid? CommuneId { get; set; }
+    public string? Statut { get; set; }
+    
+    public SearchCollecteTerrainSessionsCommand()
+    {
+    }
+    
+    public SearchCollecteTerrainSessionsCommand(
+        int pageNumber = 1, 
+        int pageSize = 10, 
+        string? sortBy = null, 
+        string? searchTerm = null,
+        DateTime? dateDebut = null,
+        DateTime? dateFin = null,
+        Guid? agentFiscalId = null,
+        Guid? zoneCollecteId = null,
+        Guid? communeId = null,
+        string? statut = null)
+    {
+        PageNumber = pageNumber;
+        PageSize = pageSize;
+        OrderBy = sortBy != null ? new[] { sortBy } : null;
+        SearchTerm = searchTerm;
+        DateDebut = dateDebut;
+        DateFin = dateFin;
+        AgentFiscalId = agentFiscalId;
+        ZoneCollecteId = zoneCollecteId;
+        CommuneId = communeId;
+        Statut = statut;
+    }
+} 
