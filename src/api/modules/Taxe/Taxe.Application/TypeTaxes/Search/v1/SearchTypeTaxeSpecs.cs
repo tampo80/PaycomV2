@@ -1,42 +1,18 @@
 using Ardalis.Specification;
-using FSH.Framework.Core.Persistence;
-using PayCom.WebApi.Taxe.Application.TypeTaxes.Get.v1;
+using FSH.Framework.Core.Paging;
+using FSH.Framework.Core.Specifications;
 using PayCom.WebApi.Taxe.Domain;
-using System.Linq.Expressions;
+using PayCom.WebApi.Taxe.Application.TypeTaxes.Get.v1;
+using Shared.Enums;
 
 namespace PayCom.WebApi.Taxe.Application.TypeTaxes.Search.v1;
 
-public class SearchTypeTaxeSpecs : Specification<TypeTaxe, TypeTaxeResponse>
+public class SearchTypeTaxeSpecs : EntitiesByPaginationFilterSpec<TypeTaxe, TypeTaxeResponse>
 {
-    public SearchTypeTaxeSpecs(SearchTypeTaxesCommand request)
-    {
-        Query.OrderByDescending(x => x.Created);
+    public SearchTypeTaxeSpecs(SearchTypeTaxeCommand command)
+        : base(command) =>
+        Query
+            .OrderBy(c => c.Nom, !command.HasOrderBy())
+            .Where(c => c.Nom.Contains(command.Keyword), !string.IsNullOrEmpty(command.Keyword));
+}
 
-        if (!string.IsNullOrEmpty(request.SearchTerm))
-        {
-            // Recherche par nom ou description
-            Query.Where(x => 
-                x.Nom.Contains(request.SearchTerm) || 
-                x.Description.Contains(request.SearchTerm) ||
-                x.Code.Contains(request.SearchTerm));
-        }
-
-        // Pagination
-        Query.Skip((request.PageNumber - 1) * request.PageSize)
-             .Take(request.PageSize);
-
-        // Mapper la réponse
-        Query.Select(typeTaxe => new TypeTaxeResponse
-        {
-            Id = typeTaxe.Id,
-            Code = typeTaxe.Code,
-            Nom = typeTaxe.Nom,
-            Description = typeTaxe.Description,
-            EstPeriodique = typeTaxe.EstPeriodique,
-            FrequencePaiement = typeTaxe.FrequencePaiement,
-            //MontantBase = typeTaxe.TauxBase,
-            UniteMesure = typeTaxe.UniteMesure,
-            NecessiteInspection = typeTaxe.NecessiteInspection
-        });
-    }
-} 

@@ -12,9 +12,10 @@ public record CreateTypeTaxeCommand(
     [property: DefaultValue("Description du type de taxe")]
     string Description,
     [property: DefaultValue(0.0)]
-    decimal MontantBase,
+    double MontantBase,
     FrequencePaiement FrequencePaiement,
     [property: DefaultValue(false)]
     bool EstPeriodique,
+    UniteMesure UniteMesure,
     [property: DefaultValue(false)]
     bool NecessiteInspection) : IRequest<CreateTypeTaxeResponse>;

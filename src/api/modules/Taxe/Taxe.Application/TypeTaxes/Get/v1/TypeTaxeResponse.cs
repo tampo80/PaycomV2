@@ -5,15 +5,15 @@ using Shared.Enums;
 
 namespace PayCom.WebApi.Taxe.Application.TypeTaxes.Get.v1;
 
-public class TypeTaxeResponse
-{
-    public Guid Id { get; set; }
-    public string Code { get; set; } = string.Empty;
-    public string Nom { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
-    public bool EstPeriodique { get; set; }
-    public FrequencePaiement FrequencePaiement { get; set; } 
-    public decimal MontantBase { get; set; }
-    public string UniteMesure { get; set; } = string.Empty;
-    public bool NecessiteInspection { get; set; }
-} 
+public record TypeTaxeResponse(
+    Guid Id,
+    string Code,
+    string Nom,
+    string Description,
+    bool EstPeriodique,
+    FrequencePaiement FrequencePaiement,
+    double MontantBase,
+    UniteMesure UniteMesure,
+    bool NecessiteInspection,
+    DateTime DateCreation,
+    DateTime DateDerniereModification); 

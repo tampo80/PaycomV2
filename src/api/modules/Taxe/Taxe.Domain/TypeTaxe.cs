@@ -3,8 +3,7 @@ using FSH.Framework.Core.Domain.Contracts;
 using PayCom.WebApi.Taxe.Domain.Events.TypeTaxeEvents;
 using Shared.Enums;
 
-
-namespace  PayCom.WebApi.Taxe.Domain;
+namespace PayCom.WebApi.Taxe.Domain;
 
 public class TypeTaxe : AuditableEntity, IAggregateRoot
 {
@@ -13,14 +12,16 @@ public class TypeTaxe : AuditableEntity, IAggregateRoot
     public string Description { get; private set; } = string.Empty;
     public bool EstPeriodique { get; private set; }
     public FrequencePaiement FrequencePaiement { get; private set; }
-    public decimal MontantBase { get; private set; }
-    public string UniteMesure { get; private set; } = string.Empty;
+    public double MontantBase { get; private set; }
+    public UniteMesure UniteMesure { get; private set; }
     public bool NecessiteInspection { get; private set; }
+    
+    
 
     private TypeTaxe() { }
 
     public TypeTaxe(Guid id, string code, string nom, string description, bool estPeriodique, FrequencePaiement frequencePaiement,
-                   decimal montantBase, string uniteMesure, bool necessiteInspection)
+                   double montantBase, UniteMesure uniteMesure, bool necessiteInspection)
     {
         // Validation
         if (string.IsNullOrWhiteSpace(code))
@@ -44,13 +45,13 @@ public class TypeTaxe : AuditableEntity, IAggregateRoot
     }
 
     public static TypeTaxe Create(string code, string nom, string description, bool estPeriodique, FrequencePaiement frequencePaiement,
-                                 decimal montantBase, string uniteMesure, bool necessiteInspection)
+                                 double montantBase, UniteMesure uniteMesure, bool necessiteInspection)
     {
         return new TypeTaxe(Guid.NewGuid(), code, nom, description, estPeriodique, frequencePaiement, montantBase, uniteMesure, necessiteInspection);
     }
 
     public TypeTaxe Update(string code, string nom, string description, bool estPeriodique, FrequencePaiement frequencePaiement,
-                          decimal montantBase, string uniteMesure, bool necessiteInspection)
+                          double montantBase, UniteMesure uniteMesure, bool necessiteInspection)
     {
         // Validation
         if (string.IsNullOrWhiteSpace(code))

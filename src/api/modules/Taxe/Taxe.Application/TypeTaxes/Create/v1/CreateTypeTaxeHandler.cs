@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PayCom.WebApi.Taxe.Domain;
 using Shared.Enums;
+using TypeTaxe = PayCom.WebApi.Taxe.Domain.TypeTaxe;
 
 namespace PayCom.WebApi.Taxe.Application.TypeTaxes.Create.v1;
 
@@ -25,14 +26,14 @@ public sealed class CreateTypeTaxeHandler(
         
         
         // Créer un nouveau type de taxe
-        var typeTaxe = PayCom.WebApi.Taxe.Domain.TypeTaxe.Create(
+        var typeTaxe = TypeTaxe.Create(
             code,
             request.Nom,
             request.Description,
             request.EstPeriodique,
             request.FrequencePaiement,
             request.MontantBase,
-            "Unité", // UniteMesure par défaut
+            request.UniteMesure,
             request.NecessiteInspection
         );
         

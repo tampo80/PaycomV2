@@ -16,16 +16,25 @@ public sealed class RequiredPermissionAuthorizationHandler(IUserService userServ
         };
 
         var requiredPermissions = endpoint?.Metadata.GetMetadata<IRequiredPermissionMetadata>()?.RequiredPermissions;
-        if (requiredPermissions == null)
+        if (requiredPermissions == null || !requiredPermissions.Any())
         {
             // there are no permission requirements set by the endpoint
             // hence, authorize requests
             context.Succeed(requirement);
             return;
         }
-        if (context.User?.GetUserId() is { } userId && await userService.HasPermissionAsync(userId, requiredPermissions.First()))
+        
+        if (context.User?.GetUserId() is { } userId)
         {
-            context.Succeed(requirement);
+            // Vérifier si l'utilisateur a au moins une des permissions requises (OR logique)
+            foreach (var permission in requiredPermissions)
+            {
+                if (await userService.HasPermissionAsync(userId, permission))
+                {
+                    context.Succeed(requirement);
+                    return; // Sortir dès qu'une permission est validée
+                }
+            }
         }
     }
 }

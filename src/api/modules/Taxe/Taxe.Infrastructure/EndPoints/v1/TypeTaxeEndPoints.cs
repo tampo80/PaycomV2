@@ -85,7 +85,7 @@ public static class GetTypeTaxeEndPoints
             .WithSummary("Obtenir un type de taxe")
             .WithDescription("Récupère les détails d'un type de taxe spécifique")
             .Produces<TypeTaxeResponse>()
-            .RequirePermission("Permissions.TypesTaxe.Get")
+            .RequirePermission("Permissions.TypesTaxe.Read", "Permissions.TypesTaxe.View")
             .MapToApiVersion(1);
     }
 }
@@ -95,7 +95,7 @@ public static class SearchTypeTaxeEndPoints
     internal static RouteHandlerBuilder MapTypeTaxeSearchEndpoint(this IEndpointRouteBuilder endpoints)
     {
         return endpoints
-            .MapPost("/search", async ([FromBody] SearchTypeTaxesCommand request, ISender mediator) =>
+            .MapPost("/search", async ([FromBody] SearchTypeTaxeCommand request, ISender mediator) =>
             {
                 var response = await mediator.Send(request);
                 return Results.Ok(response);
@@ -104,7 +104,7 @@ public static class SearchTypeTaxeEndPoints
             .WithSummary("Rechercher des types de taxe")
             .WithDescription("Recherche et liste les types de taxe selon les critères spécifiés")
             .Produces<PagedList<TypeTaxeResponse>>()
-            .RequirePermission("Permissions.TypesTaxe.Search")
+            .RequirePermission("Permissions.TypesTaxe.Search", "Permissions.TypesTaxe.View")
             .MapToApiVersion(1);
     }
 } 
