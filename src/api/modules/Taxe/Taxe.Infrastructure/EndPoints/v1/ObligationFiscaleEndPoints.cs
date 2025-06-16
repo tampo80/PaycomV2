@@ -12,6 +12,7 @@ using PayCom.WebApi.Taxe.Application.ObligationFiscales.Search.v1;
 using PayCom.WebApi.Taxe.Application.ObligationFiscales.Update.v1;
 using PayCom.WebApi.Taxe.Application.ObligationFiscales.Desactiver.v1;
 using PayCom.WebApi.Taxe.Application.ObligationFiscales.Reactiver.v1;
+using PayCom.WebApi.Taxe.Application.ObligationFiscales.GenererEcheances.v1;
 
 namespace PayCom.WebApi.Taxe.Infrastructure.EndPoints.v1;
 
@@ -144,6 +145,26 @@ public static class ReactiverObligationFiscaleEndPoints
             .WithSummary("Réactiver une obligation fiscale")
             .WithDescription("Réactive une obligation fiscale précédemment désactivée")
             .Produces<ReactiverObligationFiscaleResponse>()
+            .RequirePermission("Permissions.ObligationsFiscales.Gerer")
+            .MapToApiVersion(1);
+    }
+}
+
+public static class GenererEcheancesEndPoints
+{
+    internal static RouteHandlerBuilder MapGenererEcheancesEndpoint(this IEndpointRouteBuilder endpoints)
+    {
+        return endpoints
+            .MapPost("/{id:guid}/generer-echeances", async (Guid id, GenererEcheancesCommand request, ISender mediator) =>
+            {
+                if (id != request.ObligationFiscaleId) return Results.BadRequest();
+                var response = await mediator.Send(request);
+                return Results.Ok(response);
+            })
+            .WithName(nameof(GenererEcheancesEndPoints))
+            .WithSummary("Générer les échéances d'une obligation fiscale")
+            .WithDescription("Génère automatiquement les échéances pour une obligation fiscale périodique")
+            .Produces<GenererEcheancesResponse>()
             .RequirePermission("Permissions.ObligationsFiscales.Gerer")
             .MapToApiVersion(1);
     }

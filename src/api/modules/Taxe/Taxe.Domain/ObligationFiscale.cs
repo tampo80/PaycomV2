@@ -20,8 +20,8 @@ public class ObligationFiscale : AuditableEntity, IAggregateRoot
     
     public DateTime DateDebut { get; private set; }
     public DateTime? DateFin { get; private set; }
-    public string ReferenceProprieteBien { get; private set; } = string.Empty;
-    public string LocalisationGPS { get; private set; } = string.Empty;
+    public string? ReferenceProprieteBien { get; private set; }
+    public string? LocalisationGPS { get; private set; }
     public bool EstActif { get; private set; }
 
     // Navigation property pour les échéances
@@ -31,7 +31,7 @@ public class ObligationFiscale : AuditableEntity, IAggregateRoot
     private ObligationFiscale() { }
 
     public ObligationFiscale(Guid id, Guid contribuableId, Guid typeTaxeId, Guid communeId, DateTime dateDebut, 
-                            DateTime? dateFin, string referenceProprieteBien, string localisationGPS, bool estActif)
+                            DateTime? dateFin, string? referenceProprieteBien, string? localisationGPS, bool estActif)
     {
         // Validation des entrées
         ValiderDates(dateDebut, dateFin);
@@ -42,22 +42,22 @@ public class ObligationFiscale : AuditableEntity, IAggregateRoot
         CommuneId = communeId;
         DateDebut = dateDebut;
         DateFin = dateFin;
-        ReferenceProprieteBien = referenceProprieteBien;
-        LocalisationGPS = localisationGPS;
+        ReferenceProprieteBien = string.IsNullOrWhiteSpace(referenceProprieteBien) ? null : referenceProprieteBien;
+        LocalisationGPS = string.IsNullOrWhiteSpace(localisationGPS) ? null : localisationGPS;
         EstActif = estActif;
         
         QueueDomainEvent(new ObligationFiscaleCreated { ObligationFiscale = this });
     }
 
     public static ObligationFiscale Create(Guid contribuableId, Guid typeTaxeId, Guid communeId, DateTime dateDebut, 
-                                         DateTime? dateFin, string referenceProprieteBien, string localisationGPS, bool estActif)
+                                         DateTime? dateFin, string? referenceProprieteBien, string? localisationGPS, bool estActif)
     {
         return new ObligationFiscale(Guid.NewGuid(), contribuableId, typeTaxeId, communeId, dateDebut, 
                                     dateFin, referenceProprieteBien, localisationGPS, estActif);
     }
 
     public ObligationFiscale Update(Guid contribuableId, Guid typeTaxeId, Guid communeId, DateTime dateDebut, 
-                                  DateTime? dateFin, string referenceProprieteBien, string localisationGPS, bool estActif)
+                                  DateTime? dateFin, string? referenceProprieteBien, string? localisationGPS, bool estActif)
     {
         // Validation des entrées
         ValiderDates(dateDebut, dateFin);
@@ -94,15 +94,17 @@ public class ObligationFiscale : AuditableEntity, IAggregateRoot
             isUpdated = true;
         }
 
-        if (ReferenceProprieteBien != referenceProprieteBien)
+        var newReferenceProprieteBien = string.IsNullOrWhiteSpace(referenceProprieteBien) ? null : referenceProprieteBien;
+        if (ReferenceProprieteBien != newReferenceProprieteBien)
         {
-            ReferenceProprieteBien = referenceProprieteBien;
+            ReferenceProprieteBien = newReferenceProprieteBien;
             isUpdated = true;
         }
 
-        if (LocalisationGPS != localisationGPS)
+        var newLocalisationGPS = string.IsNullOrWhiteSpace(localisationGPS) ? null : localisationGPS;
+        if (LocalisationGPS != newLocalisationGPS)
         {
-            LocalisationGPS = localisationGPS;
+            LocalisationGPS = newLocalisationGPS;
             isUpdated = true;
         }
 

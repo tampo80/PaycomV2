@@ -6,18 +6,12 @@ using MediatR;
 using Shared.Enums;
 
 namespace PayCom.WebApi.Taxe.Application.TypeTaxes.Update.v1;
-public record UpdateTypeTaxeCommand(
-    
+public sealed record UpdateTypeTaxeCommand(
     Guid Id,
-    
     string Nom,
-  
-    string Description,
-   
-    double MontantBase,
+    string? Description,
+    decimal? MontantBase,
     FrequencePaiement FrequencePaiement,
-  
     bool EstPeriodique,
     UniteMesure UniteMesure,
-   
     bool NecessiteInspection) : IRequest<UpdateTypeTaxeResponse>;

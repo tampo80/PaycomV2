@@ -1,3 +1,4 @@
+using FSH.Framework.Core.Exceptions;
 using FSH.Framework.Core.Persistence;
 using PayCom.WebApi.Taxe.Domain.Events;
 using PayCom.WebApi.Taxe.Domain.Enums;
@@ -8,17 +9,21 @@ using PayCom.WebApi.Taxe.Domain;
 using PayCom.WebApi.Taxe.Domain.Exceptions;
 
 namespace PayCom.WebApi.Taxe.Application.Penalites.Delete.v1;
-public class DeletePenaliteHandler(
-    ILogger<DeletePenaliteHandler> logger,
-    [FromKeyedServices("taxe:penalites")] IRepository<Penalite> repository) : IRequestHandler<DeletePenaliteCommand>
+
+public sealed class DeletePenaliteHandler(
+    [FromKeyedServices("taxe:penalites")] IRepository<Penalite> repository)
+    : IRequestHandler<DeletePenaliteCommand>
 {
     public async Task Handle(DeletePenaliteCommand request, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(request);
         var penalite = await repository.GetByIdAsync(request.Id, cancellationToken);
-        _ = penalite ?? throw new PenaliteNotFoundException(request.Id);
+        
+        if (penalite == null)
+        {
+            throw new NotFoundException($"Pénalité avec l'ID {request.Id} non trouvée");
+        }
+
         await repository.DeleteAsync(penalite, cancellationToken);
-        logger.LogInformation("penalite avec l'id {penaliteId}", penalite.Id);
+        await repository.SaveChangesAsync(cancellationToken);
     }
-    
 }

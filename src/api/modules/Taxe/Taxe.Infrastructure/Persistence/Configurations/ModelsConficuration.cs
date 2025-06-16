@@ -25,6 +25,127 @@ internal sealed class AgentFiscalConfiguration : IEntityTypeConfiguration<AgentF
     
 }
 
+internal sealed class ObligationFiscaleConfiguration : IEntityTypeConfiguration<ObligationFiscale>
+{
+    public void Configure(EntityTypeBuilder<ObligationFiscale> builder)
+    {
+        builder.IsMultiTenant();
+        builder.HasKey(x => x.Id);
+        
+        // Configuration des propriétés
+        builder.Property(x => x.ContribuableId).IsRequired();
+        builder.Property(x => x.TypeTaxeId).IsRequired();
+        builder.Property(x => x.CommuneId).IsRequired();
+        builder.Property(x => x.DateDebut).IsRequired();
+        builder.Property(x => x.DateFin).IsRequired(false);
+        builder.Property(x => x.ReferenceProprieteBien)
+               .HasMaxLength(200)
+               .IsRequired(false)
+               .HasDefaultValue("");
+        builder.Property(x => x.LocalisationGPS)
+               .HasMaxLength(500)
+               .IsRequired(false)
+               .HasDefaultValue("");
+        builder.Property(x => x.EstActif).IsRequired();
+        
+        // Configuration des relations
+        builder.HasOne(x => x.Contribuable)
+               .WithMany()
+               .HasForeignKey(x => x.ContribuableId)
+               .OnDelete(DeleteBehavior.Restrict);
+               
+        builder.HasOne(x => x.TypeTaxe)
+               .WithMany()
+               .HasForeignKey(x => x.TypeTaxeId)
+               .OnDelete(DeleteBehavior.Restrict);
+               
+        builder.HasOne(x => x.Commune)
+               .WithMany()
+               .HasForeignKey(x => x.CommuneId)
+               .OnDelete(DeleteBehavior.Restrict);
+               
+        // Configuration de la relation avec les échéances
+        builder.HasMany(x => x.Echeances)
+               .WithOne(e => e.ObligationFiscale)
+               .HasForeignKey(e => e.ObligationFiscaleId)
+               .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+internal sealed class EcheanceConfiguration : IEntityTypeConfiguration<Echeance>
+{
+    public void Configure(EntityTypeBuilder<Echeance> builder)
+    {
+        builder.IsMultiTenant();
+        builder.HasKey(x => x.Id);
+        
+        // Configuration des propriétés
+        builder.Property(x => x.ObligationFiscaleId).IsRequired();
+        builder.Property(x => x.AnneeImposition).IsRequired();
+        builder.Property(x => x.PeriodeImposition).IsRequired();
+        builder.Property(x => x.DateEcheance).IsRequired();
+        builder.Property(x => x.Statut).IsRequired();
+        
+        // Configuration des montants avec précision pour PostgreSQL
+        builder.Property(x => x.MontantBase)
+               .HasColumnType("decimal(18,2)")
+               .IsRequired();
+               
+        builder.Property(x => x.MontantPenalites)
+               .HasColumnType("decimal(18,2)")
+               .IsRequired();
+               
+        builder.Property(x => x.MontantTotal)
+               .HasColumnType("decimal(18,2)")
+               .IsRequired();
+        
+        // Configuration de la relation avec ObligationFiscale
+        builder.HasOne(x => x.ObligationFiscale)
+               .WithMany(o => o.Echeances)
+               .HasForeignKey(x => x.ObligationFiscaleId)
+               .OnDelete(DeleteBehavior.Cascade);
+               
+        // Configuration de la relation avec les paiements
+        builder.HasMany(x => x.Paiements)
+               .WithOne(p => p.Echeance)
+               .HasForeignKey(p => p.EcheanceId)
+               .OnDelete(DeleteBehavior.Restrict);
+               
+        // Index pour améliorer les performances
+        builder.HasIndex(x => new { x.ObligationFiscaleId, x.AnneeImposition, x.PeriodeImposition })
+               .IsUnique()
+               .HasDatabaseName("IX_Echeance_ObligationFiscale_Periode");
+    }
+}
+
+internal sealed class TypeTaxeConfiguration : IEntityTypeConfiguration<TypeTaxe>
+{
+    public void Configure(EntityTypeBuilder<TypeTaxe> builder)
+    {
+        builder.IsMultiTenant();
+        builder.HasKey(x => x.Id);
+        
+        // Configuration des propriétés
+        builder.Property(x => x.Nom).HasMaxLength(200).IsRequired();
+        builder.Property(x => x.Code).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.Description).HasMaxLength(1000);
+        builder.Property(x => x.EstPeriodique).IsRequired();
+        builder.Property(x => x.FrequencePaiement).IsRequired();
+        builder.Property(x => x.UniteMesure).IsRequired();
+        builder.Property(x => x.NecessiteInspection).IsRequired();
+        
+        // Configuration du montant avec précision pour PostgreSQL
+        builder.Property(x => x.MontantBase)
+               .HasColumnType("decimal(18,2)")
+               .IsRequired(false);
+        
+        // Index unique sur le code
+        builder.HasIndex(x => x.Code)
+               .IsUnique()
+               .HasDatabaseName("IX_TypeTaxe_Code");
+    }
+}
+
 internal sealed class CommuneConfiguration : IEntityTypeConfiguration<Commune>
 {
     public void Configure(EntityTypeBuilder<Commune> builder)
@@ -40,7 +161,6 @@ internal sealed class CommuneConfiguration : IEntityTypeConfiguration<Commune>
                .OnDelete(DeleteBehavior.Restrict);
     }
 }
-
 
 internal sealed class VilleConfiguration : IEntityTypeConfiguration<Ville>
 {
@@ -111,10 +231,44 @@ internal sealed class PenaliteConfiguration : IEntityTypeConfiguration<Penalite>
     {
         builder.IsMultiTenant();
         builder.HasKey(x => x.Id);
-        builder.Property(x => x.Description);
-        builder.Property(x => x.DateApplication);
-        builder.Property(x => x.Montant);
-        builder.Property(x => x.Type);
+        
+        // Configuration des propriétés
+        builder.Property(x => x.EcheanceId).IsRequired();
+        builder.Property(x => x.ObligationFiscaleId).IsRequired();
+        builder.Property(x => x.TypePenalite).IsRequired();
+        builder.Property(x => x.MontantPenalite)
+               .HasColumnType("decimal(18,2)")
+               .IsRequired();
+        builder.Property(x => x.TauxPenalite)
+               .HasColumnType("decimal(5,2)")
+               .IsRequired();
+        builder.Property(x => x.DateCalcul).IsRequired();
+        builder.Property(x => x.DateApplication).IsRequired();
+        builder.Property(x => x.NombreJoursRetard).IsRequired();
+        builder.Property(x => x.Motif)
+               .HasMaxLength(500)
+               .IsRequired(false);
+        builder.Property(x => x.Observation)
+               .HasMaxLength(1000)
+               .IsRequired(false);
+        builder.Property(x => x.Statut).IsRequired();
+        builder.Property(x => x.EstAnnulee).IsRequired();
+        builder.Property(x => x.DateAnnulation).IsRequired(false);
+        builder.Property(x => x.MotifAnnulation)
+               .HasMaxLength(500)
+               .IsRequired(false);
+        builder.Property(x => x.AnnuleePar).IsRequired(false);
+        
+        // Configuration des relations
+        builder.HasOne(x => x.Echeance)
+               .WithMany()
+               .HasForeignKey(x => x.EcheanceId)
+               .OnDelete(DeleteBehavior.Restrict);
+               
+        builder.HasOne(x => x.ObligationFiscale)
+               .WithMany()
+               .HasForeignKey(x => x.ObligationFiscaleId)
+               .OnDelete(DeleteBehavior.Restrict);
     }
 }
 

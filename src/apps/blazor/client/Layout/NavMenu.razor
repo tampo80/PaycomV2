@@ -109,27 +109,35 @@
     @if (CanViewAdministrationFiscaleGroup)
     {
         <MudNavGroup Title="Administration Fiscale" Icon="@Icons.Material.Filled.AccountBalance" IconColor="Color.Primary" Expanded="false">
-            <!-- Gestion des taxes -->
+            
+            <!-- Configuration des taxes -->
             @if (_canViewTaxes)
             {
-                <MudNavGroup Title="Taxes" IconColor="Color.Primary" Icon="@Icons.Material.Filled.Receipt" Class="fsh-nav-child">
-                    <MudNavLink IconColor="Color.Primary" Href="/taxes/tableau-de-bord" Icon="@Icons.Material.Filled.Dashboard" Class="fsh-nav-child">
-                        Tableau de bord des taxes
-                    </MudNavLink>
-                    <MudNavLink IconColor="Color.Primary" Href="/taxes/calendrier-fiscal" Icon="@Icons.Material.Filled.CalendarMonth" Class="fsh-nav-child">
-                        Calendrier fiscal
-                    </MudNavLink>
-                    <MudNavLink IconColor="Color.Primary" Href="/taxes/historique-paiements" Icon="@Icons.Material.Filled.Receipt" Class="fsh-nav-child">
-                        Historique des paiements
-                    </MudNavLink>
-                    <MudNavLink IconColor="Color.Primary" Href="/taxes/liste" Icon="@Icons.Material.Filled.ListAlt" Class="fsh-nav-child">
-                        Liste des taxes
-                    </MudNavLink>
+                <MudNavGroup Title="Configuration des taxes" IconColor="Color.Primary" Icon="@Icons.Material.Filled.Settings" Class="fsh-nav-child">
                     <MudNavLink IconColor="Color.Primary" Href="/parametres/taxe/types-taxe" Icon="@Icons.Material.Filled.Category" Class="fsh-nav-child">
                         Types de taxes
                     </MudNavLink>
                     <MudNavLink IconColor="Color.Primary" Href="/taxes/obligations-fiscales" Icon="@Icons.Material.Filled.Assignment" Class="fsh-nav-child">
                         Obligations fiscales
+                    </MudNavLink>
+                </MudNavGroup>
+            }
+            
+            <!-- Suivi et contrôle -->
+            @if (_canViewTaxes)
+            {
+                <MudNavGroup Title="Suivi et contrôle" IconColor="Color.Primary" Icon="@Icons.Material.Filled.Visibility" Class="fsh-nav-child">
+                    <MudNavLink IconColor="Color.Primary" Href="/tableau-de-bord-fiscal" Icon="@Icons.Material.Filled.Dashboard" Class="fsh-nav-child">
+                        Tableau de bord fiscal
+                    </MudNavLink>
+                    <MudNavLink IconColor="Color.Primary" Href="/calendrier-fiscal" Icon="@Icons.Material.Filled.CalendarMonth" Class="fsh-nav-child">
+                        Calendrier fiscal
+                    </MudNavLink>
+                    <MudNavLink IconColor="Color.Primary" Href="/echeances" Icon="@Icons.Material.Filled.DateRange" Class="fsh-nav-child">
+                        Échéances
+                    </MudNavLink>
+                    <MudNavLink IconColor="Color.Primary" Href="/penalites" Icon="@Icons.Material.Filled.ErrorOutline" Class="fsh-nav-child">
+                        Pénalités
                     </MudNavLink>
                 </MudNavGroup>
             }
@@ -141,14 +149,13 @@
                     <MudNavLink IconColor="Color.Primary" Href="/agents/liste" Icon="@Icons.Material.Filled.FormatListBulleted" Class="fsh-nav-child">
                         Liste des agents
                     </MudNavLink>
-                    
                     <MudNavLink IconColor="Color.Primary" Href="/agents/performance" Icon="@Icons.Material.Filled.TrendingUp" Class="fsh-nav-child">
                         Performance
                     </MudNavLink>
                 </MudNavGroup>
             }
             
-            <!-- Gestion des zones de collecte -->
+            <!-- Zones de collecte -->
             @if (HasRoleAgentFiscal)
             {
                 <MudNavLink IconColor="Color.Primary" Href="/collecte/zones" Icon="@Icons.Material.Filled.Map" Class="fsh-nav-child">
@@ -156,40 +163,21 @@
                 </MudNavLink>
             }
             
-            <!-- Échéances et pénalités -->
-            <MudNavGroup Title="Échéances et pénalités" IconColor="Color.Primary" Icon="@Icons.Material.Filled.EventNote" Class="fsh-nav-child">
-                <MudNavLink IconColor="Color.Primary" Href="/taxes/calendrier-fiscal" Icon="@Icons.Material.Filled.DateRange" Class="fsh-nav-child">
-                    Calendrier fiscal
-                </MudNavLink>
-                <MudNavLink IconColor="Color.Primary" Href="/echeances" Icon="@Icons.Material.Filled.DateRange" Class="fsh-nav-child">
-                    Échéances
-                </MudNavLink>
-                <MudNavLink IconColor="Color.Primary" Href="/penalites" Icon="@Icons.Material.Filled.ErrorOutline" Class="fsh-nav-child">
-                    Pénalités
-                </MudNavLink>
-            </MudNavGroup>
-            
             <!-- Rapports et analyses -->
             @if (HasRoleAgentFiscal)
             {
-                <MudNavGroup Title="Rapports" IconColor="Color.Primary" Icon="@Icons.Material.Filled.Assessment" Class="fsh-nav-child">
-                    <MudNavLink IconColor="Color.Primary" Href="/rapports/performance" Icon="@Icons.Material.Filled.TrendingUp" Class="fsh-nav-child">
-                        Performance
-                    </MudNavLink>
+                <MudNavGroup Title="Rapports et analyses" IconColor="Color.Primary" Icon="@Icons.Material.Filled.Assessment" Class="fsh-nav-child">
                     <MudNavLink IconColor="Color.Primary" Href="/rapports/recouvrement" Icon="@Icons.Material.Filled.MonetizationOn" Class="fsh-nav-child">
                         Taux de recouvrement
                     </MudNavLink>
                     <MudNavLink IconColor="Color.Primary" Href="/rapports/journaliers" Icon="@Icons.Material.Filled.Today" Class="fsh-nav-child">
-                        Journaliers
+                        Rapports journaliers
                     </MudNavLink>
                     <MudNavLink IconColor="Color.Primary" Href="/rapports/mensuels" Icon="@Icons.Material.Filled.DateRange" Class="fsh-nav-child">
-                        Mensuels
+                        Rapports mensuels
                     </MudNavLink>
                     <MudNavLink IconColor="Color.Primary" Href="/rapports/annuels" Icon="@Icons.Material.Filled.EventNote" Class="fsh-nav-child">
-                        Annuels
-                    </MudNavLink>
-                    <MudNavLink IconColor="Color.Primary" Href="/rapports/personnalises" Icon="@Icons.Material.Filled.Build" Class="fsh-nav-child">
-                        Rapports personnalisés
+                        Rapports annuels
                     </MudNavLink>
                 </MudNavGroup>
             }

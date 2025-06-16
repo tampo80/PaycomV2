@@ -10,9 +10,12 @@ public class CreatePenaliteCommandValidator : AbstractValidator<CreatePenaliteCo
     public CreatePenaliteCommandValidator()
     {
         RuleFor(p => p.DateApplication).NotEmpty();
-        RuleFor(p => p.Montant).GreaterThan(0).WithMessage("Le montant doit être supérieur à zéro");
-        RuleFor(p => p.Type).NotEmpty().MaximumLength(100);
-        RuleFor(p => p.Description).MaximumLength(500);
-        RuleFor(p => p.TaxeConcerneeId).NotEmpty().WithMessage("L'identifiant de la taxe concernée est requis");
+        RuleFor(p => p.MontantPenalite).GreaterThan(0).WithMessage("Le montant doit être supérieur à zéro");
+        RuleFor(p => p.TypePenalite).NotEmpty();
+        RuleFor(p => p.Motif).MaximumLength(500);
+        RuleFor(p => p.ObligationFiscaleId).NotEmpty().WithMessage("L'identifiant de l'obligation fiscale est requis");
+        RuleFor(p => p.EcheanceId).NotEmpty().WithMessage("L'identifiant de l'échéance est requis");
+        RuleFor(p => p.TauxPenalite).GreaterThanOrEqualTo(0).WithMessage("Le taux de pénalité doit être supérieur ou égal à zéro");
+        RuleFor(p => p.NombreJoursRetard).GreaterThanOrEqualTo(0).WithMessage("Le nombre de jours de retard doit être supérieur ou égal à zéro");
     }
 }

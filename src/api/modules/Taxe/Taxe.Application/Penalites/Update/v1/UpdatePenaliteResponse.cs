@@ -9,4 +9,5 @@ using PayCom.WebApi.Taxe.Application.Penalites.Get.v1;
 using PayCom.WebApi.Taxe.Application.Penalites.Search.v1;
 
 namespace PayCom.WebApi.Taxe.Application.Penalites.Update.v1;
-public record UpdatePenaliteResponse(Guid? Id);
+
+public record UpdatePenaliteResponse(Guid Id);

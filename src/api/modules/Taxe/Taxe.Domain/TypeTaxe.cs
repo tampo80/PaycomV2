@@ -12,7 +12,7 @@ public class TypeTaxe : AuditableEntity, IAggregateRoot
     public string Description { get; private set; } = string.Empty;
     public bool EstPeriodique { get; private set; }
     public FrequencePaiement FrequencePaiement { get; private set; }
-    public double MontantBase { get; private set; }
+    public decimal? MontantBase { get; private set; }
     public UniteMesure UniteMesure { get; private set; }
     public bool NecessiteInspection { get; private set; }
     
@@ -21,7 +21,7 @@ public class TypeTaxe : AuditableEntity, IAggregateRoot
     private TypeTaxe() { }
 
     public TypeTaxe(Guid id, string code, string nom, string description, bool estPeriodique, FrequencePaiement frequencePaiement,
-                   double montantBase, UniteMesure uniteMesure, bool necessiteInspection)
+                   decimal? montantBase, UniteMesure uniteMesure, bool necessiteInspection)
     {
         // Validation
         if (string.IsNullOrWhiteSpace(code))
@@ -45,13 +45,13 @@ public class TypeTaxe : AuditableEntity, IAggregateRoot
     }
 
     public static TypeTaxe Create(string code, string nom, string description, bool estPeriodique, FrequencePaiement frequencePaiement,
-                                 double montantBase, UniteMesure uniteMesure, bool necessiteInspection)
+                                 decimal? montantBase, UniteMesure uniteMesure, bool necessiteInspection)
     {
         return new TypeTaxe(Guid.NewGuid(), code, nom, description, estPeriodique, frequencePaiement, montantBase, uniteMesure, necessiteInspection);
     }
 
     public TypeTaxe Update(string code, string nom, string description, bool estPeriodique, FrequencePaiement frequencePaiement,
-                          double montantBase, UniteMesure uniteMesure, bool necessiteInspection)
+                          decimal? montantBase, UniteMesure uniteMesure, bool necessiteInspection)
     {
         // Validation
         if (string.IsNullOrWhiteSpace(code))

@@ -163,6 +163,9 @@ public static class TaxeModule
             group.MapObligationFiscaleSearchEndpoint();
             group.MapObligationFiscaleUpdateEndpoint();
             group.MapObligationFiscaleDeleteEndpoint();
+            group.MapDesactiverObligationFiscaleEndpoint();
+            group.MapReactiverObligationFiscaleEndpoint();
+            group.MapGenererEcheancesEndpoint();
         }
 
         private static void MapCollecteTerrainSessionEndpoints(IEndpointRouteBuilder app)

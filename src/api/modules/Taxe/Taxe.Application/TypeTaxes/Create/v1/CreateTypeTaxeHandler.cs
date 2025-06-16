@@ -18,18 +18,13 @@ public sealed class CreateTypeTaxeHandler(
         ArgumentNullException.ThrowIfNull(request);
         
         // Générer un code unique pour le type de taxe
-        string code = $"TX-{Guid.NewGuid().ToString().Substring(0, 8).ToUpper()}";
+        string code = await GenerateUniqueCodeAsync(cancellationToken);
         
-        // Convertir la chaîne FrequencePaiement en enum
-        
-           
-        
-        
-        // Créer un nouveau type de taxe
+        // Créer un nouveau type de taxe avec le code généré
         var typeTaxe = TypeTaxe.Create(
             code,
             request.Nom,
-            request.Description,
+            request.Description ?? string.Empty,
             request.EstPeriodique,
             request.FrequencePaiement,
             request.MontantBase,
@@ -41,9 +36,41 @@ public sealed class CreateTypeTaxeHandler(
         await repository.AddAsync(typeTaxe, cancellationToken);
         await repository.SaveChangesAsync(cancellationToken);
         
-        logger.LogInformation("Type de taxe créé avec l'ID {TypeTaxeId}", typeTaxe.Id);
+        logger.LogInformation("Type de taxe créé avec l'ID {TypeTaxeId} et le code {Code}", typeTaxe.Id, typeTaxe.Code);
         
         // Retourner la réponse
         return new CreateTypeTaxeResponse(typeTaxe.Id);
+    }
+    
+    private async Task<string> GenerateUniqueCodeAsync(CancellationToken cancellationToken)
+    {
+        string code;
+        bool codeExists;
+        int attempts = 0;
+        const int maxAttempts = 10;
+        
+        do
+        {
+            // Générer un code au format TX-YYYYMMDD-XXX
+            var now = DateTime.UtcNow;
+            var datePrefix = now.ToString("yyyyMMdd");
+            var randomSuffix = Random.Shared.Next(100, 999);
+            code = $"TX-{datePrefix}-{randomSuffix}";
+            
+            // Vérifier si le code existe déjà
+            var existingTypeTaxe = await repository.GetBySpecAsync(
+                new TypeTaxeByCodeSpec(code), cancellationToken);
+            codeExists = existingTypeTaxe != null;
+            
+            attempts++;
+        } while (codeExists && attempts < maxAttempts);
+        
+        if (codeExists)
+        {
+            // En dernier recours, utiliser un GUID
+            code = $"TX-{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+        }
+        
+        return code;
     }
 } 

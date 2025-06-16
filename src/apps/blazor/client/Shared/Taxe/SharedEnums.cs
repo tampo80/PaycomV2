@@ -30,8 +30,20 @@ public enum StatutPaiementTerrain
 {
     EnAttente = 0,
     Valide = 1,
-    Rejete = 2,
-    FraudeSuspectee = 3
+    EnCoursVerification = 2,
+    Rejete = 3,
+    AnnulePourFraude = 4,
+    EnCoursRemboursement = 5,
+    Rembourse = 6
+}
+
+public enum StatutSession
+{
+    EnCours = 0,
+    Terminee = 1,
+    Annulee = 2,
+    EnErreur = 3,
+    Cloturee = 4
 }
 
 public enum FrequencePaiement

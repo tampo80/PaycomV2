@@ -12,5 +12,14 @@ public class SearchObligationFiscalesCommand : PaginationFilter, IRequest<PagedL
 {
     public Guid? ContribuableId { get; set; }
     public Guid? TypeTaxeId { get; set; }
+    public Guid? CommuneId { get; set; }
     public bool? EstActif { get; set; } = true;
+    public DateTime? DateDebutMin { get; set; }
+    public DateTime? DateDebutMax { get; set; }
+    public DateTime? DateFinMin { get; set; }
+    public DateTime? DateFinMax { get; set; }
+    public string? ReferenceProprieteBien { get; set; }
+    public decimal? MontantMin { get; set; }
+    public decimal? MontantMax { get; set; }
+    public bool IncludeInactives { get; set; } = false;
 } 
