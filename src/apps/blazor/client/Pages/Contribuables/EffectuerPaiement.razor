@@ -4,6 +4,7 @@
 @using PayCom.Blazor.Infrastructure.Api
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
+@using SharedEnums = PayCom.Shared.Enums
 
 @inject ISnackbar Snackbar
 @inject IApiClient ApiClient
@@ -25,82 +26,246 @@
         {
             <div class="d-flex justify-center align-center">
                 <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                <MudText Class="ml-3">Chargement des échéances...</MudText>
             </div>
         }
-        else
+        else if (_errorMessage != null)
         {
-            <MudForm @ref="_form" Model="@_paiement" @bind-IsValid="@_formIsValid">
+            <MudAlert Severity="Severity.Error" Class="mb-4" ShowCloseIcon="true" CloseIconClicked="() => _errorMessage = null">
+                <MudText>@_errorMessage</MudText>
+                <MudButton Color="Color.Error" Variant="Variant.Text" OnClick="LoadEcheances" Class="mt-2">
+                    Réessayer
+                </MudButton>
+            </MudAlert>
+        }
+        else if (!_echeances.Any())
+        {
+            <MudAlert Severity="Severity.Info" Class="mb-4">
+                <MudStack Spacing="2">
+                    <MudText Typo="Typo.body1">
+                        <strong>Aucune échéance en attente de paiement trouvée</strong>
+                    </MudText>
+                    <MudText Typo="Typo.body2">
+                        Vos obligations peuvent être déjà payées ou aucune échéance n'a été générée.
+                    </MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Success">
+                        <MudIcon Icon="@Icons.Material.Filled.Info" Class="mr-2" />
+                        Vous pouvez néanmoins effectuer un paiement libre ci-dessous.
+                    </MudText>
+                    <MudStack Row="true" Spacing="2" Class="mt-2">
+                        <MudButton Href="/contribuable/mes-obligations" 
+                                 Color="Color.Primary" 
+                                 Variant="Variant.Text" 
+                                 StartIcon="@Icons.Material.Filled.Assignment">
+                            Voir mes obligations fiscales
+                        </MudButton>
+                        <MudButton OnClick="LoadEcheances" 
+                                 Color="Color.Secondary" 
+                                 Variant="Variant.Text" 
+                                 StartIcon="@Icons.Material.Filled.Refresh">
+                            Actualiser
+                        </MudButton>
+                    </MudStack>
+                </MudStack>
+            </MudAlert>
+            
+            <!-- Afficher le formulaire de paiement libre même sans échéances -->
+            <MudForm @ref="_form" @bind-IsValid="@_formIsValid">
                 <MudGrid>
+                    <!-- Type de paiement -->
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.subtitle2" Class="mb-3">
+                            <strong>Paiement d'échéance</strong>
+                        </MudText>
+                        
+                        @if (!_obligations.Any())
+                        {
+                            <MudAlert Severity="Severity.Warning" Class="mb-4">
+                                <MudText Typo="Typo.body1">
+                                    <strong>Aucune obligation fiscale trouvée</strong>
+                                </MudText>
+                                <MudText Typo="Typo.body2">
+                                    Vous devez d'abord créer vos obligations fiscales avant de pouvoir effectuer un paiement.
+                                </MudText>
+                            </MudAlert>
+                        }
+                    </MudItem>
+
+                    <!-- Sélection de l'obligation fiscale -->
+                    @if (_obligations.Any())
+                    {
+                        <MudItem xs="12" md="6">
+                            <MudSelect T="ObligationFiscaleResponse" Label="Obligation fiscale" 
+                                     Required RequiredError="Veuillez sélectionner une obligation fiscale"
+                                     @bind-Value="_selectedObligation" 
+                                     ToStringFunc="@(o => o?.TypeTaxeNom ?? string.Empty)"
+                                     AdornmentIcon="@Icons.Material.Filled.Assignment"
+                                     AdornmentColor="Color.Primary"
+                                     HelperText="Sélectionnez l'obligation fiscale concernée"
+                                     HelperTextOnFocus="true"
+                                     OnSelectedItemChanged="@((ObligationFiscaleResponse obligation) => OnObligationSelected(obligation))">
+                                @foreach (var obligation in _obligations)
+                                {
+                                    <MudSelectItem Value="@obligation">
+                                        <div class="d-flex justify-space-between align-center">
+                                            <div>
+                                                <MudText Typo="Typo.body2">@obligation.TypeTaxeNom</MudText>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                    @obligation.ReferenceProprieteBien
+                                                </MudText>
+                                            </div>
+                                            <MudChip T="string" Size="Size.Small" Color="@(obligation.EstActif ? Color.Success : Color.Default)">
+                                                @(obligation.EstActif ? "Active" : "Inactive")
+                                            </MudChip>
+                                        </div>
+                                    </MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                    }
+
+                    <!-- Sélection de l'échéance -->
+                    @if (_selectedObligation != null && _echeances.Any())
+                    {
+                        <MudItem xs="12" md="6">
+                            <MudSelect T="EcheanceDto" Label="Échéance à payer" 
+                                     Required RequiredError="Veuillez sélectionner une échéance à payer"
+                                     @bind-Value="_selectedEcheance" 
+                                     ToStringFunc="@(e => e?.Libelle ?? string.Empty)"
+                                     AdornmentIcon="@Icons.Material.Filled.Receipt"
+                                     AdornmentColor="Color.Primary"
+                                     HelperText="Sélectionnez l'échéance fiscale à payer"
+                                     HelperTextOnFocus="true"
+                                     OnSelectedItemChanged="@((EcheanceDto echeance) => OnEcheanceSelected(echeance))">
+                                @foreach (var echeance in _echeances)
+                                {
+                                    <MudSelectItem Value="@echeance">
+                                        <div class="d-flex justify-space-between align-center">
+                                            <div>
+                                                <MudText Typo="Typo.body2">@echeance.Libelle</MudText>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                    Échéance: @echeance.DateEcheance.ToString("dd/MM/yyyy")
+                                                </MudText>
+                                            </div>
+                                            <div class="text-right">
+                                                <MudText Typo="Typo.body2" Color="Color.Error">
+                                                    @echeance.MontantRestant.ToString("N0") FCFA
+                                                </MudText>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                    Restant à payer
+                                                </MudText>
+                                            </div>
+                                        </div>
+                                    </MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                    }
+
+                    <!-- Message si aucune échéance pour l'obligation sélectionnée -->
+                    @if (_selectedObligation != null && !_echeances.Any())
+                    {
+                        <MudItem xs="12">
+                            <MudAlert Severity="Severity.Info" Class="mb-4">
+                                <MudText Typo="Typo.body1">
+                                    <strong>Aucune échéance en attente pour cette obligation</strong>
+                                </MudText>
+                                <MudText Typo="Typo.body2">
+                                    L'obligation "@_selectedObligation.TypeTaxeNom" n'a pas d'échéances en attente de paiement.
+                                    Toutes les échéances peuvent déjà être payées.
+                                </MudText>
+                            </MudAlert>
+                        </MudItem>
+                    }
+                    
+                    <!-- Mode de paiement -->
                     <MudItem xs="12" md="6">
-                        <MudSelect T="ObligationDto" Label="Obligation fiscale" 
-                                 Required RequiredError="Veuillez sélectionner une obligation fiscale"
-                                 @bind-Value="_selectedObligation" 
-                                 ToStringFunc="@(o => o?.Libelle ?? string.Empty)"
-                                 AdornmentIcon="@Icons.Material.Filled.Receipt"
-                                 AdornmentColor="Color.Primary"
-                                 HelperText="Sélectionnez l'obligation fiscale à payer"
-                                 HelperTextOnFocus="true"
-                                 OnSelectedItemChanged="@((ObligationDto o) => UpdateMontant(o))">
-                            @foreach (var obligation in _obligations)
+                        <MudSelect T="PayCom.Blazor.Infrastructure.Api.ModePaiement" Label="Mode de paiement" 
+                             Required RequiredError="Veuillez sélectionner un mode de paiement"
+                             @bind-Value="_selectedModePaiement"
+                             AdornmentIcon="@Icons.Material.Filled.Wallet"
+                             AdornmentColor="Color.Primary"
+                             HelperText="Sélectionnez votre mode de paiement préféré">
+                            @foreach (var mode in _modesPaiementDisponibles)
                             {
-                                <MudSelectItem Value="@obligation">@obligation.Libelle</MudSelectItem>
+                                <MudSelectItem Value="@mode.Key">
+                                    <div class="d-flex align-center">
+                                        <MudIcon Icon="@GetPaymentIcon(mode.Key)" Class="mr-3" />
+                                        <div>
+                                            <MudText Typo="Typo.body2">@mode.Value</MudText>
+                                            @if (GetFraisEstimes(mode.Key) > 0)
+                                            {
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                    Frais estimés: @GetFraisEstimes(mode.Key).ToString("N0") FCFA
+                                                </MudText>
+                                            }
+                                        </div>
+                                    </div>
+                                </MudSelectItem>
                             }
                         </MudSelect>
                     </MudItem>
                     
-                    <MudItem xs="12" md="6">
-                        <MudSelect T="string" Label="Mode de paiement" 
-                                 Required RequiredError="Veuillez sélectionner un mode de paiement"
-                                 @bind-Value="_paiement.ModePaiement"
-                                 AdornmentIcon="@Icons.Material.Filled.Wallet"
-                                 AdornmentColor="Color.Primary"
-                                 HelperText="Sélectionnez votre mode de paiement préféré">
-                            <MudSelectItem Value="@("Mobile Money")">Mobile Money</MudSelectItem>
-                            <MudSelectItem Value="@("Carte bancaire")">Carte bancaire</MudSelectItem>
-                            <MudSelectItem Value="@("Virement bancaire")">Virement bancaire</MudSelectItem>
-                            <MudSelectItem Value="@("Espèces")">Espèces</MudSelectItem>
-                        </MudSelect>
-                    </MudItem>
-                    
+                    <!-- Montant -->
                     <MudItem xs="12" md="6">
                         <MudNumericField T="decimal" Label="Montant" 
                                       Required RequiredError="Le montant est requis"
-                                      @bind-Value="_paiement.Montant"
+                                      Value="_montantPaiement"
+                                      ValueChanged="@((decimal value) => OnMontantChanged(value))"
                                       Format="N0"
                                       AdornmentIcon="@Icons.Material.Filled.Money"
                                       AdornmentText="FCFA"
                                       Adornment="Adornment.End"
                                       AdornmentColor="Color.Primary"
                                       Min="0"
-                                      Disabled="@(_selectedObligation != null)" />
+                                      Max="@GetMontantMaximum()"
+                                      HelperText="@GetMontantHelperText()" />
                     </MudItem>
-                    
-                    @if (_paiement.ModePaiement == "Mobile Money")
+
+                    <!-- Frais de transaction -->
+                    @if (_fraisTransaction > 0)
+                    {
+                        <MudItem xs="12" md="6">
+                            <MudTextField T="string" Label="Frais de transaction" 
+                                       Value="@($"{_fraisTransaction:N0} FCFA")"
+                                       ReadOnly="true"
+                                       AdornmentIcon="@Icons.Material.Filled.Receipt"
+                                       AdornmentColor="Color.Secondary"
+                                       HelperText="Frais appliqués pour ce mode de paiement" />
+                        </MudItem>
+                    }
+
+                    <!-- Champs spécifiques selon le mode de paiement -->
+                    @if (IsMobileMoneyPayment(_selectedModePaiement))
                     {
                         <MudItem xs="12" md="6">
                             <MudTextField T="string" Label="Numéro de téléphone" 
                                        Required RequiredError="Le numéro de téléphone est requis"
-                                       @bind-Value="_paiement.NumeroTelephone"
+                                       @bind-Value="_numeroTelephone"
                                        AdornmentIcon="@Icons.Material.Filled.Phone"
                                        AdornmentColor="Color.Primary"
-                                       Placeholder="Ex: 0123456789" />
+                                       Placeholder="Ex: 77 123 45 67"
+                                       Validation="@(new Func<string, IEnumerable<string>>(ValidatePhoneNumber))"
+                                       Immediate="true" />
                         </MudItem>
                     }
-                    else if (_paiement.ModePaiement == "Carte bancaire")
+                    else if (_selectedModePaiement == PayCom.Blazor.Infrastructure.Api.ModePaiement._1) // Carte bancaire
                     {
                         <MudItem xs="12" md="6">
                             <MudTextField T="string" Label="Numéro de carte" 
                                        Required RequiredError="Le numéro de carte est requis"
-                                       @bind-Value="_paiement.NumeroCarte"
+                                       @bind-Value="_numeroCarte"
                                        AdornmentIcon="@Icons.Material.Filled.CreditCard"
                                        AdornmentColor="Color.Primary"
-                                       Placeholder="Ex: 1234 5678 9012 3456" />
+                                       Placeholder="Ex: 1234 5678 9012 3456"
+                                       Validation="@(new Func<string, IEnumerable<string>>(ValidateCardNumber))"
+                                       Immediate="true" />
                         </MudItem>
                         
                         <MudItem xs="12" md="6">
                             <MudTextField T="string" Label="Nom sur la carte" 
                                        Required RequiredError="Le nom sur la carte est requis"
-                                       @bind-Value="_paiement.NomCarte"
+                                       @bind-Value="_nomCarte"
                                        AdornmentIcon="@Icons.Material.Filled.Person"
                                        AdornmentColor="Color.Primary" />
                         </MudItem>
@@ -108,84 +273,142 @@
                         <MudItem xs="6" md="3">
                             <MudTextField T="string" Label="Date d'expiration" 
                                        Required RequiredError="La date d'expiration est requise"
-                                       @bind-Value="_paiement.DateExpiration"
+                                       @bind-Value="_dateExpiration"
                                        AdornmentIcon="@Icons.Material.Filled.DateRange"
                                        AdornmentColor="Color.Primary"
-                                       Placeholder="MM/AA" />
+                                       Placeholder="MM/AA"
+                                       Validation="@(new Func<string, IEnumerable<string>>(ValidateExpiryDate))"
+                                       Immediate="true" />
                         </MudItem>
                         
                         <MudItem xs="6" md="3">
                             <MudTextField T="string" Label="CVV" 
                                        Required RequiredError="Le CVV est requis"
-                                       @bind-Value="_paiement.Cvv"
+                                       @bind-Value="_cvv"
                                        AdornmentIcon="@Icons.Material.Filled.Lock"
                                        AdornmentColor="Color.Primary"
-                                       InputType="InputType.Password" />
+                                       InputType="InputType.Password"
+                                       Validation="@(new Func<string, IEnumerable<string>>(ValidateCvv))"
+                                       Immediate="true" />
                         </MudItem>
                     }
-                    else if (_paiement.ModePaiement == "Virement bancaire")
+                    else if (_selectedModePaiement == PayCom.Blazor.Infrastructure.Api.ModePaiement._4) // Virement
                     {
                         <MudItem xs="12">
                             <MudAlert Severity="Severity.Info" Class="mb-4">
-                                Veuillez effectuer un virement bancaire vers le compte suivant:
+                                <strong>Instructions pour le virement bancaire :</strong>
                                 <br /><br />
-                                <b>Banque:</b> Banque Nationale de Développement<br />
-                                <b>Titulaire:</b> Trésor Public - Commune de Dakar<br />
-                                <b>IBAN:</b> SN12 3456 7890 1234 5678 9012 345<br />
-                                <b>BIC:</b> BNDSNSND<br />
-                                <b>Référence:</b> @(_paiement.Reference)<br />
+                                <MudGrid>
+                                    <MudItem xs="12" md="6">
+                                        <MudText><strong>Banque :</strong> Banque Nationale de Développement</MudText>
+                                        <MudText><strong>Titulaire :</strong> Trésor Public - Commune de Dakar</MudText>
+                                        <MudText><strong>IBAN :</strong> SN12 3456 7890 1234 5678 9012 345</MudText>
+                                    </MudItem>
+                                    <MudItem xs="12" md="6">
+                                        <MudText><strong>BIC :</strong> BNDSNSND</MudText>
+                                        <MudText><strong>Référence obligatoire :</strong> @_codeTransaction</MudText>
+                                        <MudText><strong>Montant :</strong> @_montantTotal.ToString("N0") FCFA</MudText>
+                                    </MudItem>
+                                </MudGrid>
                             </MudAlert>
                         </MudItem>
                     }
+                    else if (_selectedModePaiement == PayCom.Blazor.Infrastructure.Api.ModePaiement._3) // Chèque
+                    {
+                        <MudItem xs="12" md="6">
+                            <MudTextField T="string" Label="Numéro de chèque" 
+                                       Required RequiredError="Le numéro de chèque est requis"
+                                       @bind-Value="_numeroCheque"
+                                       AdornmentIcon="@Icons.Material.Filled.Receipt"
+                                       AdornmentColor="Color.Primary" />
+                        </MudItem>
+                        
+                        <MudItem xs="12" md="6">
+                            <MudTextField T="string" Label="Banque émettrice" 
+                                       Required RequiredError="La banque émettrice est requise"
+                                       @bind-Value="_banqueEmettrice"
+                                       AdornmentIcon="@Icons.Material.Filled.AccountBalance"
+                                       AdornmentColor="Color.Primary" />
+                        </MudItem>
+                    }
                     
+                    <!-- Notes -->
                     <MudItem xs="12">
                         <MudTextField T="string" Label="Notes (facultatif)" 
-                                   @bind-Value="_paiement.Notes"
+                                   @bind-Value="_notes"
                                    AdornmentIcon="@Icons.Material.Filled.Note"
                                    AdornmentColor="Color.Primary"
-                                   Lines="3" />
+                                   Lines="3"
+                                   HelperText="Informations complémentaires sur le paiement" />
                     </MudItem>
                     
-                    <MudItem xs="12">
-                        <MudDivider Class="my-4" />
-                        <MudText Typo="Typo.subtitle1" Class="mb-4">
-                            <b>Récapitulatif du paiement</b>
-                        </MudText>
-                        
-                        <MudGrid>
-                            <MudItem xs="12" md="6">
-                                <MudText><b>Obligation fiscale:</b> @(_selectedObligation?.Libelle ?? "-")</MudText>
-                                <MudText><b>Type de taxe:</b> @(_selectedObligation?.TypeTaxe ?? "-")</MudText>
-                                <MudText><b>Référence:</b> @_paiement.Reference</MudText>
-                            </MudItem>
-                            <MudItem xs="12" md="6">
-                                <MudText><b>Montant:</b> @_paiement.Montant.ToString("N0") FCFA</MudText>
-                                <MudText><b>Mode de paiement:</b> @(_paiement.ModePaiement ?? "-")</MudText>
-                                <MudText><b>Date:</b> @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</MudText>
-                            </MudItem>
-                        </MudGrid>
-                    </MudItem>
+                    <!-- Récapitulatif du paiement -->
+                    @if (_montantPaiement > 0)
+                    {
+                        <MudItem xs="12">
+                            <MudDivider Class="my-4" />
+                            <MudText Typo="Typo.subtitle1" Class="mb-4">
+                                <strong>Récapitulatif du paiement</strong>
+                            </MudText>
+                            
+                            <MudPaper Elevation="1" Class="pa-4">
+                                <MudGrid>
+                                    <MudItem xs="12" md="6">
+                                        @if (_selectedEcheance != null)
+                                        {
+                                            <MudText><strong>Échéance :</strong> @_selectedEcheance.Libelle</MudText>
+                                            <MudText><strong>Type de taxe :</strong> @_selectedEcheance.TypeTaxe</MudText>
+                                        }
+                                        <MudText><strong>Référence :</strong> @_codeTransaction</MudText>
+                                    </MudItem>
+                                    <MudItem xs="12" md="6">
+                                        <MudText><strong>Montant :</strong> @_montantPaiement.ToString("N0") FCFA</MudText>
+                                        @if (_fraisTransaction > 0)
+                                        {
+                                            <MudText><strong>Frais :</strong> @_fraisTransaction.ToString("N0") FCFA</MudText>
+                                            <MudText Class="font-weight-bold"><strong>Total :</strong> @_montantTotal.ToString("N0") FCFA</MudText>
+                                        }
+                                        <MudText><strong>Mode de paiement :</strong> @GetModePaiementLabel(_selectedModePaiement)</MudText>
+                                        <MudText><strong>Date :</strong> @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</MudText>
+                                    </MudItem>
+                                </MudGrid>
+                            </MudPaper>
+                        </MudItem>
+                    }
                     
+                    <!-- Conditions générales -->
                     <MudItem xs="12">
-                        <MudCheckBox @bind-Checked="@_paiement.AccepteConditions" 
+                        <MudCheckBox Value="_accepteConditions"
+                                   ValueChanged="@((bool value) => OnConditionsChanged(value))"
                                    T="bool"
-                                   Label="J'accepte les conditions générales de paiement" 
+                                   Label="J'accepte les conditions générales de paiement et confirme l'exactitude des informations fournies" 
                                    Required="true"
-                                   RequiredError="Vous devez accepter les conditions générales" />
+                                   RequiredError="Vous devez accepter les conditions générales"
+                                   Color="Color.Primary" />
                     </MudItem>
                     
-                    <MudItem xs="12" Class="d-flex justify-end">
+                    <!-- Actions -->
+                    <MudItem xs="12" Class="d-flex justify-end gap-2">
                         <MudButton Variant="Variant.Outlined" 
                                  Color="Color.Secondary" 
-                                 Class="mr-2"
-                                 OnClick="@(() => NavigationManager.NavigateTo("/contribuable/mes-paiements/historique"))">
+                                 OnClick="@(() => NavigationManager.NavigateTo("/contribuable/mes-paiements/historique"))"
+                                 Disabled="_processing">
                             Annuler
                         </MudButton>
                         <MudButton Variant="Variant.Filled" 
                                  Color="Color.Primary" 
-                                 Disabled="@(!_formIsValid)"
-                                 OnClick="@(ProcessPayment)">
-                            Confirmer le paiement
+                                 Disabled="@(!CanSubmitPayment())"
+                                 OnClick="ProcessPayment"
+                                 StartIcon="@Icons.Material.Filled.Payment">
+                            @if (_processing)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                                <span class="ml-2">Traitement...</span>
+                            }
+                            else
+                            {
+                                <span>Confirmer le paiement (@_montantTotal.ToString("N0") FCFA)</span>
+                            }
                         </MudButton>
                     </MudItem>
                 </MudGrid>
@@ -200,6 +423,7 @@
         <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center">
             <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
             <MudText Typo="Typo.h6" Color="Color.Surface" Class="mt-4">Traitement du paiement en cours...</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Surface" Class="mt-2">Veuillez patienter, ne fermez pas cette page</MudText>
         </MudStack>
     </MudOverlay>
 }
@@ -209,139 +433,455 @@
     private bool _formIsValid;
     private bool _loading = true;
     private bool _processing = false;
+    private string? _errorMessage;
     private string _userId;
     private Guid? _contribuableId;
-    private List<ObligationDto> _obligations = new();
-    private ObligationDto _selectedObligation;
-    private PaiementModel _paiement = new();
+    private List<ObligationFiscaleResponse> _obligations = new();
+    private ObligationFiscaleResponse? _selectedObligation;
+    private List<EcheanceDto> _echeances = new();
+    private EcheanceDto? _selectedEcheance;
+    private PayCom.Blazor.Infrastructure.Api.ModePaiement _selectedModePaiement = PayCom.Blazor.Infrastructure.Api.ModePaiement._2; // Mobile Money par défaut
     private const string ApiVersion = "1.0";
+    private readonly CancellationTokenSource _cancellationTokenSource = new();
     
-    // Classe pour représenter les obligations fiscales
-    public class ObligationDto
+    // Champs du formulaire
+    private decimal _montantPaiement;
+    private decimal _fraisTransaction;
+    private decimal _montantTotal => _montantPaiement + _fraisTransaction;
+    private string _numeroTelephone = string.Empty;
+    private string _numeroCarte = string.Empty;
+    private string _nomCarte = string.Empty;
+    private string _dateExpiration = string.Empty;
+    private string _cvv = string.Empty;
+    private string _numeroCheque = string.Empty;
+    private string _banqueEmettrice = string.Empty;
+    private string _notes = string.Empty;
+    private bool _accepteConditions;
+    private string _codeTransaction = string.Empty;
+    
+    // Dictionnaire des modes de paiement disponibles
+    private readonly Dictionary<PayCom.Blazor.Infrastructure.Api.ModePaiement, string> _modesPaiementDisponibles = new()
+    {
+        { PayCom.Blazor.Infrastructure.Api.ModePaiement._2, "Mobile Money" },
+        { PayCom.Blazor.Infrastructure.Api.ModePaiement._5, "Orange Money" },
+        { PayCom.Blazor.Infrastructure.Api.ModePaiement._6, "MTN Money" },
+        { PayCom.Blazor.Infrastructure.Api.ModePaiement._7, "Moov Money" },
+        { PayCom.Blazor.Infrastructure.Api.ModePaiement._8, "Wave" },
+        { PayCom.Blazor.Infrastructure.Api.ModePaiement._1, "Carte bancaire" },
+        { PayCom.Blazor.Infrastructure.Api.ModePaiement._4, "Virement bancaire" },
+        { PayCom.Blazor.Infrastructure.Api.ModePaiement._0, "Espèces" },
+        { PayCom.Blazor.Infrastructure.Api.ModePaiement._3, "Chèque" }
+    };
+
+    // Classe pour représenter les échéances
+    public class EcheanceDto
     {
         public Guid Id { get; set; }
-        public string Libelle { get; set; }
-        public string TypeTaxe { get; set; }
+        public Guid ObligationFiscaleId { get; set; }
+        public string Libelle { get; set; } = string.Empty;
+        public string TypeTaxe { get; set; } = string.Empty;
         public decimal Montant { get; set; }
         public DateTime DateEcheance { get; set; }
+        public bool EstPayee { get; set; }
+        public decimal MontantRestant { get; set; }
     }
-    
-    // Modèle pour le formulaire de paiement
-    public class PaiementModel
-    {
-        public string Reference { get; set; } = $"PAY-{DateTime.Now:yyyyMMdd}-{new Random().Next(1000, 9999)}";
-        public Guid? ObligationFiscaleId { get; set; }
-        public decimal Montant { get; set; }
-        public string ModePaiement { get; set; } = "Mobile Money";
-        public string NumeroTelephone { get; set; }
-        public string NumeroCarte { get; set; }
-        public string NomCarte { get; set; }
-        public string DateExpiration { get; set; }
-        public string Cvv { get; set; }
-        public string Notes { get; set; }
-        public bool AccepteConditions { get; set; }
-    }
-    
+
     protected override async Task OnInitializedAsync()
     {
+        _codeTransaction = GenerateTransactionCode();
         await LoadUserData();
-        await LoadObligations();
+        await LoadEcheances();
+        
         _loading = false;
     }
-    
+
     private async Task LoadUserData()
     {
-        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-        
-        if (user.Identity.IsAuthenticated)
+        try
         {
-            _userId = user.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
             
-            // Rechercher le contribuable associé à l'utilisateur
-            var searchCommand = new SearchContribuableCommand
+            if (user.Identity?.IsAuthenticated == true)
+            {
+                _userId = user.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+                
+                if (Guid.TryParse(_userId, out var userIdGuid))
+                {
+                    var contribuable = await ApiClient.GetContribuableByUserIdEndPointsAsync(ApiVersion, userIdGuid, _cancellationTokenSource.Token);
+                    _contribuableId = contribuable?.Id;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Erreur lors de la récupération du profil contribuable: {ex.Message}";
+        }
+    }
+    
+    private async Task LoadEcheances()
+    {
+        _errorMessage = null;
+        
+        try
+        {
+            if (!_contribuableId.HasValue)
+            {
+                _errorMessage = "Impossible de charger les échéances : profil contribuable non trouvé";
+                Snackbar.Add("Profil contribuable non trouvé. Veuillez vous reconnecter.", Severity.Warning);
+                return;
+            }
+
+            Console.WriteLine($"Chargement des obligations pour le contribuable ID: {_contribuableId.Value}");
+            
+            // D'abord charger les obligations fiscales
+            var searchCommand = new PayCom.Blazor.Infrastructure.Api.SearchObligationFiscalesCommand
             {
                 PageNumber = 1,
-                PageSize = 1,
-                Keyword = _userId
+                PageSize = 100,
+                ContribuableId = _contribuableId.Value,
+                EstActif = true,
+                IncludeInactives = false
             };
             
+            var obligationsResult = await ApiClient.SearchObligationFiscaleEndPointsAsync(ApiVersion, searchCommand, _cancellationTokenSource.Token);
+            
+            if (obligationsResult?.Items?.Any() != true)
+            {
+                Console.WriteLine("Aucune obligation fiscale trouvée pour ce contribuable");
+                _obligations = new List<ObligationFiscaleResponse>();
+                Snackbar.Add("Aucune obligation fiscale trouvée. Veuillez créer vos obligations fiscales d'abord.", Severity.Info);
+                return;
+            }
+
+            _obligations = obligationsResult.Items.ToList();
+            Console.WriteLine($"Nombre d'obligations trouvées: {_obligations.Count}");
+            
+            // Charger toutes les échéances pour toutes les obligations
+            await LoadEcheancesForAllObligations();
+        }
+        catch (ApiException apiEx)
+        {
+            Console.WriteLine($"Erreur API lors du chargement des obligations: {apiEx.StatusCode} - {apiEx.Message}");
+            _errorMessage = apiEx.StatusCode switch
+            {
+                401 => "Vous n'avez pas l'autorisation d'accéder à vos obligations",
+                404 => "Aucune donnée trouvée pour votre compte",
+                >= 500 => "Erreur du serveur. Veuillez réessayer plus tard.",
+                _ => $"Erreur lors du chargement des obligations (Code: {apiEx.StatusCode})"
+            };
+            Snackbar.Add(_errorMessage, Severity.Error);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erreur générale lors du chargement des obligations: {ex.Message}");
+            _errorMessage = $"Erreur lors du chargement des obligations: {ex.Message}";
+            Snackbar.Add(_errorMessage, Severity.Error);
+        }
+    }
+    
+    private async Task LoadEcheancesForAllObligations()
+    {
+        var echeancesList = new List<EcheanceDto>();
+        
+        foreach (var obligation in _obligations)
+        {
             try
             {
-                var result = await ApiClient.SearchContribuableEndPointsAsync(ApiVersion, searchCommand);
-                if (result?.Items != null && result.Items.Any())
+                Console.WriteLine($"Recherche d'échéances pour l'obligation {obligation.Id} ({obligation.TypeTaxeNom})");
+                
+                var echeancesSearchCommand = new PayCom.Blazor.Infrastructure.Api.SearchEcheancesCommand
                 {
-                    _contribuableId = result.Items.First().Id;
+                    PageNumber = 1,
+                    PageSize = 100,
+                    ObligationFiscaleId = obligation.Id
+                };
+                
+                var echeancesResult = await ApiClient.SearchEcheanceEndPointsAsync(ApiVersion, echeancesSearchCommand, _cancellationTokenSource.Token);
+                
+                if (echeancesResult?.Items?.Any() == true)
+                {
+                    Console.WriteLine($"  -> {echeancesResult.Items.Count()} échéances trouvées");
+                    var echeancesImpayees = echeancesResult.Items.Where(e => e.MontantRestant > 0).ToList();
+                    Console.WriteLine($"  -> {echeancesImpayees.Count} échéances avec montant restant > 0");
+                    
+                    foreach (var echeance in echeancesImpayees)
+                    {
+                        Console.WriteLine($"    Échéance: {echeance.AnneeImposition}/{echeance.PeriodeImposition:D2} - Montant dû: {echeance.MontantDu} FCFA, Restant: {echeance.MontantRestant} FCFA");
+                        
+                        echeancesList.Add(new EcheanceDto
+                        {
+                            Id = echeance.Id,
+                            ObligationFiscaleId = echeance.ObligationFiscaleId,
+                            Libelle = $"{obligation.TypeTaxeNom} - {echeance.AnneeImposition}/{echeance.PeriodeImposition:D2}",
+                            TypeTaxe = obligation.TypeTaxeNom ?? "Non défini",
+                            Montant = (decimal)echeance.MontantDu,
+                            DateEcheance = echeance.DateEcheance,
+                            EstPayee = echeance.MontantRestant <= 0,
+                            MontantRestant = (decimal)echeance.MontantRestant
+                        });
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"  -> Aucune échéance trouvée pour l'obligation {obligation.Id}");
                 }
             }
             catch (Exception ex)
             {
-                Snackbar.Add($"Erreur lors de la recherche du contribuable: {ex.Message}", Severity.Error);
+                Console.WriteLine($"Erreur lors du chargement des échéances pour l'obligation {obligation.Id}: {ex.Message}");
+                Snackbar.Add($"Erreur pour l'obligation {obligation.TypeTaxeNom}: {ex.Message}", Severity.Warning);
             }
+        }
+        
+        _echeances = echeancesList.OrderBy(e => e.DateEcheance).ToList();
+        
+        Console.WriteLine($"Total des échéances chargées: {_echeances.Count}");
+        
+        if (!_echeances.Any())
+        {
+            Snackbar.Add(
+                "Aucune échéance en attente de paiement trouvée. " +
+                "Vos obligations peuvent être déjà payées ou aucune échéance n'a été générée. " +
+                "Vous pouvez néanmoins effectuer un paiement libre.", 
+                Severity.Info);
+        }
+        else
+        {
+            Snackbar.Add($"{_echeances.Count} échéance(s) en attente trouvée(s)", Severity.Success);
         }
     }
     
-    private async Task LoadObligations()
+    private async Task OnObligationSelected(ObligationFiscaleResponse? obligation)
+    {
+        _selectedObligation = obligation;
+        _selectedEcheance = null; // Reset l'échéance sélectionnée
+        _montantPaiement = 0;
+        
+        if (obligation != null)
+        {
+            Console.WriteLine($"Obligation sélectionnée: {obligation.TypeTaxeNom}");
+            
+            // Filtrer les échéances pour cette obligation uniquement
+            _echeances = _echeances.Where(e => e.ObligationFiscaleId == obligation.Id).ToList();
+            
+            // Si aucune échéance pour cette obligation, recharger depuis l'API
+            if (!_echeances.Any())
+            {
+                await LoadEcheancesForObligation(obligation);
+            }
+        }
+        else
+        {
+            // Si aucune obligation sélectionnée, afficher toutes les échéances
+            await LoadEcheancesForAllObligations();
+        }
+        
+        StateHasChanged();
+    }
+    
+    private async Task LoadEcheancesForObligation(ObligationFiscaleResponse obligation)
     {
         try
         {
-            // Simuler les données d'obligations car l'API n'est pas disponible
-            _obligations = new List<ObligationDto>
+            Console.WriteLine($"Chargement des échéances pour l'obligation {obligation.Id}");
+            
+            var echeancesSearchCommand = new PayCom.Blazor.Infrastructure.Api.SearchEcheancesCommand
             {
-                new ObligationDto
-                {
-                    Id = Guid.NewGuid(),
-                    Libelle = "Taxe d'habitation 2023",
-                    TypeTaxe = "Taxe d'habitation",
-                    Montant = 25000,
-                    DateEcheance = DateTime.Now.AddDays(30)
-                },
-                new ObligationDto
-                {
-                    Id = Guid.NewGuid(),
-                    Libelle = "Taxe foncière 2023",
-                    TypeTaxe = "Taxe foncière",
-                    Montant = 50000,
-                    DateEcheance = DateTime.Now.AddDays(15)
-                },
-                new ObligationDto
-                {
-                    Id = Guid.NewGuid(),
-                    Libelle = "Taxe professionnelle 2023",
-                    TypeTaxe = "Taxe professionnelle",
-                    Montant = 75000,
-                    DateEcheance = DateTime.Now.AddDays(-5)
-                },
-                new ObligationDto
-                {
-                    Id = Guid.NewGuid(),
-                    Libelle = "Taxe sur les enseignes 2023",
-                    TypeTaxe = "Taxe sur les enseignes",
-                    Montant = 15000,
-                    DateEcheance = DateTime.Now.AddDays(45)
-                }
+                PageNumber = 1,
+                PageSize = 100,
+                ObligationFiscaleId = obligation.Id
             };
+            
+            var echeancesResult = await ApiClient.SearchEcheanceEndPointsAsync(ApiVersion, echeancesSearchCommand, _cancellationTokenSource.Token);
+            
+            var echeancesList = new List<EcheanceDto>();
+            
+            if (echeancesResult?.Items?.Any() == true)
+            {
+                var echeancesImpayees = echeancesResult.Items.Where(e => e.MontantRestant > 0).ToList();
+                
+                foreach (var echeance in echeancesImpayees)
+                {
+                    echeancesList.Add(new EcheanceDto
+                    {
+                        Id = echeance.Id,
+                        ObligationFiscaleId = echeance.ObligationFiscaleId,
+                        Libelle = $"{obligation.TypeTaxeNom} - {echeance.AnneeImposition}/{echeance.PeriodeImposition:D2}",
+                        TypeTaxe = obligation.TypeTaxeNom ?? "Non défini",
+                        Montant = (decimal)echeance.MontantDu,
+                        DateEcheance = echeance.DateEcheance,
+                        EstPayee = echeance.MontantRestant <= 0,
+                        MontantRestant = (decimal)echeance.MontantRestant
+                    });
+                }
+            }
+            
+            _echeances = echeancesList.OrderBy(e => e.DateEcheance).ToList();
+            
+            if (!_echeances.Any())
+            {
+                Snackbar.Add($"Aucune échéance en attente pour l'obligation {obligation.TypeTaxeNom}", Severity.Info);
+            }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Erreur lors du chargement des obligations: {ex.Message}", Severity.Error);
+            Console.WriteLine($"Erreur lors du chargement des échéances pour l'obligation {obligation.Id}: {ex.Message}");
+            Snackbar.Add($"Erreur lors du chargement des échéances: {ex.Message}", Severity.Error);
         }
     }
-    
-    private void UpdateMontant(ObligationDto obligation)
+
+    private void OnEcheanceSelected(EcheanceDto? echeance)
     {
-        if (obligation != null)
+        _selectedEcheance = echeance;
+        if (echeance != null)
         {
-            _paiement.ObligationFiscaleId = obligation.Id;
-            _paiement.Montant = obligation.Montant;
+            _montantPaiement = echeance.MontantRestant;
+            Console.WriteLine($"Échéance sélectionnée: {echeance.Libelle} - Montant: {echeance.MontantRestant} FCFA");
+        }
+        else
+        {
+            _montantPaiement = 0;
+        }
+        CalculerFraisTransaction();
+        StateHasChanged();
+    }
+
+    private void OnMontantChanged(decimal value)
+    {
+        _montantPaiement = value;
+        CalculerFraisTransaction();
+        StateHasChanged();
+    }
+
+    private void OnConditionsChanged(bool value)
+    {
+        _accepteConditions = value;
+        StateHasChanged();
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            CalculerFraisTransaction();
         }
     }
-    
+
+    private void CalculerFraisTransaction()
+    {
+        _fraisTransaction = _selectedModePaiement switch
+        {
+            PayCom.Blazor.Infrastructure.Api.ModePaiement._2 or // MobileMoney
+            PayCom.Blazor.Infrastructure.Api.ModePaiement._5 or // OrangeMoney
+            PayCom.Blazor.Infrastructure.Api.ModePaiement._6 or // MTNMoney
+            PayCom.Blazor.Infrastructure.Api.ModePaiement._7 => _montantPaiement * 0.01m, // MoovMoney - 1%
+            PayCom.Blazor.Infrastructure.Api.ModePaiement._8 => 0, // WaveAfricaMoney - Gratuit
+            PayCom.Blazor.Infrastructure.Api.ModePaiement._1 => Math.Max(500, _montantPaiement * 0.015m), // CarteBancaire - 1.5% min 500 FCFA
+            PayCom.Blazor.Infrastructure.Api.ModePaiement._4 => 1000, // Virement - Frais fixe
+            PayCom.Blazor.Infrastructure.Api.ModePaiement._3 => 500, // Cheque - Frais fixe
+            _ => 0
+        };
+    }
+
+    private decimal GetFraisEstimes(PayCom.Blazor.Infrastructure.Api.ModePaiement mode)
+    {
+        if (_montantPaiement <= 0) return 0;
+        
+        return mode switch
+        {
+            PayCom.Blazor.Infrastructure.Api.ModePaiement._2 or
+            PayCom.Blazor.Infrastructure.Api.ModePaiement._5 or
+            PayCom.Blazor.Infrastructure.Api.ModePaiement._6 or
+            PayCom.Blazor.Infrastructure.Api.ModePaiement._7 => _montantPaiement * 0.01m,
+            PayCom.Blazor.Infrastructure.Api.ModePaiement._8 => 0,
+            PayCom.Blazor.Infrastructure.Api.ModePaiement._1 => Math.Max(500, _montantPaiement * 0.015m),
+            PayCom.Blazor.Infrastructure.Api.ModePaiement._4 => 1000,
+            PayCom.Blazor.Infrastructure.Api.ModePaiement._3 => 500,
+            _ => 0
+        };
+    }
+
+    private string GetMontantHelperText()
+    {
+        if (_selectedEcheance != null) 
+            return $"Montant restant à payer: {_selectedEcheance.MontantRestant:N0} FCFA";
+        
+        if (_selectedObligation != null)
+            return "Saisissez le montant que vous souhaitez payer";
+            
+        return "Sélectionnez d'abord une obligation fiscale";
+    }
+
+    private bool IsMobileMoneyPayment(PayCom.Blazor.Infrastructure.Api.ModePaiement mode)
+    {
+        return mode == PayCom.Blazor.Infrastructure.Api.ModePaiement._2 ||
+               mode == PayCom.Blazor.Infrastructure.Api.ModePaiement._5 ||
+               mode == PayCom.Blazor.Infrastructure.Api.ModePaiement._6 ||
+               mode == PayCom.Blazor.Infrastructure.Api.ModePaiement._7 ||
+               mode == PayCom.Blazor.Infrastructure.Api.ModePaiement._8;
+    }
+
+    private string GetPaymentIcon(PayCom.Blazor.Infrastructure.Api.ModePaiement mode)
+    {
+        return mode switch
+        {
+            PayCom.Blazor.Infrastructure.Api.ModePaiement._2 or
+            PayCom.Blazor.Infrastructure.Api.ModePaiement._5 or
+            PayCom.Blazor.Infrastructure.Api.ModePaiement._6 or
+            PayCom.Blazor.Infrastructure.Api.ModePaiement._7 or
+            PayCom.Blazor.Infrastructure.Api.ModePaiement._8 => Icons.Material.Filled.PhoneAndroid,
+            PayCom.Blazor.Infrastructure.Api.ModePaiement._1 => Icons.Material.Filled.CreditCard,
+            PayCom.Blazor.Infrastructure.Api.ModePaiement._4 => Icons.Material.Filled.AccountBalance,
+            PayCom.Blazor.Infrastructure.Api.ModePaiement._3 => Icons.Material.Filled.Receipt,
+            PayCom.Blazor.Infrastructure.Api.ModePaiement._0 => Icons.Material.Filled.Money,
+            _ => Icons.Material.Filled.Payment
+        };
+    }
+
+    private bool CanSubmitPayment()
+    {
+        // Permettre le paiement si:
+        // 1. Le contribuable est identifié ET
+        // 2. Une échéance est sélectionnée OU c'est un paiement libre (obligation sélectionnée et montant > 0)
+        var hasValidTarget = _selectedEcheance != null || 
+                           (_selectedObligation != null && _montantPaiement > 0);
+        
+        return _contribuableId.HasValue && // NOUVEAU : Vérifier que le contribuable est identifié
+               hasValidTarget &&
+               _montantPaiement > 0 && 
+               _accepteConditions && 
+               !_processing &&
+               ValidatePaymentFields();
+    }
+
+    private bool ValidatePaymentFields()
+    {
+        return _selectedModePaiement switch
+        {
+            var mode when IsMobileMoneyPayment(mode) => !string.IsNullOrWhiteSpace(_numeroTelephone),
+            PayCom.Blazor.Infrastructure.Api.ModePaiement._1 => !string.IsNullOrWhiteSpace(_numeroCarte) && 
+                                                               !string.IsNullOrWhiteSpace(_nomCarte) && 
+                                                               !string.IsNullOrWhiteSpace(_dateExpiration) && 
+                                                               !string.IsNullOrWhiteSpace(_cvv),
+            PayCom.Blazor.Infrastructure.Api.ModePaiement._3 => !string.IsNullOrWhiteSpace(_numeroCheque) && 
+                                                               !string.IsNullOrWhiteSpace(_banqueEmettrice),
+            _ => true
+        };
+    }
+
     private async Task ProcessPayment()
     {
-        if (!_formIsValid)
+        if (!CanSubmitPayment())
         {
             Snackbar.Add("Veuillez remplir correctement tous les champs requis", Severity.Warning);
+            return;
+        }
+        
+        // Vérifier que le ContribuableId est disponible
+        if (!_contribuableId.HasValue)
+        {
+            Snackbar.Add("Erreur : profil contribuable non trouvé. Veuillez vous reconnecter.", Severity.Error);
             return;
         }
         
@@ -349,22 +889,165 @@
         
         try
         {
-            // Simuler un délai de traitement
-            await Task.Delay(2000);
+            var paiementCommand = new PayCom.Blazor.Infrastructure.Api.CreatePaiementCommand
+            {
+                Date = DateTime.Now,
+                Montant = (double)_montantPaiement,
+                ModePaiement = _selectedModePaiement,
+                CodeTransaction = _codeTransaction,
+                DateTransaction = DateTime.Now,
+                Statut = (PayCom.Blazor.Infrastructure.Api.StatutPaiement)(int)SharedEnums.StatutPaiement.EnAttente, // EnAttente
+                FraisTransaction = (double)_fraisTransaction,
+                InformationsSupplementaires = BuildInformationsSupplementaires(),
+                EcheanceId = _selectedEcheance?.Id ?? Guid.Empty, // Cast explicite pour gérer le nullable temporairement
+                ContribuableId = _contribuableId.Value // CORRECTION CRITIQUE : Ajouter le ContribuableId manquant
+            };
             
-            // Simuler une réponse de l'API
-            Snackbar.Add("Paiement effectué avec succès!", Severity.Success);
+            var response = await ApiClient.CreatePaiementEndPointsAsync(ApiVersion, paiementCommand, _cancellationTokenSource.Token);
             
-            // Rediriger vers la page d'historique des paiements
-            NavigationManager.NavigateTo("/contribuable/mes-paiements/historique");
+            if (response?.Id != null)
+            {
+                Snackbar.Add("Paiement initié avec succès! Redirection en cours...", Severity.Success);
+                await Task.Delay(1000, _cancellationTokenSource.Token);
+                NavigationManager.NavigateTo($"/contribuable/paiement-reussi/{response.Id}");
+            }
+            else
+            {
+                Snackbar.Add("Erreur lors de la création du paiement", Severity.Error);
+            }
+        }
+        catch (ApiException apiEx)
+        {
+            var errorMessage = apiEx.StatusCode switch
+            {
+                400 => "Données de paiement invalides. Veuillez vérifier les informations saisies.",
+                401 => "Vous n'êtes pas autorisé à effectuer ce paiement.",
+                404 => _selectedEcheance == null ? "Profil contribuable non trouvé." : "L'échéance sélectionnée n'existe plus.",
+                409 => _selectedEcheance == null ? "Conflit dans les données de paiement." : "Cette échéance a déjà été payée ou n'est plus disponible.",
+                >= 500 => "Erreur du serveur. Veuillez réessayer plus tard.",
+                _ => $"Erreur lors du traitement du paiement (Code: {apiEx.StatusCode})"
+            };
+            
+            Snackbar.Add(errorMessage, Severity.Error);
+        }
+        catch (OperationCanceledException)
+        {
+            Snackbar.Add("Opération annulée", Severity.Warning);
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Erreur lors du traitement du paiement: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Erreur inattendue: {ex.Message}", Severity.Error);
         }
         finally
         {
             _processing = false;
         }
+    }
+
+    private string BuildInformationsSupplementaires()
+    {
+        var infos = new List<string>();
+        
+        if (!string.IsNullOrEmpty(_numeroTelephone))
+            infos.Add($"Téléphone: {_numeroTelephone}");
+            
+        if (!string.IsNullOrEmpty(_numeroCarte))
+            infos.Add($"Carte: ****{_numeroCarte[Math.Max(0, _numeroCarte.Length - 4)..]}");
+            
+        if (!string.IsNullOrEmpty(_numeroCheque))
+            infos.Add($"Chèque: {_numeroCheque}");
+            
+        if (!string.IsNullOrEmpty(_banqueEmettrice))
+            infos.Add($"Banque: {_banqueEmettrice}");
+            
+        if (!string.IsNullOrEmpty(_notes))
+            infos.Add($"Notes: {_notes}");
+        
+        return string.Join(" | ", infos);
+    }
+
+    private string GetModePaiementLabel(PayCom.Blazor.Infrastructure.Api.ModePaiement mode)
+    {
+        return _modesPaiementDisponibles.TryGetValue(mode, out var label) ? label : "Mode inconnu";
+    }
+
+    private string GenerateTransactionCode()
+    {
+        // Utiliser les millisecondes et un GUID pour garantir l'unicité
+        var timestamp = DateTime.Now.ToString("yyyyMMddHHmmssfff"); // Inclure les millisecondes
+        var guidPart = Guid.NewGuid().ToString("N")[..8]; // 8 premiers caractères du GUID
+        return $"PAY-{timestamp}-{guidPart.ToUpper()}";
+    }
+
+    // Méthodes de validation améliorées
+    private IEnumerable<string> ValidatePhoneNumber(string? phone)
+    {
+        if (string.IsNullOrWhiteSpace(phone))
+            yield return "Le numéro de téléphone est requis";
+        else if (phone.Length < 9)
+            yield return "Le numéro de téléphone doit contenir au moins 9 chiffres";
+        else if (!phone.All(c => char.IsDigit(c) || char.IsWhiteSpace(c)))
+            yield return "Le numéro de téléphone ne doit contenir que des chiffres";
+        else if (phone.Replace(" ", "").Length > 15)
+            yield return "Le numéro de téléphone est trop long";
+    }
+    
+    private IEnumerable<string> ValidateCardNumber(string? cardNumber)
+    {
+        if (string.IsNullOrWhiteSpace(cardNumber))
+            yield return "Le numéro de carte est requis";
+        else
+        {
+            var cleanNumber = cardNumber.Replace(" ", "");
+            if (cleanNumber.Length < 13 || cleanNumber.Length > 19)
+                yield return "Le numéro de carte doit contenir entre 13 et 19 chiffres";
+            else if (!cleanNumber.All(char.IsDigit))
+                yield return "Le numéro de carte ne doit contenir que des chiffres";
+        }
+    }
+    
+    private IEnumerable<string> ValidateExpiryDate(string? expiryDate)
+    {
+        if (string.IsNullOrWhiteSpace(expiryDate))
+            yield return "La date d'expiration est requise";
+        else if (!System.Text.RegularExpressions.Regex.IsMatch(expiryDate, @"^(0[1-9]|1[0-2])\/\d{2}$"))
+            yield return "Format invalide (MM/AA)";
+        else
+        {
+            var parts = expiryDate.Split('/');
+            if (parts.Length == 2 && 
+                int.TryParse(parts[0], out var month) && 
+                int.TryParse(parts[1], out var year))
+            {
+                var expiryDateTime = new DateTime(2000 + year, month, 1).AddMonths(1).AddDays(-1);
+                if (expiryDateTime <= DateTime.Now)
+                    yield return "La carte a expiré";
+            }
+        }
+    }
+    
+    private IEnumerable<string> ValidateCvv(string? cvv)
+    {
+        if (string.IsNullOrWhiteSpace(cvv))
+            yield return "Le CVV est requis";
+        else if (cvv.Length < 3 || cvv.Length > 4)
+            yield return "Le CVV doit contenir 3 ou 4 chiffres";
+        else if (!cvv.All(char.IsDigit))
+            yield return "Le CVV ne doit contenir que des chiffres";
+    }
+
+    private decimal GetMontantMaximum()
+    {
+        if (_selectedEcheance != null)
+        {
+            return _selectedEcheance.MontantRestant;
+        }
+        
+        return 999_999_999m;
+    }
+
+    public void Dispose()
+    {
+        _cancellationTokenSource?.Dispose();
     }
 } 

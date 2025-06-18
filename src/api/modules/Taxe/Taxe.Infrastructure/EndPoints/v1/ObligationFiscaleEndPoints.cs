@@ -13,6 +13,7 @@ using PayCom.WebApi.Taxe.Application.ObligationFiscales.Update.v1;
 using PayCom.WebApi.Taxe.Application.ObligationFiscales.Desactiver.v1;
 using PayCom.WebApi.Taxe.Application.ObligationFiscales.Reactiver.v1;
 using PayCom.WebApi.Taxe.Application.ObligationFiscales.GenererEcheances.v1;
+using PayCom.WebApi.Taxe.Application.ObligationFiscales.GetByContribuable.v1;
 
 namespace PayCom.WebApi.Taxe.Infrastructure.EndPoints.v1;
 
@@ -166,6 +167,25 @@ public static class GenererEcheancesEndPoints
             .WithDescription("Génère automatiquement les échéances pour une obligation fiscale périodique")
             .Produces<GenererEcheancesResponse>()
             .RequirePermission("Permissions.ObligationsFiscales.Gerer")
+            .MapToApiVersion(1);
+    }
+}
+
+public static class GetObligationsByContribuableEndPoints
+{
+    internal static RouteHandlerBuilder MapGetObligationsByContribuableEndpoint(this IEndpointRouteBuilder endpoints)
+    {
+        return endpoints
+            .MapGet("/contribuable/{contribuableId:guid}", async (Guid contribuableId, ISender mediator) =>
+            {
+                var response = await mediator.Send(new GetObligationsByContribuableIdCommand(contribuableId));
+                return Results.Ok(response);
+            })
+            .WithName(nameof(GetObligationsByContribuableEndPoints))
+            .WithSummary("Obtenir les obligations fiscales d'un contribuable")
+            .WithDescription("Récupère toutes les obligations fiscales d'un contribuable spécifique - Sécurisé par vérification de propriété")
+            .Produces<List<ObligationFiscaleResponse>>()
+            .RequireAuthorization()
             .MapToApiVersion(1);
     }
 } 

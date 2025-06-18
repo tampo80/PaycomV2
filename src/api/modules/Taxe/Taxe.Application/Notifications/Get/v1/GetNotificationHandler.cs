@@ -20,7 +20,21 @@ public sealed class GetNotificationHandler(
             {
                 var notificationItem = await repository.GetByIdAsync(request.Id, cancellationToken);
                 if (notificationItem == null) throw new NotificationNotFoundException(request.Id);
-                return new NotificationResponse(notificationItem.Id, notificationItem.Type, notificationItem.DateEnvoi, notificationItem.Contenu);
+                return new NotificationResponse(
+                    notificationItem.Id, 
+                    notificationItem.Type, 
+                    notificationItem.DateEnvoi, 
+                    notificationItem.Contenu,
+                    notificationItem.EstLue,
+                    notificationItem.DateLecture,
+                    notificationItem.Statut,
+                    notificationItem.TypeDestinataire,
+                    notificationItem.ContribuableId,
+                    notificationItem.AgentFiscalId,
+                    notificationItem.Titre,
+                    notificationItem.Priorite,
+                    notificationItem.DateExpiration,
+                    notificationItem.EstArchivee);
             }, cancellationToken: cancellationToken);
         return item!;
     }

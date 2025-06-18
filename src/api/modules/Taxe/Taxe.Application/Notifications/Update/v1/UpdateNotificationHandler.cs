@@ -19,7 +19,15 @@ public class UpdateNotificationHandler(
         ArgumentNullException.ThrowIfNull(request);
         var notification = await repository.GetByIdAsync(request.Id, cancellationToken);
         _ = notification?? throw new NotificationNotFoundException(request.Id);
-        var updateNotification = notification.Update(request.Type, request.DateEnvoi, request.Contenu);
+        var updateNotification = notification.Update(
+            request.Type, 
+            request.DateEnvoi, 
+            request.Contenu,
+            request.TypeDestinataire,
+            request.ContribuableId,
+            request.Titre,
+            request.Priorite,
+            request.DateExpiration);
         await repository.UpdateAsync(updateNotification, cancellationToken);
         logger.LogInformation("Notification avec l'id {notificationId} mis à jour.", notification.Id);
         return new UpdateNotificationResponse(notification.Id);

@@ -215,15 +215,7 @@ internal sealed class ContribuableConfiguration : IEntityTypeConfiguration<Contr
     }
 }
 
-internal sealed class EcheancierConfiguration : IEntityTypeConfiguration<Echeancier>
-{
-    public void Configure(EntityTypeBuilder<Echeancier> builder)
-    {
-        builder.IsMultiTenant();
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.DateEcheance);
-    }
-}
+
 
 internal sealed class PenaliteConfiguration : IEntityTypeConfiguration<Penalite>
 {
@@ -278,8 +270,65 @@ internal sealed class PaiementConfiguration : IEntityTypeConfiguration<Paiement>
     {
         builder.IsMultiTenant();
         builder.HasKey(x => x.Id);
-        builder.Property(x => x.Montant);
-        builder.Property(x => x.DateTransaction);
+        
+        // Configuration des propriétés
+        builder.Property(x => x.Date).IsRequired();
+        builder.Property(x => x.Montant)
+               .HasColumnType("decimal(18,2)")
+               .IsRequired();
+        builder.Property(x => x.CodeTransaction)
+               .HasMaxLength(100)
+               .IsRequired();
+        builder.Property(x => x.DateTransaction).IsRequired();
+        builder.Property(x => x.FraisTransaction)
+               .HasColumnType("decimal(18,2)")
+               .IsRequired();
+        builder.Property(x => x.InformationsSupplementaires)
+               .HasMaxLength(500)
+               .IsRequired(false);
+        builder.Property(x => x.ModePaiement).IsRequired();
+        builder.Property(x => x.Statut).IsRequired();
+        
+        // NOUVEAU : Configuration des relations obligatoires et optionnelles
+        builder.Property(x => x.ContribuableId).IsRequired(); // OBLIGATOIRE
+        builder.Property(x => x.AgentFiscalId).IsRequired(false); // OPTIONNEL
+        
+        // Relation OBLIGATOIRE avec Contribuable
+        builder.HasOne(x => x.Contribuable)
+               .WithMany() // Un contribuable peut avoir plusieurs paiements
+               .HasForeignKey(x => x.ContribuableId)
+               .IsRequired(true)
+               .OnDelete(DeleteBehavior.Restrict);
+        
+        // Configuration de la relation optionnelle avec Echeance
+        // EcheanceId est nullable pour les paiements libres
+        builder.HasOne(x => x.Echeance)
+               .WithMany(e => e.Paiements)
+               .HasForeignKey(x => x.EcheanceId)
+               .IsRequired(false) // Relation optionnelle
+               .OnDelete(DeleteBehavior.Restrict);
+               
+        // NOUVEAU : Relation OPTIONNELLE avec AgentFiscal
+        builder.HasOne(x => x.AgentFiscal)
+               .WithMany() // Un agent peut collecter plusieurs paiements
+               .HasForeignKey(x => x.AgentFiscalId)
+               .IsRequired(false)
+               .OnDelete(DeleteBehavior.SetNull);
+        
+        // Index pour améliorer les performances
+        builder.HasIndex(x => x.CodeTransaction)
+               .IsUnique()
+               .HasDatabaseName("IX_Paiement_CodeTransaction");
+               
+        builder.HasIndex(x => x.EcheanceId)
+               .HasDatabaseName("IX_Paiement_EcheanceId");
+               
+        // NOUVEAUX index pour les nouvelles relations
+        builder.HasIndex(x => x.ContribuableId)
+               .HasDatabaseName("IX_Paiement_ContribuableId");
+               
+        builder.HasIndex(x => x.AgentFiscalId)
+               .HasDatabaseName("IX_Paiement_AgentFiscalId");
     }
 }
 
@@ -311,8 +360,81 @@ internal sealed class NotificationConfiguration : IEntityTypeConfiguration<Notif
     {
         builder.IsMultiTenant();
         builder.HasKey(x => x.Id);
-        builder.Property(x => x.DateEnvoi);
-        builder.Property(x => x.Contenu);
+        
+        // Propriétés de base
+        builder.Property(x => x.Type)
+               .HasMaxLength(100)
+               .IsRequired();
+               
+        builder.Property(x => x.DateEnvoi)
+               .IsRequired();
+               
+        builder.Property(x => x.Contenu)
+               .HasMaxLength(2000)
+               .IsRequired();
+               
+        builder.Property(x => x.Titre)
+               .HasMaxLength(200)
+               .IsRequired();
+               
+        builder.Property(x => x.EstLue)
+               .IsRequired();
+               
+        builder.Property(x => x.DateLecture);
+        
+        // Énumérations
+        builder.Property(x => x.Statut)
+               .HasConversion<int>()
+               .IsRequired();
+               
+        builder.Property(x => x.TypeDestinataire)
+               .HasConversion<int>()
+               .IsRequired();
+               
+        // Propriétés optionnelles
+        builder.Property(x => x.ContribuableId);
+        builder.Property(x => x.AgentFiscalId);
+        builder.Property(x => x.DateExpiration);
+        
+        builder.Property(x => x.Priorite)
+               .IsRequired()
+               .HasDefaultValue(1);
+               
+        builder.Property(x => x.EstArchivee)
+               .IsRequired()
+               .HasDefaultValue(false);
+        
+        // Relations
+        builder.HasOne(x => x.Contribuable)
+               .WithMany()
+               .HasForeignKey(x => x.ContribuableId)
+               .IsRequired(false)
+               .OnDelete(DeleteBehavior.SetNull);
+               
+        builder.HasOne(x => x.AgentFiscal)
+               .WithMany()
+               .HasForeignKey(x => x.AgentFiscalId)
+               .IsRequired(false)
+               .OnDelete(DeleteBehavior.SetNull);
+        
+        // Index pour améliorer les performances
+        builder.HasIndex(x => x.TypeDestinataire)
+               .HasDatabaseName("IX_Notification_TypeDestinataire");
+               
+        builder.HasIndex(x => x.ContribuableId)
+               .HasDatabaseName("IX_Notification_ContribuableId");
+               
+        builder.HasIndex(x => x.DateEnvoi)
+               .HasDatabaseName("IX_Notification_DateEnvoi");
+               
+        builder.HasIndex(x => x.EstLue)
+               .HasDatabaseName("IX_Notification_EstLue");
+               
+        builder.HasIndex(x => x.EstArchivee)
+               .HasDatabaseName("IX_Notification_EstArchivee");
+               
+        builder.HasIndex(x => x.Priorite)
+               .HasDatabaseName("IX_Notification_Priorite");
     }
 }
 

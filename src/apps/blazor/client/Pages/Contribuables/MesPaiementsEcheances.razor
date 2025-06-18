@@ -20,17 +20,29 @@
                 <MudText Typo="Typo.h4" Color="Color.Primary">Échéances à venir</MudText>
             </MudStack>
             
-            <MudStack Row="true">
+            <MudStack Row="true" Spacing="2">
                 <MudSelect T="string" Label="Filtrer par période" 
                          @bind-Value="_periodeFiltre"
                          AdornmentIcon="@Icons.Material.Filled.FilterList"
                          AdornmentColor="Color.Primary"
                          OnSelectedItemChanged="@((string value) => FilterEcheances())"
-                         Style="width: 200px;">
+                         Style="width: 220px;">
                     <MudSelectItem Value="@("all")">Toutes les échéances</MudSelectItem>
                     <MudSelectItem Value="@("week")">7 prochains jours</MudSelectItem>
                     <MudSelectItem Value="@("month")">30 prochains jours</MudSelectItem>
                     <MudSelectItem Value="@("quarter")">3 prochains mois</MudSelectItem>
+                </MudSelect>
+                
+                <MudSelect T="string" Label="Filtrer par statut" 
+                         @bind-Value="_statutFiltre"
+                         AdornmentIcon="@Icons.Material.Filled.FilterAlt"
+                         AdornmentColor="Color.Secondary"
+                         OnSelectedItemChanged="@((string value) => FilterEcheances())"
+                         Style="width: 180px;">
+                    <MudSelectItem Value="@("all")">Tous les statuts</MudSelectItem>
+                    <MudSelectItem Value="@("EnAttente")">En attente</MudSelectItem>
+                    <MudSelectItem Value="@("EnRetard")">En retard</MudSelectItem>
+                    <MudSelectItem Value="@("Payee")">Payée</MudSelectItem>
                 </MudSelect>
                 
                 <MudTextField T="string"
@@ -40,7 +52,16 @@
                              AdornmentIcon="@Icons.Material.Filled.Search" 
                              IconSize="Size.Medium" 
                              Immediate="true"
-                             Class="ml-2" />
+                             OnKeyUp="@((e) => FilterEcheances())"
+                             Class="ml-2" 
+                             Style="width: 250px;" />
+                             
+                <MudButton Variant="Variant.Outlined" 
+                         Color="Color.Primary" 
+                         StartIcon="@Icons.Material.Filled.Refresh"
+                         OnClick="RefreshData">
+                    Actualiser
+                </MudButton>
             </MudStack>
         </MudStack>
 
@@ -48,18 +69,88 @@
         
         @if (_loading)
         {
-            <div class="d-flex justify-center align-center">
+            <div class="d-flex justify-center align-center pa-8">
                 <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                <MudText Class="ml-3">Chargement des échéances...</MudText>
             </div>
         }
         else if (_echeances == null || !_echeances.Any())
         {
             <MudAlert Severity="Severity.Info" Class="mb-4">
-                Aucune échéance à venir trouvée.
+                <MudStack Spacing="2">
+                    <MudText Typo="Typo.body1">
+                        <strong>Aucune échéance à venir trouvée</strong>
+                    </MudText>
+                    <MudText Typo="Typo.body2">
+                        Cela peut signifier que toutes vos obligations sont à jour ou qu'aucune échéance n'a été générée.
+                    </MudText>
+                    <MudStack Row="true" Spacing="2" Class="mt-2">
+                        <MudButton Href="/contribuable/mes-obligations" 
+                                 Color="Color.Primary" 
+                                 Variant="Variant.Text" 
+                                 StartIcon="@Icons.Material.Filled.Assignment">
+                            Voir mes obligations fiscales
+                        </MudButton>
+                        <MudButton OnClick="RefreshData" 
+                                 Color="Color.Secondary" 
+                                 Variant="Variant.Text" 
+                                 StartIcon="@Icons.Material.Filled.Refresh">
+                            Actualiser
+                        </MudButton>
+                    </MudStack>
+                </MudStack>
             </MudAlert>
         }
         else
         {
+            <!-- Statistiques en haut -->
+            <MudGrid Class="mb-4">
+                <MudItem xs="12" md="3">
+                    <MudCard Elevation="2" Class="pa-4" Style="border-left: 4px solid var(--mud-palette-error);">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.EventBusy" Color="Color.Error" Size="Size.Large" />
+                            <div>
+                                <MudText Typo="Typo.h6" Color="Color.Error">@_echeancesEnRetard</MudText>
+                                <MudText Typo="Typo.caption">En retard</MudText>
+                            </div>
+                        </MudStack>
+                    </MudCard>
+                </MudItem>
+                <MudItem xs="12" md="3">
+                    <MudCard Elevation="2" Class="pa-4" Style="border-left: 4px solid var(--mud-palette-warning);">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.EventAvailable" Color="Color.Warning" Size="Size.Large" />
+                            <div>
+                                <MudText Typo="Typo.h6" Color="Color.Warning">@_echeancesBientotDues</MudText>
+                                <MudText Typo="Typo.caption">Bientôt dues (7 jours)</MudText>
+                            </div>
+                        </MudStack>
+                    </MudCard>
+                </MudItem>
+                <MudItem xs="12" md="3">
+                    <MudCard Elevation="2" Class="pa-4" Style="border-left: 4px solid var(--mud-palette-info);">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.Event" Color="Color.Info" Size="Size.Large" />
+                            <div>
+                                <MudText Typo="Typo.h6" Color="Color.Info">@_echeancesAVenir</MudText>
+                                <MudText Typo="Typo.caption">À venir</MudText>
+                            </div>
+                        </MudStack>
+                    </MudCard>
+                </MudItem>
+                <MudItem xs="12" md="3">
+                    <MudCard Elevation="2" Class="pa-4" Style="border-left: 4px solid var(--mud-palette-primary);">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.MonetizationOn" Color="Color.Primary" Size="Size.Large" />
+                            <div>
+                                <MudText Typo="Typo.h6" Color="Color.Primary">@_montantTotal.ToString("N0")</MudText>
+                                <MudText Typo="Typo.caption">FCFA à payer</MudText>
+                            </div>
+                        </MudStack>
+                    </MudCard>
+                </MudItem>
+            </MudGrid>
+
             <MudTable Items="@_filteredEcheances" 
                      Dense="true" 
                      Hover="true" 
@@ -69,64 +160,70 @@
                      SortLabel="Trier par"
                      T="EcheanceDto">
                 <HeaderContent>
-                    <MudTh><MudTableSortLabel SortBy="new Func<EcheanceDto, object>(x => x.DateLimite)">Date limite</MudTableSortLabel></MudTh>
-                    <MudTh><MudTableSortLabel SortBy="new Func<EcheanceDto, object>(x => x.ObligationFiscale)">Obligation</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy="new Func<EcheanceDto, object>(x => x.DateEcheance)">Date échéance</MudTableSortLabel></MudTh>
                     <MudTh><MudTableSortLabel SortBy="new Func<EcheanceDto, object>(x => x.TypeTaxe)">Type de taxe</MudTableSortLabel></MudTh>
-                    <MudTh><MudTableSortLabel SortBy="new Func<EcheanceDto, object>(x => x.Montant)">Montant</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy="new Func<EcheanceDto, object>(x => x.Periode)">Période</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy="new Func<EcheanceDto, object>(x => x.MontantRestant)">Montant restant</MudTableSortLabel></MudTh>
                     <MudTh><MudTableSortLabel SortBy="new Func<EcheanceDto, object>(x => x.Statut)">Statut</MudTableSortLabel></MudTh>
                     <MudTh>Actions</MudTh>
                 </HeaderContent>
                 <RowTemplate>
-                    <MudTd DataLabel="Date limite">
-                        <MudStack Row="true" AlignItems="AlignItems.Center">
-                            <MudIcon Icon="@GetDateIcon(context.DateLimite)" Color="@GetDateColor(context.DateLimite)" Size="Size.Small" Class="mr-2" />
-                            <MudText>@context.DateLimite.ToString("dd/MM/yyyy")</MudText>
+                    <MudTd DataLabel="Date échéance">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@GetDateIcon(context.DateEcheance)" Color="@GetDateColor(context.DateEcheance)" Size="Size.Small" />
+                            <div>
+                                <MudText Typo="Typo.body2">@context.DateEcheance.ToString("dd/MM/yyyy")</MudText>
+                                <MudText Typo="Typo.caption" Color="@GetDateColor(context.DateEcheance)">
+                                    @GetDateDescription(context.DateEcheance)
+                                </MudText>
+                            </div>
                         </MudStack>
                     </MudTd>
-                    <MudTd DataLabel="Obligation">@context.ObligationFiscale</MudTd>
-                    <MudTd DataLabel="Type de taxe">@context.TypeTaxe</MudTd>
-                    <MudTd DataLabel="Montant">@context.Montant.ToString("N0") FCFA</MudTd>
+                    <MudTd DataLabel="Type de taxe">
+                        <MudText Typo="Typo.body2">@context.TypeTaxe</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Période">
+                        <MudText Typo="Typo.body2">@context.Periode</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Montant restant">
+                        <MudText Typo="Typo.body2" Color="@(context.MontantRestant > 0 ? Color.Error : Color.Success)">
+                            @context.MontantRestant.ToString("N0") FCFA
+                        </MudText>
+                        @if (context.MontantPaye > 0)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Payé: @context.MontantPaye.ToString("N0") FCFA
+                            </MudText>
+                        }
+                    </MudTd>
                     <MudTd DataLabel="Statut">
-                        <MudChip T="string" Color="@GetStatutColor(context.Statut)" Size="Size.Small">
-                            @context.Statut
+                        <MudChip T="string" Color="@GetStatutColor(context.Statut)" Size="Size.Small" Icon="@GetStatutIcon(context.Statut)">
+                            @GetStatutDisplayName(context.Statut)
                         </MudChip>
                     </MudTd>
                     <MudTd>
-                        <MudButton Variant="Variant.Filled" 
-                                 Color="Color.Primary" 
-                                 Size="Size.Small"
-                                 OnClick="@(() => NavigationManager.NavigateTo("/contribuable/mes-paiements/effectuer"))">
-                            Payer
-                        </MudButton>
+                        @if (context.MontantRestant > 0)
+                        {
+                            <MudButton Variant="Variant.Filled" 
+                                     Color="Color.Primary" 
+                                     Size="Size.Small"
+                                     StartIcon="@Icons.Material.Filled.Payment"
+                                     OnClick="@(() => NavigateToPayment(context))">
+                                Payer
+                            </MudButton>
+                        }
+                        else
+                        {
+                            <MudChip T="string" Color="Color.Success" Size="Size.Small" Icon="@Icons.Material.Filled.CheckCircle">
+                                Payée
+                            </MudChip>
+                        }
                     </MudTd>
                 </RowTemplate>
                 <PagerContent>
-                    <MudTablePager PageSizeOptions="new int[] { 5, 10, 25, 50 }" />
+                    <MudTablePager PageSizeOptions="new int[] { 10, 25, 50, 100 }" />
                 </PagerContent>
             </MudTable>
-            
-            <MudDivider Class="my-4" />
-            
-            <MudGrid>
-                <MudItem xs="12" md="4">
-                    <MudPaper Elevation="0" Class="pa-4 mud-theme-primary rounded-lg">
-                        <MudText Typo="Typo.h6" Class="mb-2">À payer ce mois-ci</MudText>
-                        <MudText Typo="Typo.h4">@_echeances.Where(e => e.DateLimite.Month == DateTime.Now.Month && e.DateLimite.Year == DateTime.Now.Year).Sum(e => e.Montant).ToString("N0") FCFA</MudText>
-                    </MudPaper>
-                </MudItem>
-                <MudItem xs="12" md="4">
-                    <MudPaper Elevation="0" Class="pa-4 mud-theme-secondary rounded-lg">
-                        <MudText Typo="Typo.h6" Class="mb-2">À payer dans les 7 jours</MudText>
-                        <MudText Typo="Typo.h4">@_echeances.Where(e => (e.DateLimite - DateTime.Now).TotalDays <= 7 && (e.DateLimite - DateTime.Now).TotalDays >= 0).Sum(e => e.Montant).ToString("N0") FCFA</MudText>
-                    </MudPaper>
-                </MudItem>
-                <MudItem xs="12" md="4">
-                    <MudPaper Elevation="0" Class="pa-4 mud-theme-tertiary rounded-lg">
-                        <MudText Typo="Typo.h6" Class="mb-2">Total à venir</MudText>
-                        <MudText Typo="Typo.h4">@_echeances.Sum(e => e.Montant).ToString("N0") FCFA</MudText>
-                    </MudPaper>
-                </MudItem>
-            </MudGrid>
         }
     </MudPaper>
 </MudContainer>
@@ -139,17 +236,29 @@
     private Guid? _contribuableId;
     private string _searchString = "";
     private string _periodeFiltre = "all";
+    private string _statutFiltre = "all";
     private const string ApiVersion = "1.0";
+    
+    // Statistiques
+    private int _echeancesEnRetard = 0;
+    private int _echeancesBientotDues = 0;
+    private int _echeancesAVenir = 0;
+    private decimal _montantTotal = 0;
     
     // Classe pour représenter les échéances
     public class EcheanceDto
     {
         public Guid Id { get; set; }
-        public string ObligationFiscale { get; set; }
-        public string TypeTaxe { get; set; }
-        public decimal Montant { get; set; }
-        public DateTime DateLimite { get; set; }
-        public string Statut { get; set; } // À venir, Bientôt due, En retard
+        public Guid ObligationFiscaleId { get; set; }
+        public string TypeTaxe { get; set; } = "";
+        public string Periode { get; set; } = "";
+        public decimal MontantDu { get; set; }
+        public decimal MontantPaye { get; set; }
+        public decimal MontantRestant { get; set; }
+        public DateTime DateEcheance { get; set; }
+        public string Statut { get; set; } = "";
+        public int AnneeImposition { get; set; }
+        public int PeriodeImposition { get; set; }
     }
     
     protected override async Task OnInitializedAsync()
@@ -167,25 +276,20 @@
         {
             _userId = user.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
             
-            // Rechercher le contribuable associé à l'utilisateur
-            var searchCommand = new SearchContribuableCommand
+            if (Guid.TryParse(_userId, out var userIdGuid))
             {
-                PageNumber = 1,
-                PageSize = 1,
-                Keyword = _userId
-            };
-            
-            try
-            {
-                var result = await ApiClient.SearchContribuableEndPointsAsync(ApiVersion, searchCommand);
-                if (result?.Items != null && result.Items.Any())
+                try
                 {
-                    _contribuableId = result.Items.First().Id;
+                    var contribuable = await ApiClient.GetContribuableByUserIdEndPointsAsync(ApiVersion, userIdGuid);
+                    if (contribuable?.Id != null)
+                    {
+                        _contribuableId = contribuable.Id.Value;
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                Snackbar.Add($"Erreur lors de la recherche du contribuable: {ex.Message}", Severity.Error);
+                catch (Exception ex)
+                {
+                    Snackbar.Add($"Erreur lors de la récupération du profil contribuable: {ex.Message}", Severity.Error);
+                }
             }
         }
     }
@@ -196,64 +300,70 @@
         {
             _loading = true;
             
-            // Simuler les données d'échéances car l'API n'est pas disponible
-            _echeances = new List<EcheanceDto>
+            if (!_contribuableId.HasValue)
             {
-                new EcheanceDto
+                Snackbar.Add("Profil contribuable non trouvé", Severity.Warning);
+                return;
+            }
+
+            // Récupérer les obligations fiscales du contribuable
+            var obligations = await ApiClient.GetObligationsByContribuableEndPointsAsync(ApiVersion, _contribuableId.Value);
+            
+            if (obligations == null || !obligations.Any())
+            {
+                _echeances = new List<EcheanceDto>();
+                FilterEcheances();
+                return;
+            }
+
+            var echeancesList = new List<EcheanceDto>();
+            
+            // Pour chaque obligation, récupérer ses échéances
+            foreach (var obligation in obligations)
+            {
+                try
                 {
-                    Id = Guid.NewGuid(),
-                    ObligationFiscale = "Taxe d'habitation 2023",
-                    TypeTaxe = "Taxe d'habitation",
-                    Montant = 25000,
-                    DateLimite = DateTime.Now.AddDays(7),
-                    Statut = "Bientôt due"
-                },
-                new EcheanceDto
-                {
-                    Id = Guid.NewGuid(),
-                    ObligationFiscale = "Taxe foncière 2023",
-                    TypeTaxe = "Taxe foncière",
-                    Montant = 50000,
-                    DateLimite = DateTime.Now.AddDays(-2),
-                    Statut = "En retard"
-                },
-                new EcheanceDto
-                {
-                    Id = Guid.NewGuid(),
-                    ObligationFiscale = "Taxe professionnelle 2023 - T1",
-                    TypeTaxe = "Taxe professionnelle",
-                    Montant = 25000,
-                    DateLimite = DateTime.Now.AddDays(3),
-                    Statut = "Bientôt due"
-                },
-                new EcheanceDto
-                {
-                    Id = Guid.NewGuid(),
-                    ObligationFiscale = "Taxe professionnelle 2023 - T2",
-                    TypeTaxe = "Taxe professionnelle",
-                    Montant = 25000,
-                    DateLimite = DateTime.Now.AddDays(90),
-                    Statut = "À venir"
-                },
-                new EcheanceDto
-                {
-                    Id = Guid.NewGuid(),
-                    ObligationFiscale = "Taxe professionnelle 2023 - T3",
-                    TypeTaxe = "Taxe professionnelle",
-                    Montant = 25000,
-                    DateLimite = DateTime.Now.AddDays(180),
-                    Statut = "À venir"
-                },
-                new EcheanceDto
-                {
-                    Id = Guid.NewGuid(),
-                    ObligationFiscale = "Taxe sur les enseignes 2023",
-                    TypeTaxe = "Taxe sur les enseignes",
-                    Montant = 15000,
-                    DateLimite = DateTime.Now.AddDays(45),
-                    Statut = "À venir"
+                    var searchCommand = new SearchEcheancesCommand
+                    {
+                        PageNumber = 1,
+                        PageSize = 100,
+                        ObligationFiscaleId = obligation.Id
+                    };
+                    
+                    var echeancesResult = await ApiClient.SearchEcheanceEndPointsAsync(ApiVersion, searchCommand);
+                    
+                    if (echeancesResult?.Items != null)
+                    {
+                        foreach (var echeance in echeancesResult.Items)
+                        {
+                            echeancesList.Add(new EcheanceDto
+                            {
+                                Id = echeance.Id,
+                                ObligationFiscaleId = echeance.ObligationFiscaleId,
+                                TypeTaxe = obligation.TypeTaxeNom ?? "Non défini",
+                                Periode = $"{echeance.AnneeImposition}/{echeance.PeriodeImposition:D2}",
+                                MontantDu = (decimal)echeance.MontantDu,
+                                MontantPaye = (decimal)echeance.MontantPaye,
+                                MontantRestant = (decimal)echeance.MontantRestant,
+                                DateEcheance = echeance.DateEcheance,
+                                Statut = echeance.Statut ?? "EnAttente",
+                                AnneeImposition = echeance.AnneeImposition,
+                                PeriodeImposition = echeance.PeriodeImposition
+                            });
+                        }
+                    }
                 }
-            };
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Erreur lors du chargement des échéances pour l'obligation {obligation.Id}: {ex.Message}");
+                }
+            }
+            
+            // Trier par date d'échéance
+            _echeances = echeancesList.OrderBy(e => e.DateEcheance).ToList();
+            
+            // Calculer les statistiques
+            CalculateStatistics();
             
             FilterEcheances();
         }
@@ -269,6 +379,23 @@
         }
     }
     
+    private void CalculateStatistics()
+    {
+        var today = DateTime.Now.Date;
+        var nextWeek = today.AddDays(7);
+        
+        _echeancesEnRetard = _echeances.Count(e => e.DateEcheance.Date < today && e.MontantRestant > 0);
+        _echeancesBientotDues = _echeances.Count(e => e.DateEcheance.Date >= today && e.DateEcheance.Date <= nextWeek && e.MontantRestant > 0);
+        _echeancesAVenir = _echeances.Count(e => e.DateEcheance.Date > nextWeek && e.MontantRestant > 0);
+        _montantTotal = _echeances.Where(e => e.MontantRestant > 0).Sum(e => e.MontantRestant);
+    }
+    
+    private async Task RefreshData()
+    {
+        await LoadEcheances();
+        Snackbar.Add("Données actualisées", Severity.Success);
+    }
+    
     private void FilterEcheances()
     {
         if (_echeances == null)
@@ -277,14 +404,24 @@
             return;
         }
         
+        var filtered = _echeances.AsEnumerable();
+        
         // Filtrer par période
-        _filteredEcheances = _periodeFiltre switch
+        filtered = _periodeFiltre switch
         {
-            "week" => _echeances.Where(e => (e.DateLimite - DateTime.Now).TotalDays <= 7).ToList(),
-            "month" => _echeances.Where(e => (e.DateLimite - DateTime.Now).TotalDays <= 30).ToList(),
-            "quarter" => _echeances.Where(e => (e.DateLimite - DateTime.Now).TotalDays <= 90).ToList(),
-            _ => _echeances.ToList()
+            "week" => filtered.Where(e => (e.DateEcheance - DateTime.Now).TotalDays <= 7 && (e.DateEcheance - DateTime.Now).TotalDays >= 0),
+            "month" => filtered.Where(e => (e.DateEcheance - DateTime.Now).TotalDays <= 30 && (e.DateEcheance - DateTime.Now).TotalDays >= 0),
+            "quarter" => filtered.Where(e => (e.DateEcheance - DateTime.Now).TotalDays <= 90 && (e.DateEcheance - DateTime.Now).TotalDays >= 0),
+            _ => filtered
         };
+        
+        // Filtrer par statut
+        if (_statutFiltre != "all")
+        {
+            filtered = filtered.Where(e => e.Statut == _statutFiltre);
+        }
+        
+        _filteredEcheances = filtered.ToList();
     }
     
     private bool FilterEcheance(EcheanceDto echeance)
@@ -292,37 +429,45 @@
         if (string.IsNullOrWhiteSpace(_searchString))
             return true;
             
-        // Recherche par obligation fiscale
-        if (echeance.ObligationFiscale.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
-            return true;
-            
-        // Recherche par type de taxe
-        if (echeance.TypeTaxe.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
-            return true;
-            
-        // Recherche par statut
-        if (echeance.Statut.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
-            return true;
-            
-        // Recherche par montant
-        if (echeance.Montant.ToString().Contains(_searchString))
-            return true;
-            
-        // Recherche par date
-        if (echeance.DateLimite.ToString("dd/MM/yyyy").Contains(_searchString))
-            return true;
-            
-        return false;
+        var searchTerm = _searchString.ToLowerInvariant();
+        
+        return echeance.TypeTaxe.ToLowerInvariant().Contains(searchTerm) ||
+               echeance.Periode.ToLowerInvariant().Contains(searchTerm) ||
+               echeance.Statut.ToLowerInvariant().Contains(searchTerm) ||
+               echeance.MontantRestant.ToString().Contains(searchTerm) ||
+               echeance.DateEcheance.ToString("dd/MM/yyyy").Contains(searchTerm);
     }
     
     private Color GetStatutColor(string statut)
     {
         return statut switch
         {
-            "À venir" => Color.Info,
-            "Bientôt due" => Color.Warning,
-            "En retard" => Color.Error,
+            "EnAttente" => Color.Info,
+            "EnRetard" => Color.Error,
+            "Payee" => Color.Success,
             _ => Color.Default
+        };
+    }
+    
+    private string GetStatutIcon(string statut)
+    {
+        return statut switch
+        {
+            "EnAttente" => Icons.Material.Filled.Schedule,
+            "EnRetard" => Icons.Material.Filled.EventBusy,
+            "Payee" => Icons.Material.Filled.CheckCircle,
+            _ => Icons.Material.Filled.Event
+        };
+    }
+    
+    private string GetStatutDisplayName(string statut)
+    {
+        return statut switch
+        {
+            "EnAttente" => "En attente",
+            "EnRetard" => "En retard",
+            "Payee" => "Payée",
+            _ => statut
         };
     }
     
@@ -348,5 +493,24 @@
             (<= 7) => Color.Warning,
             _ => Color.Info
         };
+    }
+    
+    private string GetDateDescription(DateTime date)
+    {
+        var daysRemaining = (date - DateTime.Now).TotalDays;
+        
+        return daysRemaining switch
+        {
+            (< 0) => $"En retard de {Math.Abs((int)daysRemaining)} jour(s)",
+            (0) => "Échéance aujourd'hui",
+            (1) => "Échéance demain",
+            (<= 7) => $"Dans {(int)daysRemaining} jour(s)",
+            _ => $"Dans {(int)daysRemaining} jour(s)"
+        };
+    }
+    
+    private void NavigateToPayment(EcheanceDto echeance)
+    {
+        NavigationManager.NavigateTo($"/contribuable/mes-paiements/effectuer?obligationId={echeance.ObligationFiscaleId}");
     }
 } 

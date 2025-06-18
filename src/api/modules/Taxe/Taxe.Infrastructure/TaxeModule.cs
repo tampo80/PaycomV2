@@ -33,6 +33,7 @@ public static class TaxeModule
             MapTaxeEndpoints(app);
             MapTypeTaxeEndpoints(app);
             MapObligationFiscaleEndpoints(app);
+            MapEcheanceEndpoints(app);
             MapCollecteTerrainSessionEndpoints(app);
             MapTransactionCollecteEndpoints(app);
         }
@@ -102,6 +103,10 @@ public static class TaxeModule
             group.MapPaiementSearchEndpoint();
             group.MapPaiementUpdateEndpoint();
             group.MapPaiementDeleteEndpoint();
+            group.MapPaiementByAgentCreationEndpoint();
+            group.MapTransactionsByAgentSearchEndpoint();
+            group.MapPaiementSearchByContribuableEndpoint();
+            group.MapPaiementSearchByAgentFiscalEndpoint();
         }
 
         private static void MapNotificationEndpoints(IEndpointRouteBuilder app)
@@ -113,6 +118,11 @@ public static class TaxeModule
             group.MapNotificationSearchEndpoint();
             group.MapNotificationUpdateEndpoint();
             group.MapMarquerCommeLueEndpoint();
+            
+            // Nouveaux endpoints spécialisés
+            group.MapNotificationPourContribuableCreationEndpoint();
+            group.MapNotificationPourTousLesContribuablesCreationEndpoint();
+            group.MapNotificationsPourContribuableSearchEndpoint();
         }
 
         private static void MapOperationEndpoints(IEndpointRouteBuilder app)
@@ -166,6 +176,19 @@ public static class TaxeModule
             group.MapDesactiverObligationFiscaleEndpoint();
             group.MapReactiverObligationFiscaleEndpoint();
             group.MapGenererEcheancesEndpoint();
+            group.MapGetObligationsByContribuableEndpoint();
+        }
+
+        private static void MapEcheanceEndpoints(IEndpointRouteBuilder app)
+        {
+            var group = app.MapGroup("echeances").WithTags("echeances");
+            group.MapEcheanceCreationEndpoint();
+            group.MapEcheanceGetEndpoint();
+            group.MapEcheanceSearchEndpoint();
+            group.MapEcheanceUpdateEndpoint();
+            group.MapEcheanceDeleteEndpoint();
+            group.MapCalculerMontantEcheanceEndpoint();
+            group.MapAppliquerPenaliteEndpoint();
         }
 
         private static void MapCollecteTerrainSessionEndpoints(IEndpointRouteBuilder app)
@@ -288,11 +311,16 @@ public static class TaxeModule
         services.AddScoped<IRepository<Notification>, TaxeRepository<Notification>>();
         services.AddScoped<IReadRepository<Notification>, TaxeRepository<Notification>>();
         
-        services.AddScoped<IRepository<Echeancier>, TaxeRepository<Echeancier>>();
-        services.AddScoped<IReadRepository<Echeancier>, TaxeRepository<Echeancier>>();
+
         
         services.AddScoped<IRepository<Configuration>, TaxeRepository<Configuration>>();
         services.AddScoped<IReadRepository<Configuration>, TaxeRepository<Configuration>>();
+        
+        services.AddScoped<IRepository<HistoriquePaiementAgent>, TaxeRepository<HistoriquePaiementAgent>>();
+        services.AddScoped<IReadRepository<HistoriquePaiementAgent>, TaxeRepository<HistoriquePaiementAgent>>();
+        
+        services.AddScoped<IRepository<SynchronisationPaiement>, TaxeRepository<SynchronisationPaiement>>();
+        services.AddScoped<IReadRepository<SynchronisationPaiement>, TaxeRepository<SynchronisationPaiement>>();
     }
     
     private static void RegisterRepositoriesWithKey(IServiceCollection services)
@@ -387,13 +415,19 @@ public static class TaxeModule
         services.AddKeyedScoped<IRepository<Notification>, TaxeRepository<Notification>>("taxe:notifications");
         services.AddKeyedScoped<IReadRepository<Notification>, TaxeRepository<Notification>>("taxe:notifications");
         
-        // Echeancier
-        services.AddKeyedScoped<IRepository<Echeancier>, TaxeRepository<Echeancier>>("taxe:echeanciers");
-        services.AddKeyedScoped<IReadRepository<Echeancier>, TaxeRepository<Echeancier>>("taxe:echeanciers");
+
         
         // Configuration
         services.AddKeyedScoped<IRepository<Configuration>, TaxeRepository<Configuration>>("taxe:configurations");
         services.AddKeyedScoped<IReadRepository<Configuration>, TaxeRepository<Configuration>>("taxe:configurations");
+        
+        // HistoriquePaiementAgent
+        services.AddKeyedScoped<IRepository<HistoriquePaiementAgent>, TaxeRepository<HistoriquePaiementAgent>>("taxe:historique-paiement-agents");
+        services.AddKeyedScoped<IReadRepository<HistoriquePaiementAgent>, TaxeRepository<HistoriquePaiementAgent>>("taxe:historique-paiement-agents");
+        
+        // SynchronisationPaiement
+        services.AddKeyedScoped<IRepository<SynchronisationPaiement>, TaxeRepository<SynchronisationPaiement>>("taxe:synchronisation-paiements");
+        services.AddKeyedScoped<IReadRepository<SynchronisationPaiement>, TaxeRepository<SynchronisationPaiement>>("taxe:synchronisation-paiements");
     }
     
     public static WebApplication UseTaxeModule(this WebApplication app)

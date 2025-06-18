@@ -18,9 +18,19 @@ public sealed class CreateNotificationHandler(
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
-        var notification = Notification.Create(request.Type, request.DateEnvoi, request.Contenu);
+        var notification = Notification.Create(
+            request.Type, 
+            request.DateEnvoi, 
+            request.Contenu,
+            request.TypeDestinataire,
+            request.ContribuableId,
+            request.AgentFiscalId,
+            request.Titre,
+            request.Priorite,
+            request.DateExpiration);
         await repository.AddAsync(notification, cancellationToken);
-        logger.LogInformation("Notification créé {notificationId}", notification.Id);
+        logger.LogInformation("Notification créé {notificationId} pour {typeDestinataire}", 
+            notification.Id, request.TypeDestinataire);
         return new CreateNotificationResponse(notification.Id);
     }
 }

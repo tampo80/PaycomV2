@@ -11,6 +11,12 @@ public record PaiementResponse(
     ModePaiement ModePaiement,
     string CodeTransaction,
     DateTime DateTransaction,
+    StatutPaiement Status,
     decimal FraisTransaction,
     string InformationsSupplementaires,
-    StatutPaiement Status);
+    Guid ContribuableId,
+    Guid? EcheanceId,
+    Guid? AgentFiscalId,
+    string? ContribuableNom = null,
+    string? TypeTaxeNom = null,
+    string? AgentFiscalNom = null);

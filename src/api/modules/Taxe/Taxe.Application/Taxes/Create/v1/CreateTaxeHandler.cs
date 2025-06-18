@@ -6,7 +6,7 @@ using FSH.Framework.Core.Persistence;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using PayCom.WebApi.Taxe.Application.Echeanciers.Create.v1;
+
 
 namespace PayCom.WebApi.Taxe.Application.Taxes.Create.v1;
 public sealed class CreateTaxeHandler(

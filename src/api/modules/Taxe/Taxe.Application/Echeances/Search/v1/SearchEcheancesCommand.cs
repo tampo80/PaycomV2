@@ -7,13 +7,11 @@ using MediatR;
 using PayCom.WebApi.Taxe.Application.Echeances.Get.v1;
 
 namespace PayCom.WebApi.Taxe.Application.Echeances.Search.v1;
-public record SearchEcheancesCommand(
-    [property: DefaultValue(1)]
-    int PageIndex = 1,
-    [property: DefaultValue(10)]
-    int PageSize = 10,
-    [property: DefaultValue("")]
-    string? SortBy = null,
-    [property: DefaultValue(null)]
-    Guid? ObligationFiscaleId = null,
-    string? Statut = null) : IRequest<PagedList<EcheanceResponse>>; 
+
+public class SearchEcheancesCommand : PaginationFilter, IRequest<PagedList<EcheanceResponse>>
+{
+    [DefaultValue(null)]
+    public Guid? ObligationFiscaleId { get; set; }
+    
+    public string? Statut { get; set; }
+} 

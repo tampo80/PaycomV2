@@ -10,6 +10,11 @@
     @if (CanViewEspaceContribuableGroup)
     {
         <MudNavGroup Title="Espace Contribuable" Icon="@Icons.Material.Filled.Person" IconColor="Color.Primary" Expanded="false">
+            <!-- Dashboard contribuable -->
+            <MudNavLink IconColor="Color.Primary" Href="/contribuable/dashboard" Icon="@Icons.Material.Filled.Dashboard" Class="fsh-nav-child">
+                Mon tableau de bord
+            </MudNavLink>
+            
             <!-- Mes informations -->
             <MudNavLink IconColor="Color.Primary" Href="/contribuable/mon-profil" Icon="@Icons.Material.Filled.AccountCircle" Class="fsh-nav-child">
                 Mon profil

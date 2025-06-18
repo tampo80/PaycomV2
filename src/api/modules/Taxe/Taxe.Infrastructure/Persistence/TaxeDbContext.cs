@@ -22,7 +22,7 @@ public sealed class TaxeDbContext:FshDbContext
     public DbSet<AgentFiscal> AgentsFiscaux { get; set; }
     public DbSet<Ville> Villes { get; set; }
     public DbSet<Contribuable> Contribuables { get; set; }
-    public DbSet<Echeancier> Echeanciers { get; set; }
+
     public DbSet<Region> Regions { get; set; }
     public DbSet<Prefecture> Prefectures { get; set; }
     public DbSet<Village> Villages { get; set; }

@@ -11,6 +11,9 @@ using PayCom.WebApi.Taxe.Application.Notifications.Get.v1;
 using PayCom.WebApi.Taxe.Application.Notifications.Search.v1;
 using PayCom.WebApi.Taxe.Application.Notifications.Update.v1;
 using PayCom.WebApi.Taxe.Application.Notifications.MarquerCommeLue.v1;
+using PayCom.WebApi.Taxe.Application.Notifications.CreatePourContribuable.v1;
+using PayCom.WebApi.Taxe.Application.Notifications.CreatePourTousLesContribuables.v1;
+using PayCom.WebApi.Taxe.Application.Notifications.SearchPourContribuable.v1;
 
 namespace PayCom.WebApi.Taxe.Infrastructure.EndPoints.v1;
 
@@ -126,6 +129,63 @@ public static class MarquerCommeLueEndPoints
             .WithDescription("Marque une notification comme ayant été lue par l'utilisateur")
             .Produces<MarquerCommeLueResponse>()
             .RequirePermission("Permissions.Notifications.Update")
+            .MapToApiVersion(1);
+    }
+}
+
+public static class CreateNotificationPourContribuableEndPoints
+{
+    internal static RouteHandlerBuilder MapNotificationPourContribuableCreationEndpoint(this IEndpointRouteBuilder endpoints)
+    {
+        return endpoints
+            .MapPost("/pour-contribuable", async (CreateNotificationPourContribuableCommand request, ISender mediator) =>
+            {
+                var response = await mediator.Send(request);
+                return Results.Ok(response);
+            })
+            .WithName(nameof(CreateNotificationPourContribuableEndPoints))
+            .WithSummary("Créer une notification pour un contribuable spécifique")
+            .WithDescription("Crée une nouvelle notification destinée à un contribuable spécifique")
+            .Produces<CreateNotificationResponse>()
+            .RequirePermission("Permissions.Notifications.Create")
+            .MapToApiVersion(1);
+    }
+}
+
+public static class CreateNotificationPourTousLesContribuablesEndPoints
+{
+    internal static RouteHandlerBuilder MapNotificationPourTousLesContribuablesCreationEndpoint(this IEndpointRouteBuilder endpoints)
+    {
+        return endpoints
+            .MapPost("/pour-tous-les-contribuables", async (CreateNotificationPourTousLesContribuablesCommand request, ISender mediator) =>
+            {
+                var response = await mediator.Send(request);
+                return Results.Ok(response);
+            })
+            .WithName(nameof(CreateNotificationPourTousLesContribuablesEndPoints))
+            .WithSummary("Créer une notification pour tous les contribuables")
+            .WithDescription("Crée une nouvelle notification destinée à tous les contribuables")
+            .Produces<CreateNotificationResponse>()
+            .RequirePermission("Permissions.Notifications.Create")
+            .MapToApiVersion(1);
+    }
+}
+
+public static class SearchNotificationsPourContribuableEndPoints
+{
+    internal static RouteHandlerBuilder MapNotificationsPourContribuableSearchEndpoint(this IEndpointRouteBuilder endpoints)
+    {
+        return endpoints
+            .MapPost("/pour-contribuable/search", async ([FromBody] SearchNotificationsPourContribuableCommand request, ISender mediator) =>
+            {
+                var response = await mediator.Send(request);
+                return Results.Ok(response);
+            })
+            .WithName(nameof(SearchNotificationsPourContribuableEndPoints))
+            .WithSummary("Rechercher les notifications d'un contribuable")
+            .WithDescription("Recherche et liste les notifications visibles pour un contribuable spécifique")
+            .Produces<PagedList<NotificationResponse>>()
+            .RequirePermission("Permissions.Notifications.Search")
             .MapToApiVersion(1);
     }
 } 

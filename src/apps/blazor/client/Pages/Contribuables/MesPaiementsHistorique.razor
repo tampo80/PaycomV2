@@ -4,11 +4,13 @@
 @using PayCom.Blazor.Infrastructure.Api
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
+@using PayCom.Blazor.Client.Shared.Models
 
 @inject ISnackbar Snackbar
 @inject IApiClient ApiClient
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager NavigationManager
+@inject IDialogService DialogService
 
 <PageTitle>Historique des Paiements - PayCom</PageTitle>
 
@@ -50,16 +52,41 @@
         else if (_paiements == null || !_paiements.Any())
         {
             <MudAlert Severity="Severity.Info" Class="mb-4">
-                Aucun paiement trouvé. Vous n'avez pas encore effectué de paiements.
+                <MudText>Aucun paiement trouvé. Vous n'avez pas encore effectué de paiements.</MudText>
+                <MudText Class="mt-2" Typo="Typo.caption">
+                    Contribuable ID: @_contribuableId?.ToString() ?? "Non défini"
+                </MudText>
             </MudAlert>
             
-            <MudButton Href="/contribuable/mes-paiements/effectuer" 
-                      Variant="Variant.Filled" 
-                      Color="Color.Primary" 
-                      StartIcon="@Icons.Material.Filled.Payment" 
-                      Class="mt-4">
-                Effectuer un paiement
-            </MudButton>
+            <MudStack Row="true" Class="mt-4" Spacing="2">
+                <MudButton Href="/contribuable/mes-paiements/effectuer" 
+                          Variant="Variant.Filled" 
+                          Color="Color.Primary" 
+                          StartIcon="@Icons.Material.Filled.Payment">
+                    Effectuer un paiement
+                </MudButton>
+                
+                <MudButton OnClick="@CreateTestData" 
+                          Variant="Variant.Outlined" 
+                          Color="Color.Secondary" 
+                          StartIcon="@Icons.Material.Filled.DataSaverOn">
+                    Créer des données de test
+                </MudButton>
+                
+                <MudButton OnClick="@LoadPaiements" 
+                          Variant="Variant.Text" 
+                          Color="Color.Info" 
+                          StartIcon="@Icons.Material.Filled.Refresh">
+                    Actualiser
+                </MudButton>
+                
+                <MudButton OnClick="@TestDialog" 
+                          Variant="Variant.Text" 
+                          Color="Color.Warning" 
+                          StartIcon="@Icons.Material.Filled.BugReport">
+                    Test Dialog
+                </MudButton>
+            </MudStack>
         }
         else
         {
@@ -69,7 +96,6 @@
                      Bordered="false" 
                      Striped="true" 
                      Filter="new Func<PaiementDto, bool>(FilterPaiements)"
-                     @bind-SelectedItem="_selectedPaiement"
                      OnRowClick="@((e) => ShowPaiementDetails(e.Item))"
                      T="PaiementDto">
                 <HeaderContent>
@@ -131,116 +157,19 @@
     </MudPaper>
 </MudContainer>
 
-@if (_selectedPaiement != null && _showDetails)
-{
-    <MudDialog @bind-IsVisible="_showDetails" Options="new DialogOptions { FullWidth = true, MaxWidth = MaxWidth.Medium }">
-        <TitleContent>
-            <MudText Typo="Typo.h6">
-                <MudIcon Icon="@Icons.Material.Filled.Receipt" Class="mr-2" />
-                Détails du paiement
-            </MudText>
-        </TitleContent>
-        <DialogContent>
-            <MudGrid>
-                <MudItem xs="12" md="6">
-                    <MudText Typo="Typo.subtitle1"><b>Référence:</b></MudText>
-                    <MudText>@_selectedPaiement.Reference</MudText>
-                </MudItem>
-                <MudItem xs="12" md="6">
-                    <MudText Typo="Typo.subtitle1"><b>Date:</b></MudText>
-                    <MudText>@_selectedPaiement.Date.ToString("dd/MM/yyyy HH:mm")</MudText>
-                </MudItem>
-                <MudItem xs="12" md="6">
-                    <MudText Typo="Typo.subtitle1"><b>Obligation fiscale:</b></MudText>
-                    <MudText>@_selectedPaiement.ObligationFiscale</MudText>
-                </MudItem>
-                <MudItem xs="12" md="6">
-                    <MudText Typo="Typo.subtitle1"><b>Type de taxe:</b></MudText>
-                    <MudText>@_selectedPaiement.TypeTaxe</MudText>
-                </MudItem>
-                <MudItem xs="12" md="6">
-                    <MudText Typo="Typo.subtitle1"><b>Montant:</b></MudText>
-                    <MudText>@_selectedPaiement.Montant.ToString("N0") FCFA</MudText>
-                </MudItem>
-                <MudItem xs="12" md="6">
-                    <MudText Typo="Typo.subtitle1"><b>Mode de paiement:</b></MudText>
-                    <MudText>@_selectedPaiement.ModePaiement</MudText>
-                </MudItem>
-                <MudItem xs="12" md="6">
-                    <MudText Typo="Typo.subtitle1"><b>Statut:</b></MudText>
-                    <MudChip T="string" Color="@GetStatutColor(_selectedPaiement.Statut)" Size="Size.Small">
-                        @_selectedPaiement.Statut
-                    </MudChip>
-                </MudItem>
-                
-                @if (!string.IsNullOrEmpty(_selectedPaiement.CodeTransaction))
-                {
-                    <MudItem xs="12" md="6">
-                        <MudText Typo="Typo.subtitle1"><b>Code transaction:</b></MudText>
-                        <MudText>@_selectedPaiement.CodeTransaction</MudText>
-                    </MudItem>
-                }
-                
-                @if (_selectedPaiement.DateConfirmation.HasValue)
-                {
-                    <MudItem xs="12" md="6">
-                        <MudText Typo="Typo.subtitle1"><b>Date de confirmation:</b></MudText>
-                        <MudText>@_selectedPaiement.DateConfirmation.Value.ToString("dd/MM/yyyy HH:mm")</MudText>
-                    </MudItem>
-                }
-                
-                @if (!string.IsNullOrEmpty(_selectedPaiement.Notes))
-                {
-                    <MudItem xs="12">
-                        <MudText Typo="Typo.subtitle1"><b>Notes:</b></MudText>
-                        <MudText>@_selectedPaiement.Notes</MudText>
-                    </MudItem>
-                }
-            </MudGrid>
-        </DialogContent>
-        <DialogActions>
-            <MudButton OnClick="@(() => _showDetails = false)" Color="Color.Primary">Fermer</MudButton>
-            
-            @if (_selectedPaiement.Statut == "Confirmé")
-            {
-                <MudButton OnClick="@(() => DownloadReceipt(_selectedPaiement))" 
-                          Color="Color.Secondary" 
-                          Variant="Variant.Filled" 
-                          StartIcon="@Icons.Material.Filled.Receipt">
-                    Télécharger le reçu
-                </MudButton>
-            }
-        </DialogActions>
-    </MudDialog>
-}
+<!-- L'ancienne dialog est supprimée, on utilise maintenant le service DialogService -->
 
 @code {
-    private List<PaiementDto> _paiements;
-    private List<PaiementDto> _filteredPaiements => _paiements;
+    private List<PaiementDto> _paiements = new List<PaiementDto>();
+    private List<PaiementDto> _filteredPaiements => _paiements ?? new List<PaiementDto>();
     private bool _loading = true;
     private string _userId;
     private Guid? _contribuableId;
     private string _searchString = "";
     private DateRange _dateRange = new DateRange(DateTime.Now.AddMonths(-3), DateTime.Now);
-    private bool _showDetails = false;
-    private PaiementDto _selectedPaiement;
     private const string ApiVersion = "1.0";
     
-    // Classe pour représenter les paiements
-    public class PaiementDto
-    {
-        public Guid Id { get; set; }
-        public string Reference { get; set; }
-        public DateTime Date { get; set; }
-        public string ObligationFiscale { get; set; }
-        public string TypeTaxe { get; set; }
-        public decimal Montant { get; set; }
-        public string ModePaiement { get; set; }
-        public string Statut { get; set; }
-        public string CodeTransaction { get; set; }
-        public DateTime? DateConfirmation { get; set; }
-        public string Notes { get; set; }
-    }
+    // Utilisation de la classe PaiementDto partagée dans PayCom.Blazor.Client.Shared.Models
     
     protected override async Task OnInitializedAsync()
     {
@@ -256,27 +185,41 @@
         if (user.Identity.IsAuthenticated)
         {
             _userId = user.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            Console.WriteLine($"[DEBUG] User ID from claims: {_userId}");
             
-            // Rechercher le contribuable associé à l'utilisateur
-            var searchCommand = new SearchContribuableCommand
+            if (Guid.TryParse(_userId, out var userIdGuid))
             {
-                PageNumber = 1,
-                PageSize = 1,
-                Keyword = _userId
-            };
-            
-            try
-            {
-                var result = await ApiClient.SearchContribuableEndPointsAsync(ApiVersion, searchCommand);
-                if (result?.Items != null && result.Items.Any())
+                try
                 {
-                    _contribuableId = result.Items.First().Id;
+                    // Utiliser l'API directe pour récupérer le contribuable par son ID utilisateur
+                    var contribuable = await ApiClient.GetContribuableByUserIdEndPointsAsync(ApiVersion, userIdGuid);
+                    if (contribuable?.Id != null)
+                    {
+                        _contribuableId = contribuable.Id.Value;
+                        Console.WriteLine($"[DEBUG] Contribuable trouvé - ID: {_contribuableId.Value}");
+                        Snackbar.Add($"Contribuable trouvé: {contribuable.Nom} {contribuable.Prenom}", Severity.Info);
+                    }
+                    else
+                    {
+                        Console.WriteLine("[DEBUG] Aucun contribuable trouvé pour cet utilisateur");
+                        Snackbar.Add("Aucun contribuable associé à votre compte", Severity.Warning);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[DEBUG] Erreur API GetContribuableByUserId: {ex.Message}");
+                    Snackbar.Add($"Erreur lors de la récupération du profil contribuable: {ex.Message}", Severity.Error);
                 }
             }
-            catch (Exception ex)
+            else
             {
-                Snackbar.Add($"Erreur lors de la recherche du contribuable: {ex.Message}", Severity.Error);
+                Console.WriteLine("[DEBUG] ID utilisateur invalide - impossible de parser en Guid");
+                Snackbar.Add("ID utilisateur invalide", Severity.Error);
             }
+        }
+        else
+        {
+            Console.WriteLine("[DEBUG] Utilisateur non authentifié");
         }
     }
     
@@ -286,77 +229,90 @@
         {
             _loading = true;
             
-            // Simuler les données de paiements car l'API n'est pas disponible
-            _paiements = new List<PaiementDto>
+            if (_contribuableId == null)
             {
-                new PaiementDto
-                {
-                    Id = Guid.NewGuid(),
-                    Reference = "PAY-2023-001",
-                    Date = DateTime.Now.AddDays(-45),
-                    ObligationFiscale = "Taxe d'habitation 2023",
-                    TypeTaxe = "Taxe d'habitation",
-                    Montant = 25000,
-                    ModePaiement = "Mobile Money",
-                    Statut = "Confirmé",
-                    CodeTransaction = "MM-123456789",
-                    DateConfirmation = DateTime.Now.AddDays(-45).AddHours(1),
-                    Notes = "Paiement effectué à l'agence centrale"
-                },
-                new PaiementDto
-                {
-                    Id = Guid.NewGuid(),
-                    Reference = "PAY-2023-002",
-                    Date = DateTime.Now.AddDays(-30),
-                    ObligationFiscale = "Taxe foncière 2023",
-                    TypeTaxe = "Taxe foncière",
-                    Montant = 50000,
-                    ModePaiement = "Virement bancaire",
-                    Statut = "Confirmé",
-                    CodeTransaction = "VB-987654321",
-                    DateConfirmation = DateTime.Now.AddDays(-29),
-                    Notes = ""
-                },
-                new PaiementDto
-                {
-                    Id = Guid.NewGuid(),
-                    Reference = "PAY-2023-003",
-                    Date = DateTime.Now.AddDays(-15),
-                    ObligationFiscale = "Taxe professionnelle 2023",
-                    TypeTaxe = "Taxe professionnelle",
-                    Montant = 75000,
-                    ModePaiement = "Carte bancaire",
-                    Statut = "En attente",
-                    CodeTransaction = "CB-456789123",
-                    DateConfirmation = null,
-                    Notes = "Paiement en cours de traitement"
-                },
-                new PaiementDto
-                {
-                    Id = Guid.NewGuid(),
-                    Reference = "PAY-2023-004",
-                    Date = DateTime.Now.AddDays(-5),
-                    ObligationFiscale = "Taxe sur les enseignes 2023",
-                    TypeTaxe = "Taxe sur les enseignes",
-                    Montant = 15000,
-                    ModePaiement = "Espèces",
-                    Statut = "Confirmé",
-                    CodeTransaction = "ESP-789123456",
-                    DateConfirmation = DateTime.Now.AddDays(-5).AddHours(2),
-                    Notes = "Paiement effectué auprès d'un agent fiscal"
-                }
+                Console.WriteLine("[DEBUG] Impossible de charger les paiements : _contribuableId est null");
+                Snackbar.Add("Impossible de charger les paiements : contribuable non trouvé", Severity.Error);
+                return;
+            }
+
+            Console.WriteLine($"[DEBUG] Recherche de paiements pour le contribuable ID: {_contribuableId.Value}");
+
+            // Rechercher les paiements avec les critères de date en utilisant le nouvel endpoint spécifique
+            var searchCommand = new SearchPaiementsByContribuableCommand
+            {
+                ContribuableId = _contribuableId.Value,
+                PageNumber = 1,
+                PageSize = 100,
+                IncludeEcheances = true,
+                IncludeObligations = true
             };
             
-            // Filtrer par date si nécessaire
-            if (_dateRange.Start.HasValue && _dateRange.End.HasValue)
+            // Temporairement désactiver les filtres de date pour le debug
+            // Appliquer le filtre de date si défini
+            /*if (_dateRange.Start.HasValue)
             {
-                _paiements = _paiements
-                    .Where(p => p.Date.Date >= _dateRange.Start.Value.Date && p.Date.Date <= _dateRange.End.Value.Date)
+                searchCommand.DateDebut = _dateRange.Start.Value;
+                Console.WriteLine($"[DEBUG] Filtre date début: {_dateRange.Start.Value:yyyy-MM-dd}");
+            }
+            
+            if (_dateRange.End.HasValue)
+            {
+                searchCommand.DateFin = _dateRange.End.Value;
+                Console.WriteLine($"[DEBUG] Filtre date fin: {_dateRange.End.Value:yyyy-MM-dd}");
+            }*/
+            
+            Console.WriteLine("[DEBUG] Filtres de date temporairement désactivés pour le debug");
+            
+            Console.WriteLine("[DEBUG] Appel de l'API SearchPaiementsByContribuableEndPointsAsync...");
+            var paiementsResult = await ApiClient.SearchPaiementsByContribuableEndPointsAsync(ApiVersion, searchCommand);
+            
+            Console.WriteLine($"[DEBUG] Résultat API - Items: {paiementsResult?.Items?.Count ?? 0}");
+            Console.WriteLine($"[DEBUG] Résultat API - TotalCount: {paiementsResult?.TotalCount ?? 0}");
+            
+            if (paiementsResult?.Items != null)
+            {
+                // Mapper les paiements vers PaiementDto (plus besoin de filtrer car l'API le fait déjà)
+                _paiements = paiementsResult.Items
+                    .Select(p => new PaiementDto
+                    {
+                        Id = p.Id,
+                        Reference = p.CodeTransaction ?? $"PAY-{p.Id.ToString()[..8]}",
+                        Date = p.Date,
+                        ObligationFiscale = p.TypeTaxeNom ?? "Paiement libre",
+                        TypeTaxe = p.TypeTaxeNom ?? "Type inconnu",
+                        Montant = (decimal)p.Montant,
+                        ModePaiement = GetModePaiementLabel(p.ModePaiement),
+                        Statut = GetStatutLabel(p.Status),
+                        CodeTransaction = p.CodeTransaction ?? "",
+                        DateConfirmation = p.Status == StatutPaiement._1 ? p.DateTransaction : null, // Confirmé
+                        Notes = p.InformationsSupplementaires ?? ""
+                    })
+                    .OrderByDescending(p => p.Date)
                     .ToList();
+                    
+                Console.WriteLine($"[DEBUG] Nombre de paiements mappés: {_paiements.Count}");
+                
+                if (_paiements.Count == 0)
+                {
+                    Snackbar.Add("Aucun paiement trouvé pour la période sélectionnée", Severity.Info);
+                }
+                else
+                {
+                    Snackbar.Add($"{_paiements.Count} paiement(s) trouvé(s)", Severity.Success);
+                }
+            }
+            else
+            {
+                Console.WriteLine("[DEBUG] paiementsResult.Items est null");
+                _paiements = new List<PaiementDto>();
+                Snackbar.Add("Aucun paiement trouvé", Severity.Info);
             }
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"[DEBUG] Exception lors du chargement des paiements: {ex.Message}");
+            Console.WriteLine($"[DEBUG] Stack trace: {ex.StackTrace}");
             Snackbar.Add($"Erreur lors du chargement des paiements: {ex.Message}", Severity.Error);
             _paiements = new List<PaiementDto>();
         }
@@ -409,10 +365,60 @@
         };
     }
     
-    private void ShowPaiementDetails(PaiementDto paiement)
+    private async Task ShowPaiementDetails(PaiementDto paiement)
     {
-        _selectedPaiement = paiement;
-        _showDetails = true;
+        Console.WriteLine($"[DEBUG] ShowPaiementDetails appelé pour paiement ID: {paiement?.Id}");
+        
+        if (paiement == null)
+        {
+            Console.WriteLine("[DEBUG] Paiement est null");
+            Snackbar.Add("Erreur: Paiement non trouvé", Severity.Error);
+            return;
+        }
+        
+        try
+        {
+            Console.WriteLine($"[DEBUG] Ouverture de la dialog pour: {paiement.Reference}");
+            
+            var parameters = new DialogParameters
+            {
+                ["Reference"] = paiement.Reference,
+                ["Date"] = paiement.Date,
+                ["ObligationFiscale"] = paiement.ObligationFiscale,
+                ["TypeTaxe"] = paiement.TypeTaxe,
+                ["Montant"] = paiement.Montant,
+                ["ModePaiement"] = paiement.ModePaiement,
+                ["Statut"] = paiement.Statut,
+                ["CodeTransaction"] = paiement.CodeTransaction,
+                ["DateConfirmation"] = paiement.DateConfirmation,
+                ["Notes"] = paiement.Notes,
+                ["OnDownloadReceipt"] = EventCallback.Factory.Create(this, () => DownloadReceipt(paiement))
+            };
+
+            var options = new DialogOptions()
+            {
+                FullWidth = true,
+                MaxWidth = MaxWidth.Medium,
+                CloseButton = true,
+                //DisableBackdropClick = false,
+                CloseOnEscapeKey = true
+            };
+
+            var dialog = await DialogService.ShowAsync<SimplePaiementDialog>("Détails du paiement", parameters, options);
+            var result = await dialog.Result;
+            
+            Console.WriteLine($"[DEBUG] Dialog fermée. Cancelled: {result.Canceled}");
+            
+            if (!result.Canceled)
+            {
+                Console.WriteLine("[DEBUG] Dialog fermée par l'utilisateur");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[DEBUG] Erreur dans ShowPaiementDetails: {ex.Message}");
+            Snackbar.Add($"Erreur lors de l'ouverture des détails: {ex.Message}", Severity.Error);
+        }
     }
     
     private void DownloadReceipt(PaiementDto paiement)
@@ -421,5 +427,130 @@
         Snackbar.Add("Le reçu est en cours de téléchargement...", Severity.Info);
         
         // Dans une implémentation réelle, on appellerait l'API pour générer et télécharger le reçu
+    }
+    
+    private async Task CreateTestData()
+    {
+        if (_contribuableId == null)
+        {
+            Snackbar.Add("Impossible de créer des données de test : contribuable non trouvé", Severity.Error);
+            return;
+        }
+        
+        try
+        {
+            // Créer des paiements de test directement dans la liste pour voir si l'affichage fonctionne
+            var testPaiements = new List<PaiementDto>
+            {
+                new PaiementDto
+                {
+                    Id = Guid.NewGuid(),
+                    Reference = "TEST-001",
+                    Date = DateTime.Now.AddDays(-30),
+                    ObligationFiscale = "Taxe d'habitation 2024",
+                    TypeTaxe = "Taxe d'habitation",
+                    Montant = 50000m,
+                    ModePaiement = "Carte bancaire",
+                    Statut = "Confirmé",
+                    CodeTransaction = "CB-TEST-001",
+                    DateConfirmation = DateTime.Now.AddDays(-30),
+                    Notes = "Paiement de test - Taxe d'habitation"
+                },
+                new PaiementDto
+                {
+                    Id = Guid.NewGuid(),
+                    Reference = "TEST-002",
+                    Date = DateTime.Now.AddDays(-15),
+                    ObligationFiscale = "Taxe foncière 2024",
+                    TypeTaxe = "Taxe foncière",
+                    Montant = 75000m,
+                    ModePaiement = "Mobile Money",
+                    Statut = "Confirmé",
+                    CodeTransaction = "MM-TEST-002",
+                    DateConfirmation = DateTime.Now.AddDays(-15),
+                    Notes = "Paiement de test - Taxe foncière"
+                },
+                new PaiementDto
+                {
+                    Id = Guid.NewGuid(),
+                    Reference = "TEST-003",
+                    Date = DateTime.Now.AddDays(-7),
+                    ObligationFiscale = "Taxe professionnelle 2024",
+                    TypeTaxe = "Taxe professionnelle",
+                    Montant = 25000m,
+                    ModePaiement = "Virement bancaire",
+                    Statut = "En attente",
+                    CodeTransaction = "VB-TEST-003",
+                    DateConfirmation = null,
+                    Notes = "Paiement de test - En cours de traitement"
+                }
+            };
+            
+            _paiements = testPaiements;
+            Snackbar.Add($"Données de test créées : {testPaiements.Count} paiements", Severity.Success);
+            
+            // Forcer le rafraîchissement
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[DEBUG] Erreur lors de la création des données de test: {ex.Message}");
+            Snackbar.Add($"Erreur lors de la création des données de test: {ex.Message}", Severity.Error);
+        }
+    }
+    
+    private async Task TestDialog()
+    {
+        Console.WriteLine("[DEBUG] TestDialog appelé");
+        
+        // Créer un paiement de test pour la dialog
+        var testPaiement = new PaiementDto
+        {
+            Id = Guid.NewGuid(),
+            Reference = "DIALOG-TEST-001",
+            Date = DateTime.Now,
+            ObligationFiscale = "Test Dialog - Taxe d'habitation",
+            TypeTaxe = "Taxe d'habitation",
+            Montant = 99999m,
+            ModePaiement = "Test Mode",
+            Statut = "Confirmé",
+            CodeTransaction = "TEST-DIALOG-123456",
+            DateConfirmation = DateTime.Now,
+            Notes = "Ceci est un test de la dialog des détails de paiement"
+        };
+        
+        Console.WriteLine($"[DEBUG] Paiement de test créé: {testPaiement.Reference}");
+        
+        Snackbar.Add("Ouverture de la dialog de test...", Severity.Info);
+        
+        // Ouvrir la dialog avec le paiement de test
+        await ShowPaiementDetails(testPaiement);
+    }
+    
+
+    
+    private string GetModePaiementLabel(ModePaiement modePaiement)
+    {
+        return modePaiement switch
+        {
+            ModePaiement._1 => "Carte bancaire",
+            ModePaiement._2 => "Mobile Money",
+            ModePaiement._3 => "Chèque",
+            ModePaiement._4 => "Virement bancaire",
+            ModePaiement._5 => "Espèces",
+            _ => "Inconnu"
+        };
+    }
+    
+    private string GetStatutLabel(StatutPaiement statut)
+    {
+        return statut switch
+        {
+            StatutPaiement._1 => "Confirmé",
+            StatutPaiement._2 => "En attente",
+            StatutPaiement._3 => "Annulé",
+            StatutPaiement._4 => "Échoué",
+            _ => "Inconnu"
+        };
     }
 } 

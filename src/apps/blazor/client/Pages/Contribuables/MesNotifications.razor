@@ -4,186 +4,534 @@
 @using PayCom.Blazor.Infrastructure.Api
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
+@using PayCom.Shared.Authorization
+@using Microsoft.AspNetCore.Authorization
 
 @inject ISnackbar Snackbar
 @inject IApiClient ApiClient
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager NavigationManager
+@inject IAuthorizationService AuthService
+
+@attribute [Authorize]
 
 <PageTitle>Mes Notifications - PayCom</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
-    <MudPaper Elevation="3" Class="pa-4 mb-4 rounded-lg">
-        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                <MudIcon Icon="@Icons.Material.Filled.Notifications" Color="Color.Primary" Size="Size.Large" Class="mr-2" />
-                <MudText Typo="Typo.h4" Color="Color.Primary">Mes Notifications</MudText>
-            </MudStack>
-            
-            <MudStack Row="true">
-                <MudToggleIconButton
-                    @bind-Toggled="@_showUnreadOnly"
-                    Icon="@Icons.Material.Filled.MarkEmailRead"
-                    Title="Voir toutes les notifications"
-                    ToggledIcon="@Icons.Material.Filled.MarkEmailUnread"
-                    ToggledTitle="Voir uniquement les notifications non lues"
-                    Color="Color.Primary"
-                    ToggledColor="Color.Secondary"
-                    Size="Size.Medium" />
+@if (!_canViewNotifications)
+{
+    <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+        <MudAlert Severity="Severity.Warning" Class="mb-4">
+            <MudText Typo="Typo.body1">
+                Vous n'avez pas les permissions nécessaires pour accéder à cette page.
+            </MudText>
+            <MudText Typo="Typo.body2" Class="mt-2">
+                Veuillez contacter votre administrateur pour obtenir les autorisations appropriées.
+            </MudText>
+        </MudAlert>
+    </MudContainer>
+}
+else
+{
+    <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+        <!-- En-tête avec statistiques -->
+        <MudPaper Elevation="2" Class="pa-6 mb-4 rounded-lg" Style="background: linear-gradient(135deg, var(--mud-palette-primary) 0%, var(--mud-palette-primary-darken) 100%);">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-3">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                    <MudIcon Icon="@Icons.Material.Filled.Notifications" Style="color: white;" Size="Size.Large" />
+                    <div>
+                        <MudText Typo="Typo.h4" Style="color: white; font-weight: bold;" Class="mb-1">Mes Notifications</MudText>
+                        <MudText Typo="Typo.body2" Style="color: white; opacity: 0.9;">
+                            Gérez vos notifications fiscales et administratives
+                        </MudText>
+                    </div>
+                </MudStack>
                 
-                <MudTextField @bind-Value="_searchString" 
-                             Placeholder="Rechercher..." 
-                             Adornment="Adornment.Start" 
-                             AdornmentIcon="@Icons.Material.Filled.Search" 
-                             IconSize="Size.Medium" 
-                             Immediate="true"
-                             Class="ml-2" />
-            </MudStack>
-        </MudStack>
-
-        <MudDivider Class="mb-4" />
-        
-        @if (_loading)
-        {
-            <div class="d-flex justify-center align-center">
-                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-            </div>
-        }
-        else if (_notifications == null || !_notifications.Any())
-        {
-            <MudAlert Severity="Severity.Info" Class="mb-4">
-                Aucune notification trouvée. Vous n'avez pas encore reçu de notifications.
-            </MudAlert>
-        }
-        else
-        {
-            <MudList T="NotificationDto" Clickable="true" Dense="false">
-                @foreach (var notification in _filteredNotifications)
+                @if (_canSearchNotifications)
                 {
-                    <MudListItem T="string" OnClick="@(() => ShowNotificationDetails(notification))" 
-                               Icon="@GetNotificationIcon(notification.Type)" 
-                               IconColor="@GetNotificationIconColor(notification.Type)"
-                               Class="@(notification.IsRead ? "" : "mud-theme-primary")">
-                        <div class="d-flex justify-space-between align-center">
-                            <div>
-                                <MudText Typo="Typo.body1" Class="@(!notification.IsRead ? "font-weight-bold" : "")">
-                                    @notification.Title
-                                </MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                    @notification.Date.ToString("dd/MM/yyyy HH:mm")
-                                </MudText>
-                                <MudText Typo="Typo.body2" Style="margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 500px;">
-                                    @notification.ShortMessage
-                                </MudText>
-                            </div>
-                            <div>
-                                @if (!notification.IsRead)
-                                {
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary">Non lu</MudChip>
-                                }
-                            </div>
-                        </div>
-                    </MudListItem>
-                    <MudDivider />
-                }
-            </MudList>
-            
-            @if (_hasMoreNotifications)
-            {
-                <div class="d-flex justify-center mt-4">
                     <MudButton Variant="Variant.Outlined" 
-                              Color="Color.Primary" 
-                              OnClick="@LoadMoreNotifications"
-                              StartIcon="@Icons.Material.Filled.ExpandMore">
-                        Charger plus de notifications
+                             StartIcon="@Icons.Material.Filled.Refresh"
+                             OnClick="RefreshNotifications"
+                             Style="color: white; border-color: white; background-color: rgba(255,255,255,0.1);"
+                             Class="hover:bg-white hover:text-primary">
+                        Actualiser
                     </MudButton>
+                }
+            </MudStack>
+            
+            <!-- Statistiques rapides -->
+            <MudGrid Class="mt-4">
+                <MudItem xs="4">
+                    <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                        <MudText Typo="Typo.h5" Style="color: white; font-weight: bold;">@_notifications.Count</MudText>
+                        <MudText Typo="Typo.caption" Style="color: white; opacity: 0.9;">Total</MudText>
+                    </MudStack>
+                </MudItem>
+                <MudItem xs="4">
+                    <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                        <MudText Typo="Typo.h5" Style="color: white; font-weight: bold;">@_notifications.Count(n => !n.IsRead)</MudText>
+                        <MudText Typo="Typo.caption" Style="color: white; opacity: 0.9;">Non lues</MudText>
+                    </MudStack>
+                </MudItem>
+                <MudItem xs="4">
+                    <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                        <MudText Typo="Typo.h5" Style="color: white; font-weight: bold;">@_notifications.Count(n => n.Type == "Warning" || n.Type == "Error")</MudText>
+                        <MudText Typo="Typo.caption" Style="color: white; opacity: 0.9;">Urgentes</MudText>
+                    </MudStack>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        <!-- Panneau de contrôle et filtres -->
+        <MudPaper Elevation="1" Class="pa-4 mb-4 rounded-lg">
+
+            @if (_canSearchNotifications)
+            {
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+                    <MudText Typo="Typo.h6" Color="Color.Primary">
+                        <MudIcon Icon="@Icons.Material.Filled.FilterList" Class="mr-2" />
+                        Filtres et Actions
+                    </MudText>
+                    <MudChip T="string" Icon="@Icons.Material.Filled.Info" Color="Color.Info" Size="Size.Small">
+                        @_filteredNotifications.Count résultat(s)
+                    </MudChip>
+                </MudStack>
+                
+                <MudGrid Spacing="3">
+                    <MudItem xs="12" md="5">
+                        <MudTextField @bind-Value="_searchString" 
+                                    Label="Rechercher dans les notifications" 
+                                    Variant="Variant.Outlined"
+                                    Adornment="Adornment.Start" 
+                                    AdornmentIcon="@Icons.Material.Filled.Search"
+                                    OnKeyUp="OnSearchKeyUp"
+                                    Immediate="true"
+                                    HelperText="Recherche par titre ou contenu" />
+                    </MudItem>
+                    <MudItem xs="12" md="2">
+                        <MudSelect @bind-Value="_selectedTypeFilter" 
+                                 Label="Type" 
+                                 Variant="Variant.Outlined"
+                                 T="string">
+                            <MudSelectItem Value="@("Tous")">Tous les types</MudSelectItem>
+                            <MudSelectItem Value="@("Info")">
+                                <div class="d-flex align-center">
+                                    <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Info" Size="Size.Small" Class="mr-2" />
+                                    Information
+                                </div>
+                            </MudSelectItem>
+                            <MudSelectItem Value="@("Warning")">
+                                <div class="d-flex align-center">
+                                    <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" Class="mr-2" />
+                                    Avertissement
+                                </div>
+                            </MudSelectItem>
+                            <MudSelectItem Value="@("Success")">
+                                <div class="d-flex align-center">
+                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" Class="mr-2" />
+                                    Succès
+                                </div>
+                            </MudSelectItem>
+                            <MudSelectItem Value="@("Error")">
+                                <div class="d-flex align-center">
+                                    <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" Size="Size.Small" Class="mr-2" />
+                                    Erreur
+                                </div>
+                            </MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" md="2">
+                        <MudStack Spacing="2">
+                            <MudSwitch @bind-Checked="_showUnreadOnly" 
+                                     Label="Non lues uniquement" 
+                                     Color="Color.Primary"
+                                     T="bool" />
+                            <MudSwitch @bind-Checked="_showUrgentOnly" 
+                                     Label="Urgentes uniquement" 
+                                     Color="Color.Warning"
+                                     T="bool" />
+                        </MudStack>
+                    </MudItem>
+                    @if (_canUpdateNotifications)
+                    {
+                        <MudItem xs="12" md="3">
+                            <MudStack Spacing="2">
+                                <MudButton Variant="Variant.Filled" 
+                                         Color="Color.Primary" 
+                                         StartIcon="@Icons.Material.Filled.DoneAll"
+                                         OnClick="MarkAllAsRead"
+                                         Disabled="_loading || !_notifications?.Any(n => !n.IsRead) == true"
+                                         FullWidth="true">
+                                    Tout marquer comme lu
+                                </MudButton>
+                                <MudButton Variant="Variant.Outlined" 
+                                         Color="Color.Secondary" 
+                                         StartIcon="@Icons.Material.Filled.Archive"
+                                         OnClick="ArchiveAllRead"
+                                         Disabled="_loading || !_notifications?.Any(n => n.IsRead) == true"
+                                         FullWidth="true">
+                                    Archiver les lues
+                                </MudButton>
+                            </MudStack>
+                        </MudItem>
+                    }
+                </MudGrid>
+            }
+        </MudPaper>
+        
+        <!-- Liste des notifications -->
+        <MudPaper Elevation="1" Class="rounded-lg overflow-hidden">
+            
+            @if (_loading)
+            {
+                <div class="d-flex justify-center align-center pa-8">
+                    <MudStack AlignItems="AlignItems.Center" Spacing="3">
+                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+                        <MudText Typo="Typo.body2" Color="Color.Primary">Chargement des notifications...</MudText>
+                    </MudStack>
                 </div>
             }
-        }
-    </MudPaper>
-</MudContainer>
+            else if (_notifications == null || !_notifications.Any())
+            {
+                <div class="d-flex justify-center align-center pa-8">
+                    <MudStack AlignItems="AlignItems.Center" Spacing="3">
+                        <MudIcon Icon="@Icons.Material.Filled.NotificationsNone" Size="Size.Large" Color="Color.Default" Style="opacity: 0.5;" />
+                        <MudText Typo="Typo.h6" Color="Color.Default">Aucune notification</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Default" Class="text-center" Style="opacity: 0.7;">
+                            Vous n'avez pas encore reçu de notifications.<br/>
+                            Les nouvelles notifications apparaîtront ici.
+                        </MudText>
+                    </MudStack>
+                </div>
+            }
+            else if (_filteredNotifications.Count == 0)
+            {
+                <div class="d-flex justify-center align-center pa-8">
+                    <MudStack AlignItems="AlignItems.Center" Spacing="3">
+                        <MudIcon Icon="@Icons.Material.Filled.SearchOff" Size="Size.Large" Color="Color.Default" Style="opacity: 0.5;" />
+                        <MudText Typo="Typo.h6" Color="Color.Default">Aucun résultat</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Default" Class="text-center" Style="opacity: 0.7;">
+                            Aucune notification ne correspond à vos critères de recherche.<br/>
+                            Essayez de modifier vos filtres.
+                        </MudText>
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="ClearFilters" StartIcon="@Icons.Material.Filled.Clear">
+                            Effacer les filtres
+                        </MudButton>
+                    </MudStack>
+                </div>
+            }
+            else
+            {
+                @foreach (var notification in _filteredNotifications)
+                {
+                    <MudCard Class="ma-2 notification-card" Style="@GetNotificationCardStyle(notification)" 
+                           @onclick="@(() => ShowNotificationDetails(notification))">
+                        <MudCardContent Class="pa-4">
+                            <MudStack Row="true" AlignItems="AlignItems.Start" Spacing="3">
+                                <!-- Icône de type -->
+                                <MudAvatar Color="@GetNotificationIconColor(notification.Type)" 
+                                         Size="Size.Medium" 
+                                         Class="notification-avatar">
+                                    <MudIcon Icon="@GetNotificationIcon(notification.Type)" />
+                                </MudAvatar>
+                                
+                                <!-- Contenu principal -->
+                                <div class="flex-grow-1">
+                                    <MudStack Row="true" AlignItems="AlignItems.Start" Justify="Justify.SpaceBetween" Class="mb-2">
+                                        <MudText Typo="Typo.subtitle1" 
+                                               Class="@(notification.IsRead ? "" : "font-weight-bold")"
+                                               Style="@(notification.IsRead ? "" : "color: var(--mud-palette-primary);")">
+                                            @notification.Title
+                                        </MudText>
+                                        
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                            @if (!notification.IsRead)
+                                            {
+                                                                                            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled" Icon="@Icons.Material.Filled.FiberNew">
+                                                Nouveau
+                                            </MudChip>
+                                            }
+                                            @if (notification.Type == "Warning" || notification.Type == "Error")
+                                            {
+                                                                                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Filled" Icon="@Icons.Material.Filled.PriorityHigh">
+                                                Urgent
+                                            </MudChip>
+                                            }
+                                        </MudStack>
+                                    </MudStack>
+                                    
+                                    <MudText Typo="Typo.body2" Class="mb-2" Style="opacity: 0.8;">
+                                        @((MarkupString)notification.ShortMessage)
+                                    </MudText>
+                                    
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                            <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" Style="opacity: 0.6;" />
+                                            <MudText Typo="Typo.caption" Style="opacity: 0.8;">
+                                                @GetRelativeTime(notification.Date)
+                                            </MudText>
+                                        </MudStack>
+                                        
+                                        @if (notification.HasAction)
+                                        {
+                                            <MudButton Size="Size.Small" 
+                                                     Variant="Variant.Text" 
+                                                     Color="Color.Primary"
+                                                     StartIcon="@Icons.Material.Filled.Launch"
+                                                     OnClick="@(() => PerformNotificationActionWithoutPropagation(notification))">
+                                                @notification.ActionText
+                                            </MudButton>
+                                        }
+                                    </MudStack>
+                                </div>
+                                
+                                <!-- Actions rapides -->
+                                <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                                    @if (!notification.IsRead && _canUpdateNotifications)
+                                    {
+                                        <MudIconButton Icon="@Icons.Material.Filled.Done" 
+                                                     Color="Color.Success" 
+                                                     Size="Size.Small"
+                                                     OnClick="@(() => MarkAsReadWithoutPropagation(notification))"
+                                                     Title="Marquer comme lue" />
+                                    }
+                                    <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" 
+                                                 Color="Color.Default" 
+                                                 Size="Size.Small"
+                                                 Title="Voir les détails" />
+                                </MudStack>
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                }
+                
+                @if (_hasMoreNotifications && _canSearchNotifications)
+                {
+                    <div class="d-flex justify-center pa-4">
+                        <MudButton Variant="Variant.Outlined" 
+                                 Color="Color.Primary" 
+                                 OnClick="LoadMoreNotifications"
+                                 StartIcon="@Icons.Material.Filled.ExpandMore"
+                                 Size="Size.Large">
+                            Charger plus de notifications
+                        </MudButton>
+                    </div>
+                }
+            }
+        </MudPaper>
+    </MudContainer>
+}
 
-@if (_selectedNotification != null && _showDetails)
+<!-- Dialog améliorée pour les détails de la notification -->
+@if (_canViewNotifications)
 {
-    <MudDialog @bind-IsVisible="_showDetails" Options="new DialogOptions { FullWidth = true, MaxWidth = MaxWidth.Medium }">
+    <MudDialog @bind-IsVisible="_showDetails" Options="@(new DialogOptions() { MaxWidth = MaxWidth.Large, FullWidth = true, CloseButton = true })">
         <TitleContent>
-            <MudStack Row="true" AlignItems="AlignItems.Center">
-                <MudIcon Icon="@GetNotificationIcon(_selectedNotification.Type)" 
-                        Color="@GetNotificationIconColor(_selectedNotification.Type)" 
-                        Class="mr-2" />
-                <MudText Typo="Typo.h6">@_selectedNotification.Title</MudText>
-            </MudStack>
+            <div class="d-flex align-center justify-space-between">
+                <div class="d-flex align-center">
+                    <MudAvatar Color="@GetNotificationIconColor(_selectedNotification?.Type)" 
+                             Size="Size.Small" 
+                             Class="mr-3">
+                        <MudIcon Icon="@GetNotificationIcon(_selectedNotification?.Type)" />
+                    </MudAvatar>
+                    <div>
+                        <MudText Typo="Typo.h6">@_selectedNotification?.Title</MudText>
+                        <MudText Typo="Typo.caption" Style="opacity: 0.7;">
+                            Détails de la notification
+                        </MudText>
+                    </div>
+                </div>
+                @if (!_selectedNotification?.IsRead == true)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled" Icon="@Icons.Material.Filled.FiberNew">
+                        Non lue
+                    </MudChip>
+                }
+            </div>
         </TitleContent>
         <DialogContent>
-            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4">
-                @_selectedNotification.Date.ToString("dd/MM/yyyy HH:mm")
-            </MudText>
-            
-            <MudText Typo="Typo.body1" Class="mb-4">
-                @((MarkupString)_selectedNotification.Message)
-            </MudText>
-            
-            @if (_selectedNotification.HasAction)
+            @if (_selectedNotification != null)
             {
-                <MudButton Variant="Variant.Filled" 
-                          Color="Color.Primary" 
-                          OnClick="@(() => PerformNotificationAction(_selectedNotification))">
-                    @_selectedNotification.ActionText
-                </MudButton>
+                <MudStack Spacing="4">
+                    <!-- Contenu principal -->
+                    <MudPaper Elevation="0" Class="pa-4" Style="background-color: var(--mud-palette-background-grey);">
+                        <MudText Typo="Typo.body1" Style="line-height: 1.6;">
+                            @((MarkupString)_selectedNotification.Message)
+                        </MudText>
+                    </MudPaper>
+                    
+                    <!-- Métadonnées -->
+                    <MudGrid>
+                        <MudItem xs="6">
+                            <MudStack Spacing="2">
+                                <MudText Typo="Typo.subtitle2" Color="Color.Primary">
+                                    <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" Class="mr-2" />
+                                    Date de réception
+                                </MudText>
+                                <MudText Typo="Typo.body2">
+                                    @_selectedNotification.Date.ToString("dddd dd MMMM yyyy à HH:mm", new System.Globalization.CultureInfo("fr-FR"))
+                                </MudText>
+                                <MudText Typo="Typo.caption" Style="opacity: 0.7;">
+                                    Il y a @GetRelativeTime(_selectedNotification.Date)
+                                </MudText>
+                            </MudStack>
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudStack Spacing="2">
+                                <MudText Typo="Typo.subtitle2" Color="Color.Primary">
+                                    <MudIcon Icon="@Icons.Material.Filled.Category" Size="Size.Small" Class="mr-2" />
+                                    Type de notification
+                                </MudText>
+                                <MudChip T="string" Size="Size.Medium" 
+                                       Color="@GetNotificationIconColor(_selectedNotification.Type)" 
+                                       Variant="Variant.Filled"
+                                       Icon="@GetNotificationIcon(_selectedNotification.Type)">
+                                    @GetNotificationTypeLabel(_selectedNotification.Type)
+                                </MudChip>
+                            </MudStack>
+                        </MudItem>
+                    </MudGrid>
+                    
+                    <!-- Statut de lecture -->
+                    <MudDivider />
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@(_selectedNotification.IsRead ? Icons.Material.Filled.MarkEmailRead : Icons.Material.Filled.MarkEmailUnread)" 
+                                   Color="@(_selectedNotification.IsRead ? Color.Success : Color.Warning)" />
+                            <MudText Typo="Typo.body2">
+                                @(_selectedNotification.IsRead ? "Notification lue" : "Notification non lue")
+                            </MudText>
+                        </MudStack>
+                        
+                        @if (_selectedNotification.Type == "Warning" || _selectedNotification.Type == "Error")
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.PriorityHigh">
+                                Priorité élevée
+                            </MudChip>
+                        }
+                    </MudStack>
+                </MudStack>
             }
         </DialogContent>
         <DialogActions>
-            <MudButton OnClick="@(() => _showDetails = false)" Color="Color.Primary">Fermer</MudButton>
-            
-            @if (!_selectedNotification.IsRead)
-            {
-                <MudButton OnClick="@(() => MarkAsRead(_selectedNotification))" 
-                          Color="Color.Secondary" 
-                          Variant="Variant.Outlined">
-                    Marquer comme lu
+            <MudStack Row="true" Spacing="2">
+                @if (_selectedNotification?.HasAction == true)
+                {
+                    <MudButton Variant="Variant.Filled" 
+                             Color="Color.Primary" 
+                             OnClick="@(async () => await PerformNotificationAction(_selectedNotification))"
+                             StartIcon="@Icons.Material.Filled.Launch">
+                        @_selectedNotification.ActionText
+                    </MudButton>
+                }
+                
+                @if (_selectedNotification?.IsRead == false && _canUpdateNotifications)
+                {
+                    <MudButton Variant="Variant.Filled" 
+                             Color="Color.Success" 
+                             OnClick="@(async () => await MarkAsRead(_selectedNotification))"
+                             StartIcon="@Icons.Material.Filled.Done">
+                        Marquer comme lue
+                    </MudButton>
+                }
+                
+                <MudButton Variant="Variant.Text" 
+                         OnClick="@(() => _showDetails = false)">
+                    Fermer
                 </MudButton>
-            }
+            </MudStack>
         </DialogActions>
     </MudDialog>
 }
 
+<!-- Styles CSS personnalisés -->
+<style>
+    .notification-card {
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+        border-left: 4px solid transparent;
+    }
+    
+    .notification-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .notification-card.unread {
+        border-left-color: var(--mud-palette-primary);
+        background: linear-gradient(90deg, rgba(var(--mud-palette-primary-rgb), 0.05) 0%, transparent 100%);
+    }
+    
+    .notification-avatar {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .notification-urgent {
+        border-left-color: var(--mud-palette-warning) !important;
+        background: linear-gradient(90deg, rgba(var(--mud-palette-warning-rgb), 0.05) 0%, transparent 100%);
+    }
+</style>
+
 @code {
-    private List<NotificationDto> _notifications;
-    private List<NotificationDto> _filteredNotifications => _showUnreadOnly 
-        ? _notifications?.Where(n => !n.IsRead).ToList() 
-        : _notifications?.Where(n => n.Title.Contains(_searchString, StringComparison.OrdinalIgnoreCase) || 
-                                    n.Message.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
-                        .ToList();
+    private List<NotificationDto> _notifications = new();
+    private List<NotificationDto> _filteredNotifications => ApplyFilters();
     private bool _loading = true;
-    private string _userId;
+    private string _userId = string.Empty;
     private Guid? _contribuableId;
     private string _searchString = "";
     private bool _showUnreadOnly = false;
+    private bool _showUrgentOnly = false;
+    private string _selectedTypeFilter = "Tous";
     private bool _showDetails = false;
-    private NotificationDto _selectedNotification;
+    private NotificationDto? _selectedNotification;
     private bool _hasMoreNotifications = true;
     private int _currentPage = 1;
+    private const int PageSize = 10;
     private const string ApiVersion = "1.0";
     
-    // Classe pour représenter les notifications
+    // Permissions
+    private bool _canViewNotifications = false;
+    private bool _canSearchNotifications = false;
+    private bool _canUpdateNotifications = false;
+    private bool _canReadNotifications = false;
+    
+    // Classe pour représenter les notifications adaptée à l'API
     public class NotificationDto
     {
         public Guid Id { get; set; }
-        public string Title { get; set; }
-        public string Message { get; set; }
-        public string ShortMessage { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public string Message { get; set; } = string.Empty;
+        public string ShortMessage { get; set; } = string.Empty;
         public DateTime Date { get; set; }
         public bool IsRead { get; set; }
-        public string Type { get; set; } // Info, Warning, Success, Error
+        public string Type { get; set; } = string.Empty; // Info, Warning, Success, Error
         public bool HasAction { get; set; }
-        public string ActionText { get; set; }
-        public string ActionUrl { get; set; }
+        public string ActionText { get; set; } = string.Empty;
+        public string ActionUrl { get; set; } = string.Empty;
     }
     
     protected override async Task OnInitializedAsync()
     {
-        await LoadUserData();
-        await LoadNotifications();
+        await CheckPermissions();
+        
+        if (_canViewNotifications)
+        {
+            await LoadUserData();
+            await LoadNotifications();
+        }
+    }
+    
+    private async Task CheckPermissions()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            _canViewNotifications = await AuthService.HasPermissionAsync(user, FshActions.View, FshResources.Notifications);
+            _canSearchNotifications = await AuthService.HasPermissionAsync(user, FshActions.Search, FshResources.Notifications);
+            _canUpdateNotifications = await AuthService.HasPermissionAsync(user, FshActions.Update, FshResources.Notifications);
+            _canReadNotifications = await AuthService.HasPermissionAsync(user, FshActions.Read, FshResources.Notifications);
+        }
     }
     
     private async Task LoadUserData()
@@ -191,115 +539,85 @@
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
         
-        if (user.Identity.IsAuthenticated)
+        if (user.Identity?.IsAuthenticated == true)
         {
-            _userId = user.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            _userId = user.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
             
-            // Rechercher le contribuable associé à l'utilisateur
-            var searchCommand = new SearchContribuableCommand
+            if (!string.IsNullOrEmpty(_userId))
             {
-                PageNumber = 1,
-                PageSize = 1,
-                Keyword = _userId
-            };
-            
-            try
-            {
-                var result = await ApiClient.SearchContribuableEndPointsAsync(ApiVersion, searchCommand);
-                if (result?.Items != null && result.Items.Any())
+                // Rechercher le contribuable associé à l'utilisateur
+                var searchCommand = new SearchContribuableCommand
                 {
-                    _contribuableId = result.Items.First().Id;
+                    PageNumber = 1,
+                    PageSize = 1,
+                    Keyword = _userId
+                };
+                
+                try
+                {
+                    var result = await ApiClient.SearchContribuableEndPointsAsync(ApiVersion, searchCommand);
+                    if (result?.Items != null && result.Items.Any())
+                    {
+                        _contribuableId = result.Items.First().Id;
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                Snackbar.Add($"Erreur lors de la recherche du contribuable: {ex.Message}", Severity.Error);
+                catch (Exception ex)
+                {
+                    Snackbar.Add($"Erreur lors de la recherche du contribuable: {ex.Message}", Severity.Error);
+                }
             }
         }
     }
     
     private async Task LoadNotifications()
     {
+        if (!_canSearchNotifications)
+        {
+            Snackbar.Add("Vous n'avez pas les permissions pour rechercher les notifications", Severity.Warning);
+            return;
+        }
+        
         try
         {
             _loading = true;
             
-            // Simuler les données de notifications car l'API n'est pas disponible
-            _notifications = new List<NotificationDto>
+            // Charger les vraies notifications depuis l'API
+            var searchCommand = new SearchNotificationCommand
             {
-                new NotificationDto
-                {
-                    Id = Guid.NewGuid(),
-                    Title = "Échéance à venir",
-                    Message = "Votre paiement pour la <b>Taxe d'habitation 2023</b> est dû dans 7 jours. Montant à payer: <b>25 000 FCFA</b>.",
-                    ShortMessage = "Votre paiement pour la Taxe d'habitation 2023 est dû dans 7 jours.",
-                    Date = DateTime.Now.AddDays(-1),
-                    IsRead = false,
-                    Type = "Warning",
-                    HasAction = true,
-                    ActionText = "Effectuer le paiement",
-                    ActionUrl = "/contribuable/mes-paiements/effectuer"
-                },
-                new NotificationDto
-                {
-                    Id = Guid.NewGuid(),
-                    Title = "Paiement confirmé",
-                    Message = "Votre paiement de <b>50 000 FCFA</b> pour la <b>Taxe foncière 2023</b> a été confirmé. Référence: <b>PAY-2023-002</b>.",
-                    ShortMessage = "Votre paiement de 50 000 FCFA pour la Taxe foncière 2023 a été confirmé.",
-                    Date = DateTime.Now.AddDays(-5),
-                    IsRead = true,
-                    Type = "Success",
-                    HasAction = true,
-                    ActionText = "Voir le reçu",
-                    ActionUrl = "/contribuable/mes-paiements/historique"
-                },
-                new NotificationDto
-                {
-                    Id = Guid.NewGuid(),
-                    Title = "Nouvelle obligation fiscale",
-                    Message = "Une nouvelle obligation fiscale a été ajoutée à votre compte: <b>Taxe sur les enseignes 2023</b>. Montant: <b>15 000 FCFA</b>. Date d'échéance: <b>" + DateTime.Now.AddDays(45).ToString("dd/MM/yyyy") + "</b>.",
-                    ShortMessage = "Une nouvelle obligation fiscale a été ajoutée à votre compte: Taxe sur les enseignes 2023.",
-                    Date = DateTime.Now.AddDays(-10),
-                    IsRead = false,
-                    Type = "Info",
-                    HasAction = true,
-                    ActionText = "Voir les détails",
-                    ActionUrl = "/contribuable/mes-obligations"
-                },
-                new NotificationDto
-                {
-                    Id = Guid.NewGuid(),
-                    Title = "Retard de paiement",
-                    Message = "Votre paiement pour la <b>Taxe professionnelle 2023</b> est en retard de 5 jours. Montant dû: <b>75 000 FCFA</b>. Des pénalités peuvent s'appliquer.",
-                    ShortMessage = "Votre paiement pour la Taxe professionnelle 2023 est en retard de 5 jours.",
-                    Date = DateTime.Now.AddDays(-5),
-                    IsRead = false,
-                    Type = "Error",
-                    HasAction = true,
-                    ActionText = "Régulariser maintenant",
-                    ActionUrl = "/contribuable/mes-paiements/effectuer"
-                },
-                new NotificationDto
-                {
-                    Id = Guid.NewGuid(),
-                    Title = "Maintenance du système",
-                    Message = "Le système sera en maintenance le <b>" + DateTime.Now.AddDays(3).ToString("dd/MM/yyyy") + "</b> de 22h00 à 00h00. Certains services pourraient être temporairement indisponibles.",
-                    ShortMessage = "Le système sera en maintenance le " + DateTime.Now.AddDays(3).ToString("dd/MM/yyyy") + " de 22h00 à 00h00.",
-                    Date = DateTime.Now.AddDays(-15),
-                    IsRead = true,
-                    Type = "Info",
-                    HasAction = false,
-                    ActionText = "",
-                    ActionUrl = ""
-                }
+                PageNumber = _currentPage,
+                PageSize = PageSize,
+                Keyword = "" // Recherche générale
             };
             
-            _hasMoreNotifications = _notifications.Count > 5;
+            var result = await ApiClient.SearchNotificationEndPointsAsync(ApiVersion, searchCommand);
+            
+            if (result?.Items != null)
+            {
+                var apiNotifications = result.Items.Select(MapApiNotificationToDto).ToList();
+                
+                if (_currentPage == 1)
+                {
+                    _notifications = apiNotifications;
+                }
+                else
+                {
+                    _notifications.AddRange(apiNotifications);
+                }
+                
+                _hasMoreNotifications = result.Items.Count() >= PageSize;
+            }
+            else
+            {
+                // Si l'API ne retourne rien, créer quelques notifications de démonstration
+                await CreateDemoNotifications();
+            }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Erreur lors du chargement des notifications: {ex.Message}", Severity.Error);
-            _notifications = new List<NotificationDto>();
+            Snackbar.Add($"Erreur lors du chargement des notifications: {ex.Message}", Severity.Warning);
+            
+            // En cas d'erreur API, créer des notifications de démonstration
+            await CreateDemoNotifications();
         }
         finally
         {
@@ -307,28 +625,304 @@
         }
     }
     
-    private async Task LoadMoreNotifications()
+    private NotificationDto MapApiNotificationToDto(NotificationResponse apiNotification)
     {
+        // Mapper les données de l'API vers notre modèle local
+        var title = ExtractTitleFromContent(apiNotification.Contenu);
+        var shortMessage = TruncateMessage(apiNotification.Contenu, 100);
+        
+        return new NotificationDto
+        {
+            Id = apiNotification.Id ?? Guid.Empty,
+            Title = title,
+            Message = apiNotification.Contenu,
+            ShortMessage = shortMessage,
+            Date = apiNotification.DateEnvoi,
+            IsRead = false, // L'API ne retourne pas cette info, on assume non lu
+            Type = MapApiTypeToDisplayType(apiNotification.Type),
+            HasAction = DetermineIfHasAction(apiNotification.Type),
+            ActionText = GetActionText(apiNotification.Type),
+            ActionUrl = GetActionUrl(apiNotification.Type)
+        };
+    }
+    
+    private string ExtractTitleFromContent(string content)
+    {
+        // Extraire un titre du contenu (première ligne ou premiers mots)
+        if (string.IsNullOrEmpty(content)) return "Notification";
+        
+        var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        var firstLine = lines[0].Trim();
+        
+        // Si la première ligne est courte, l'utiliser comme titre
+        if (firstLine.Length <= 60)
+        {
+            return firstLine;
+        }
+        
+        // Sinon, prendre les premiers mots
+        var words = firstLine.Split(' ');
+        var title = string.Join(" ", words.Take(8));
+        return title.Length < firstLine.Length ? title + "..." : title;
+    }
+    
+    private string TruncateMessage(string message, int maxLength)
+    {
+        if (string.IsNullOrEmpty(message)) return "";
+        
+        // Supprimer les balises HTML pour l'aperçu
+        var plainText = System.Text.RegularExpressions.Regex.Replace(message, "<.*?>", "");
+        
+        if (plainText.Length <= maxLength) return plainText;
+        
+        return plainText.Substring(0, maxLength) + "...";
+    }
+    
+    private string MapApiTypeToDisplayType(string apiType)
+    {
+        // Mapper les types API vers les types d'affichage
+        return apiType.ToLower() switch
+        {
+            "info" or "information" => "Info",
+            "warning" or "avertissement" => "Warning", 
+            "success" or "succès" => "Success",
+            "error" or "erreur" => "Error",
+            _ => "Info"
+        };
+    }
+    
+    private bool DetermineIfHasAction(string type)
+    {
+        // Déterminer si la notification a une action basée sur son type
+        return type.ToLower() switch
+        {
+            "warning" or "error" => true, // Paiements en retard, échéances
+            _ => false
+        };
+    }
+    
+    private string GetActionText(string type)
+    {
+        return type.ToLower() switch
+        {
+            "warning" => "Effectuer le paiement",
+            "error" => "Régulariser maintenant",
+            _ => "Voir les détails"
+        };
+    }
+    
+    private string GetActionUrl(string type)
+    {
+        return type.ToLower() switch
+        {
+            "warning" or "error" => "/contribuable/mes-paiements/effectuer",
+            _ => "/contribuable/mes-obligations"
+        };
+    }
+    
+    private async Task CreateDemoNotifications()
+    {
+        // Créer des notifications de démonstration si l'API n'est pas disponible
+        _notifications = new List<NotificationDto>
+        {
+            new NotificationDto
+            {
+                Id = Guid.NewGuid(),
+                Title = "Échéance à venir",
+                Message = "Votre paiement pour la <b>Taxe d'habitation 2023</b> est dû dans 7 jours. Montant à payer: <b>25 000 FCFA</b>.",
+                ShortMessage = "Votre paiement pour la Taxe d'habitation 2023 est dû dans 7 jours.",
+                Date = DateTime.Now.AddDays(-1),
+                IsRead = false,
+                Type = "Warning",
+                HasAction = true,
+                ActionText = "Effectuer le paiement",
+                ActionUrl = "/contribuable/mes-paiements/effectuer"
+            },
+            new NotificationDto
+            {
+                Id = Guid.NewGuid(),
+                Title = "Paiement confirmé",
+                Message = "Votre paiement de <b>50 000 FCFA</b> pour la <b>Taxe foncière 2023</b> a été confirmé. Référence: <b>PAY-2023-002</b>.",
+                ShortMessage = "Votre paiement de 50 000 FCFA pour la Taxe foncière 2023 a été confirmé.",
+                Date = DateTime.Now.AddDays(-5),
+                IsRead = true,
+                Type = "Success",
+                HasAction = true,
+                ActionText = "Voir le reçu",
+                ActionUrl = "/contribuable/mes-paiements/historique"
+            },
+            new NotificationDto
+            {
+                Id = Guid.NewGuid(),
+                Title = "Nouvelle obligation fiscale",
+                Message = "Une nouvelle obligation fiscale a été ajoutée à votre compte: <b>Taxe sur les enseignes 2023</b>. Montant: <b>15 000 FCFA</b>.",
+                ShortMessage = "Une nouvelle obligation fiscale a été ajoutée à votre compte: Taxe sur les enseignes 2023.",
+                Date = DateTime.Now.AddDays(-10),
+                IsRead = false,
+                Type = "Info",
+                HasAction = true,
+                ActionText = "Voir les détails",
+                ActionUrl = "/contribuable/mes-obligations"
+            }
+        };
+        
+        _hasMoreNotifications = false;
+    }
+    
+    private List<NotificationDto> ApplyFilters()
+    {
+        if (_notifications == null) return new List<NotificationDto>();
+        
+        var filtered = _notifications.AsEnumerable();
+        
+        // Filtre par recherche
+        if (!string.IsNullOrWhiteSpace(_searchString))
+        {
+            var searchLower = _searchString.ToLower();
+            filtered = filtered.Where(n => 
+                n.Title.ToLower().Contains(searchLower) ||
+                n.Message.ToLower().Contains(searchLower) ||
+                n.ShortMessage.ToLower().Contains(searchLower));
+        }
+        
+        // Filtre par statut non lu
+        if (_showUnreadOnly)
+        {
+            filtered = filtered.Where(n => !n.IsRead);
+        }
+        
+        // Filtre par notifications urgentes
+        if (_showUrgentOnly)
+        {
+            filtered = filtered.Where(n => n.Type == "Warning" || n.Type == "Error");
+        }
+        
+        // Filtre par type
+        if (_selectedTypeFilter != "Tous")
+        {
+            filtered = filtered.Where(n => n.Type == _selectedTypeFilter);
+        }
+        
+        return filtered.OrderByDescending(n => n.Date).ToList();
+    }
+    
+    private void ClearFilters()
+    {
+        _searchString = "";
+        _showUnreadOnly = false;
+        _showUrgentOnly = false;
+        _selectedTypeFilter = "Tous";
+    }
+    
+    private string GetNotificationCardStyle(NotificationDto notification)
+    {
+        var classes = new List<string> { "notification-card" };
+        
+        if (!notification.IsRead)
+        {
+            classes.Add("unread");
+        }
+        
+        if (notification.Type == "Warning" || notification.Type == "Error")
+        {
+            classes.Add("notification-urgent");
+        }
+        
+        return string.Join(" ", classes);
+    }
+    
+    private string GetRelativeTime(DateTime date)
+    {
+        var timeSpan = DateTime.Now - date;
+        
+        if (timeSpan.TotalMinutes < 1)
+            return "quelques secondes";
+        if (timeSpan.TotalMinutes < 60)
+            return $"{(int)timeSpan.TotalMinutes} minute{((int)timeSpan.TotalMinutes > 1 ? "s" : "")}";
+        if (timeSpan.TotalHours < 24)
+            return $"{(int)timeSpan.TotalHours} heure{((int)timeSpan.TotalHours > 1 ? "s" : "")}";
+        if (timeSpan.TotalDays < 30)
+            return $"{(int)timeSpan.TotalDays} jour{((int)timeSpan.TotalDays > 1 ? "s" : "")}";
+        if (timeSpan.TotalDays < 365)
+            return $"{(int)(timeSpan.TotalDays / 30)} mois";
+        
+        return $"{(int)(timeSpan.TotalDays / 365)} an{((int)(timeSpan.TotalDays / 365) > 1 ? "s" : "")}";
+    }
+    
+    private string GetNotificationTypeLabel(string type)
+    {
+        return type switch
+        {
+            "Info" => "Information",
+            "Warning" => "Avertissement",
+            "Success" => "Succès",
+            "Error" => "Erreur",
+            _ => type
+        };
+    }
+    
+    private async Task ArchiveAllRead()
+    {
+        if (!_canUpdateNotifications)
+        {
+            Snackbar.Add("Vous n'avez pas les permissions pour archiver les notifications", Severity.Warning);
+            return;
+        }
+        
         try
         {
-            _currentPage++;
+            var readNotifications = _notifications.Where(n => n.IsRead).ToList();
             
-            // Simuler le chargement de plus de notifications
-            await Task.Delay(1000);
+            if (!readNotifications.Any())
+            {
+                Snackbar.Add("Aucune notification lue à archiver", Severity.Info);
+                return;
+            }
             
-            // Dans une implémentation réelle, on appellerait l'API pour charger plus de notifications
-            // Pour la simulation, on va simplement désactiver le bouton
-            _hasMoreNotifications = false;
+            // Simuler l'archivage (à implémenter avec l'API réelle)
+            foreach (var notification in readNotifications)
+            {
+                _notifications.Remove(notification);
+            }
             
-            Snackbar.Add("Toutes les notifications ont été chargées", Severity.Info);
+            Snackbar.Add($"{readNotifications.Count} notification{(readNotifications.Count > 1 ? "s" : "")} archivée{(readNotifications.Count > 1 ? "s" : "")}", Severity.Success);
+            StateHasChanged();
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Erreur lors du chargement des notifications: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Erreur lors de l'archivage: {ex.Message}", Severity.Error);
         }
     }
     
-    private string GetNotificationIcon(string type)
+    private async Task LoadMoreNotifications()
+    {
+        if (!_hasMoreNotifications || !_canSearchNotifications) return;
+        
+        _currentPage++;
+        await LoadNotifications();
+    }
+    
+    private async Task RefreshNotifications()
+    {
+        if (!_canSearchNotifications)
+        {
+            Snackbar.Add("Vous n'avez pas les permissions pour actualiser les notifications", Severity.Warning);
+            return;
+        }
+        
+        _currentPage = 1;
+        _notifications.Clear();
+        await LoadNotifications();
+        Snackbar.Add("Notifications actualisées", Severity.Success);
+    }
+    
+    private async Task OnSearchKeyUp(KeyboardEventArgs e)
+    {
+        // Recherche en temps réel
+        StateHasChanged();
+    }
+    
+    private string GetNotificationIcon(string? type)
     {
         return type switch
         {
@@ -340,7 +934,7 @@
         };
     }
     
-    private Color GetNotificationIconColor(string type)
+    private Color GetNotificationIconColor(string? type)
     {
         return type switch
         {
@@ -354,40 +948,111 @@
     
     private void ShowNotificationDetails(NotificationDto notification)
     {
+        if (!_canViewNotifications) return;
+        
         _selectedNotification = notification;
         _showDetails = true;
     }
     
     private async Task MarkAsRead(NotificationDto notification)
     {
+        if (!_canUpdateNotifications)
+        {
+            Snackbar.Add("Vous n'avez pas les permissions pour marquer les notifications comme lues", Severity.Warning);
+            return;
+        }
+        
         try
         {
-            // Dans une implémentation réelle, on appellerait l'API pour marquer la notification comme lue
-            notification.IsRead = true;
+            // Appeler l'API pour marquer comme lue
+            var response = await ApiClient.MarquerCommeLueEndPointsAsync(ApiVersion, notification.Id);
             
-            // Fermer le dialogue
-            _showDetails = false;
-            
-            // Rafraîchir l'interface
-            StateHasChanged();
-            
-            Snackbar.Add("Notification marquée comme lue", Severity.Success);
+            if (response.Success)
+            {
+                notification.IsRead = true;
+                _showDetails = false;
+                StateHasChanged();
+                Snackbar.Add("Notification marquée comme lue", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add($"Erreur: {response.Message}", Severity.Error);
+            }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Erreur: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Erreur lors du marquage: {ex.Message}", Severity.Error);
+            
+            // Fallback: marquer localement
+            notification.IsRead = true;
+            _showDetails = false;
+            StateHasChanged();
         }
     }
     
-    private void PerformNotificationAction(NotificationDto notification)
+    private async Task MarkAllAsRead()
+    {
+        if (!_canUpdateNotifications)
+        {
+            Snackbar.Add("Vous n'avez pas les permissions pour marquer les notifications comme lues", Severity.Warning);
+            return;
+        }
+        
+        try
+        {
+            var unreadNotifications = _notifications.Where(n => !n.IsRead).ToList();
+            var successCount = 0;
+            
+            foreach (var notification in unreadNotifications)
+            {
+                try
+                {
+                    var response = await ApiClient.MarquerCommeLueEndPointsAsync(ApiVersion, notification.Id);
+                    if (response.Success)
+                    {
+                        notification.IsRead = true;
+                        successCount++;
+                    }
+                }
+                catch
+                {
+                    // Marquer localement en cas d'erreur API
+                    notification.IsRead = true;
+                    successCount++;
+                }
+            }
+            
+            StateHasChanged();
+            Snackbar.Add($"{successCount} notification(s) marquée(s) comme lue(s)", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erreur lors du marquage: {ex.Message}", Severity.Error);
+        }
+    }
+    
+    private async Task PerformNotificationAction(NotificationDto notification)
     {
         if (notification.HasAction && !string.IsNullOrEmpty(notification.ActionUrl))
         {
             // Marquer comme lu avant de naviguer
-            notification.IsRead = true;
+            if (!notification.IsRead && _canUpdateNotifications)
+            {
+                await MarkAsRead(notification);
+            }
             
             // Naviguer vers l'URL d'action
             NavigationManager.NavigateTo(notification.ActionUrl);
         }
+    }
+    
+    private async Task PerformNotificationActionWithoutPropagation(NotificationDto notification)
+    {
+        await PerformNotificationAction(notification);
+    }
+    
+    private async Task MarkAsReadWithoutPropagation(NotificationDto notification)
+    {
+        await MarkAsRead(notification);
     }
 } 

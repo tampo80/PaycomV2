@@ -4,11 +4,13 @@
 @using PayCom.Blazor.Infrastructure.Api
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
+@using PayCom.Blazor.Client.Pages.Contribuables.Dialogs
 
 @inject ISnackbar Snackbar
 @inject IApiClient ApiClient
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager NavigationManager
+@inject IDialogService DialogService
 
 <PageTitle>Mes Obligations Fiscales - PayCom</PageTitle>
 
@@ -99,101 +101,6 @@
     </MudPaper>
 </MudContainer>
 
-@if (_selectedObligation != null && _showDetails)
-{
-    <MudDialog @bind-IsVisible="_showDetails" Options="new DialogOptions { FullWidth = true, MaxWidth = MaxWidth.Medium }">
-        <TitleContent>
-            <MudText Typo="Typo.h6">
-                <MudIcon Icon="@Icons.Material.Filled.Assignment" Class="mr-2" />
-                Détails de l'obligation fiscale
-            </MudText>
-        </TitleContent>
-        <DialogContent>
-            <MudGrid>
-                <MudItem xs="12" md="6">
-                    <MudText Typo="Typo.subtitle1"><b>Type de taxe:</b></MudText>
-                    <MudText>@GetTypeTaxeName(_selectedObligation.TypeTaxeId)</MudText>
-                </MudItem>
-                <MudItem xs="12" md="6">
-                    <MudText Typo="Typo.subtitle1"><b>Statut:</b></MudText>
-                    <MudChip T="string" Color="@(_selectedObligation.EstActif ? Color.Success : Color.Error)" Size="Size.Small">
-                        @(_selectedObligation.EstActif ? "Actif" : "Inactif")
-                    </MudChip>
-                </MudItem>
-                <MudItem xs="12" md="6">
-                    <MudText Typo="Typo.subtitle1"><b>Date de début:</b></MudText>
-                    <MudText>@_selectedObligation.DateDebut.ToString("dd/MM/yyyy")</MudText>
-                </MudItem>
-                <MudItem xs="12" md="6">
-                    <MudText Typo="Typo.subtitle1"><b>Date de fin:</b></MudText>
-                    <MudText>@(_selectedObligation.DateFin.HasValue ? _selectedObligation.DateFin.Value.ToString("dd/MM/yyyy") : "-")</MudText>
-                </MudItem>
-                <MudItem xs="12" md="6">
-                    <MudText Typo="Typo.subtitle1"><b>Montant calculé:</b></MudText>
-                    <MudText>@_selectedObligation.MontantCalcule.ToString("N0") FCFA</MudText>
-                </MudItem>
-                @if (_selectedObligation.MontantPersonnalise.HasValue)
-                {
-                    <MudItem xs="12" md="6">
-                        <MudText Typo="Typo.subtitle1"><b>Montant personnalisé:</b></MudText>
-                        <MudText>@_selectedObligation.MontantPersonnalise.Value.ToString("N0") FCFA</MudText>
-                    </MudItem>
-                }
-                
-                @if (_selectedTypeTaxe != null)
-                {
-                    <MudItem xs="12">
-                        <MudDivider Class="my-3" />
-                        <MudText Typo="Typo.h6" Class="mb-2">Informations sur la taxe</MudText>
-                        
-                        <MudText Typo="Typo.subtitle1"><b>Nom:</b> @_selectedTypeTaxe.Nom</MudText>
-                        <MudText Typo="Typo.subtitle1"><b>Description:</b> @_selectedTypeTaxe.Description</MudText>
-                        <MudText Typo="Typo.subtitle1"><b>Fréquence de paiement:</b> @_selectedTypeTaxe.FrequencePaiement</MudText>
-                        <MudText Typo="Typo.subtitle1"><b>Montant de base:</b> @_selectedTypeTaxe.MontantBase.ToString("N0") FCFA</MudText>
-                    </MudItem>
-                }
-                
-                <MudItem xs="12">
-                    <MudDivider Class="my-3" />
-                    <MudText Typo="Typo.h6" Class="mb-2">Échéances</MudText>
-                    
-                    @if (_echeances != null && _echeances.Any())
-                    {
-                        <MudTable Items="@_echeances" Dense="true" Hover="true" Bordered="false" Striped="true">
-                            <HeaderContent>
-                                <MudTh>Année</MudTh>
-                                <MudTh>Période</MudTh>
-                                <MudTh>Date limite</MudTh>
-                                <MudTh>Montant</MudTh>
-                                <MudTh>Statut</MudTh>
-                            </HeaderContent>
-                            <RowTemplate>
-                                <MudTd DataLabel="Année">@context.AnneeImposition</MudTd>
-                                <MudTd DataLabel="Période">@context.PeriodeImposition</MudTd>
-                                <MudTd DataLabel="Date limite">@context.DateLimite.ToString("dd/MM/yyyy")</MudTd>
-                                <MudTd DataLabel="Montant">@context.Montant.ToString("N0") FCFA</MudTd>
-                                <MudTd DataLabel="Statut">
-                                    <MudChip T="string" Color="@GetEcheanceStatusColor(context)" Size="Size.Small">
-                                        @GetEcheanceStatusText(context)
-                                    </MudChip>
-                                </MudTd>
-                            </RowTemplate>
-                        </MudTable>
-                    }
-                    else
-                    {
-                        <MudText>Aucune échéance disponible pour cette obligation.</MudText>
-                    }
-                </MudItem>
-            </MudGrid>
-        </DialogContent>
-        <DialogActions>
-            <MudButton OnClick="@(() => _showDetails = false)" Color="Color.Primary">Fermer</MudButton>
-            <MudButton Href="/paiements/effectuer" Color="Color.Secondary" Variant="Variant.Filled">Effectuer un paiement</MudButton>
-        </DialogActions>
-    </MudDialog>
-}
-
 @code {
     private List<ObligationFiscaleResponse> _obligations;
     private List<ObligationFiscaleResponse> _filteredObligations => _showActiveOnly 
@@ -206,9 +113,7 @@
     private Guid? _contribuableId;
     private string _searchString = "";
     private bool _showActiveOnly = true;
-    private bool _showDetails = false;
     private ObligationFiscaleResponse _selectedObligation;
-    private TypeTaxeResponse _selectedTypeTaxe;
     private const string ApiVersion = "1.0";
     
     // Classe pour représenter les échéances
@@ -221,14 +126,6 @@
         public DateTime DateLimite { get; set; }
         public decimal Montant { get; set; }
         public bool EstPayee { get; set; }
-    }
-    
-    // Classe pour la recherche d'échéances
-    public class SearchEcheancesCommand
-    {
-        public int PageNumber { get; set; } = 1;
-        public int PageSize { get; set; } = 100;
-        public Guid? ObligationFiscaleId { get; set; }
     }
     
     protected override async Task OnInitializedAsync()
@@ -247,25 +144,25 @@
         {
             _userId = user.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
             
-            // Rechercher le contribuable associé à l'utilisateur
-            var searchCommand = new SearchContribuableCommand
+            if (Guid.TryParse(_userId, out var userIdGuid))
             {
-                PageNumber = 1,
-                PageSize = 1,
-                Keyword = _userId
-            };
-            
-            try
-            {
-                var result = await ApiClient.SearchContribuableEndPointsAsync(ApiVersion, searchCommand);
-                if (result?.Items != null && result.Items.Any())
+                try
                 {
-                    _contribuableId = result.Items.First().Id;
+                    // Utiliser l'API directe pour récupérer le contribuable par son ID utilisateur
+                    var contribuable = await ApiClient.GetContribuableByUserIdEndPointsAsync(ApiVersion, userIdGuid);
+                    if (contribuable?.Id != null)
+                    {
+                        _contribuableId = contribuable.Id.Value;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Snackbar.Add($"Erreur lors de la récupération du profil contribuable: {ex.Message}", Severity.Error);
                 }
             }
-            catch (Exception ex)
+            else
             {
-                Snackbar.Add($"Erreur lors de la recherche du contribuable: {ex.Message}", Severity.Error);
+                Snackbar.Add("ID utilisateur invalide", Severity.Error);
             }
         }
     }
@@ -301,18 +198,16 @@
             
             if (_contribuableId.HasValue)
             {
-                var searchCommand = new SearchObligationFiscalesCommand
-                {
-                    PageNumber = 1,
-                    PageSize = 100,
-                    ContribuableId = _contribuableId.Value
-                };
+                // Utiliser l'API spécifique pour récupérer les obligations par contribuable
+                var obligations = await ApiClient.GetObligationsByContribuableEndPointsAsync(ApiVersion, _contribuableId.Value);
                 
-                var result = await ApiClient.SearchObligationFiscaleEndPointsAsync(ApiVersion, searchCommand);
-                
-                if (result?.Items != null)
+                if (obligations != null)
                 {
-                    _obligations = result.Items.ToList();
+                    _obligations = obligations.ToList();
+                }
+                else
+                {
+                    _obligations = new List<ObligationFiscaleResponse>();
                 }
             }
             else
@@ -320,6 +215,21 @@
                 _obligations = new List<ObligationFiscaleResponse>();
                 Snackbar.Add("Impossible de trouver votre profil contribuable", Severity.Warning);
             }
+        }
+        catch (UnauthorizedAccessException)
+        {
+            Snackbar.Add("Vous n'avez pas l'autorisation d'accéder à ces obligations fiscales", Severity.Error);
+            _obligations = new List<ObligationFiscaleResponse>();
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("401"))
+        {
+            Snackbar.Add("Session expirée. Veuillez vous reconnecter", Severity.Warning);
+            _obligations = new List<ObligationFiscaleResponse>();
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("403"))
+        {
+            Snackbar.Add("Accès refusé à vos obligations fiscales", Severity.Error);
+            _obligations = new List<ObligationFiscaleResponse>();
         }
         catch (Exception ex)
         {
@@ -372,89 +282,48 @@
         return false;
     }
     
-    private async Task ShowObligationDetails(ObligationFiscaleResponse obligation)
+    private void ShowObligationDetails(ObligationFiscaleResponse obligation)
     {
-        _selectedObligation = obligation;
-        
-        if (_typesTaxes.TryGetValue(obligation.TypeTaxeId, out var typeTaxe))
-        {
-            _selectedTypeTaxe = typeTaxe;
-        }
-        
-        // Charger les échéances pour cette obligation
-        await LoadEcheances(obligation.Id);
-        
-        _showDetails = true;
+        // Rediriger vers la page de détails de l'obligation
+        NavigationManager.NavigateTo($"/contribuable/obligation-fiscale/{obligation.Id}");
     }
     
-    private async Task LoadEcheances(Guid obligationId)
+    private async Task<List<ObligationDetailsDialog.EcheanceDto>> LoadEcheances(Guid obligationId)
     {
         try
         {
-            var searchCommand = new SearchEcheancesCommand
+            var searchCommand = new PayCom.Blazor.Infrastructure.Api.SearchEcheancesCommand
             {
                 PageNumber = 1,
                 PageSize = 100,
                 ObligationFiscaleId = obligationId
             };
             
-            // Simuler les données d'échéances car l'API n'est pas disponible
-            _echeances = new List<EcheanceDto>
+            // Utiliser l'API réelle pour charger les échéances
+            var result = await ApiClient.SearchEcheanceEndPointsAsync(ApiVersion, searchCommand);
+            
+            if (result?.Items != null)
             {
-                new EcheanceDto
+                return result.Items.Select(e => new ObligationDetailsDialog.EcheanceDto
                 {
-                    Id = Guid.NewGuid(),
-                    ObligationFiscaleId = obligationId,
-                    AnneeImposition = DateTime.Now.Year,
-                    PeriodeImposition = 1,
-                    DateLimite = DateTime.Now.AddDays(30),
-                    Montant = 25000,
-                    EstPayee = false
-                },
-                new EcheanceDto
-                {
-                    Id = Guid.NewGuid(),
-                    ObligationFiscaleId = obligationId,
-                    AnneeImposition = DateTime.Now.Year,
-                    PeriodeImposition = 2,
-                    DateLimite = DateTime.Now.AddDays(-15),
-                    Montant = 25000,
-                    EstPayee = true
-                }
-            };
+                    Id = e.Id,
+                    ObligationFiscaleId = e.ObligationFiscaleId,
+                    AnneeImposition = e.AnneeImposition,
+                    PeriodeImposition = e.PeriodeImposition,
+                    DateLimite = e.DateEcheance,
+                    Montant = (decimal)e.MontantDu, // Conversion double vers decimal
+                    EstPayee = e.Statut == "Payee" || e.MontantRestant <= 0
+                }).ToList();
+            }
+            else
+            {
+                return new List<ObligationDetailsDialog.EcheanceDto>();
+            }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Erreur lors du chargement des échéances: {ex.Message}", Severity.Error);
-            _echeances = new List<EcheanceDto>();
+            Snackbar.Add($"Erreur lors du chargement des échéances : {ex.Message}", Severity.Error);
+            return new List<ObligationDetailsDialog.EcheanceDto>();
         }
-    }
-    
-    private Color GetEcheanceStatusColor(EcheanceDto echeance)
-    {
-        if (echeance.EstPayee)
-            return Color.Success;
-            
-        if (echeance.DateLimite < DateTime.Now)
-            return Color.Error;
-            
-        if (echeance.DateLimite < DateTime.Now.AddDays(7))
-            return Color.Warning;
-            
-        return Color.Info;
-    }
-    
-    private string GetEcheanceStatusText(EcheanceDto echeance)
-    {
-        if (echeance.EstPayee)
-            return "Payé";
-            
-        if (echeance.DateLimite < DateTime.Now)
-            return "En retard";
-            
-        if (echeance.DateLimite < DateTime.Now.AddDays(7))
-            return "Bientôt due";
-            
-        return "À venir";
     }
 } 

@@ -23,5 +23,7 @@ public record CreatePaiementCommand : IRequest<CreatePaiementResponse>
     public string InformationsSupplementaires { get; init; } = string.Empty;
     
     [Required]
+    public Guid ContribuableId { get; init; }
+    
     public Guid EcheanceId { get; init; }
 }

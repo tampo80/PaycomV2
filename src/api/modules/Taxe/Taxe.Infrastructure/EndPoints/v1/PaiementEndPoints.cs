@@ -10,6 +10,12 @@ using PayCom.WebApi.Taxe.Application.Paiements.Delete.v1;
 using PayCom.WebApi.Taxe.Application.Paiements.Get.v1;
 using PayCom.WebApi.Taxe.Application.Paiements.Search.v1;
 using PayCom.WebApi.Taxe.Application.Paiements.Update.v1;
+using PayCom.WebApi.Taxe.Application.Paiements.CreateByAgent.v1;
+using PayCom.WebApi.Taxe.Application.Paiements.SearchByContribuable.v1;
+using PayCom.WebApi.Taxe.Application.Paiements.SearchByAgentFiscal.v1;
+using PayCom.WebApi.Taxe.Application.TransactionPaiements.Get.v1;
+using PayCom.WebApi.Taxe.Application.TransactionPaiements.SearchByAgent.v1;
+
 
 namespace PayCom.WebApi.Taxe.Infrastructure.EndPoints.v1;
 
@@ -103,6 +109,82 @@ public static class SearchPaiementEndPoints
             .WithName(nameof(SearchPaiementEndPoints))
             .WithSummary("Rechercher des paiements")
             .WithDescription("Recherche et liste les paiements selon les critères spécifiés")
+            .Produces<PagedList<PaiementResponse>>()
+            .RequirePermission("Permissions.Paiements.Search")
+            .MapToApiVersion(1);
+    }
+}
+
+public static class CreatePaiementByAgentEndPoints
+{
+    internal static RouteHandlerBuilder MapPaiementByAgentCreationEndpoint(this IEndpointRouteBuilder endpoints)
+    {
+        return endpoints
+            .MapPost("/by-agent", async (CreatePaiementByAgentCommand request, ISender mediator) =>
+            {
+                var response = await mediator.Send(request);
+                return Results.Ok(response);
+            })
+            .WithName(nameof(CreatePaiementByAgentEndPoints))
+            .WithSummary("Enregistrer un paiement par agent")
+            .WithDescription("Permet à un agent fiscal d'enregistrer un paiement de taxe")
+            .Produces<CreatePaiementResponse>()
+            .RequirePermission("Permissions.Paiements.CreateByAgent")
+            .MapToApiVersion(1);
+    }
+}
+
+public static class SearchTransactionsByAgentEndPoints
+{
+    internal static RouteHandlerBuilder MapTransactionsByAgentSearchEndpoint(this IEndpointRouteBuilder endpoints)
+    {
+        return endpoints
+            .MapPost("/transactions/search-by-agent", async ([FromBody] SearchTransactionsByAgentCommand request, ISender mediator) =>
+            {
+                var response = await mediator.Send(request);
+                return Results.Ok(response);
+            })
+            .WithName(nameof(SearchTransactionsByAgentEndPoints))
+            .WithSummary("Rechercher les transactions par agent")
+            .WithDescription("Recherche les transactions de paiement traitées par un agent fiscal")
+            .Produces<PagedList<TransactionPaiementResponse>>()
+            .RequirePermission("Permissions.TransactionsPaiements.SearchByAgent")
+            .MapToApiVersion(1);
+    }
+}
+
+public static class SearchPaiementsByContribuableEndPoints
+{
+    internal static RouteHandlerBuilder MapPaiementSearchByContribuableEndpoint(this IEndpointRouteBuilder endpoints)
+    {
+        return endpoints
+            .MapPost("/search-by-contribuable", async ([FromBody] SearchPaiementsByContribuableCommand request, ISender mediator) =>
+            {
+                var response = await mediator.Send(request);
+                return Results.Ok(response);
+            })
+            .WithName(nameof(SearchPaiementsByContribuableEndPoints))
+            .WithSummary("Rechercher des paiements par contribuable")
+            .WithDescription("Recherche et liste les paiements d'un contribuable spécifique selon les critères")
+            .Produces<PagedList<PaiementResponse>>()
+            .RequirePermission("Permissions.Paiements.Search")
+            .MapToApiVersion(1);
+    }
+}
+
+public static class SearchPaiementsByAgentFiscalEndPoints
+{
+    internal static RouteHandlerBuilder MapPaiementSearchByAgentFiscalEndpoint(this IEndpointRouteBuilder endpoints)
+    {
+        return endpoints
+            .MapPost("/search-by-agent", async ([FromBody] SearchPaiementsByAgentFiscalCommand request, ISender mediator) =>
+            {
+                var response = await mediator.Send(request);
+                return Results.Ok(response);
+            })
+            .WithName(nameof(SearchPaiementsByAgentFiscalEndPoints))
+            .WithSummary("Rechercher des paiements par agent fiscal")
+            .WithDescription("Recherche et liste les paiements traités par un agent fiscal spécifique selon les critères")
             .Produces<PagedList<PaiementResponse>>()
             .RequirePermission("Permissions.Paiements.Search")
             .MapToApiVersion(1);

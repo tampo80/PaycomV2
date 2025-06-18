@@ -1,6 +1,7 @@
 using FSH.Framework.Core.Domain;
 using FSH.Framework.Core.Domain.Contracts;
 using PayCom.WebApi.Taxe.Domain.Events.EcheanceEvents;
+using PayCom.WebApi.Taxe.Domain.BusinessRules;
 using Shared.Enums;
 using System.Linq;
 
@@ -50,8 +51,14 @@ public class Echeance : AuditableEntity, IAggregateRoot
     }
 
     public static Echeance Create(Guid obligationFiscaleId, int anneeImposition, int periodeImposition, 
-                                DateTime dateEcheance, decimal montantBase, decimal montantPenalites, StatutEcheance statut)
+                                DateTime dateEcheance, decimal montantBase, decimal montantPenalites, StatutEcheance statut,
+                                ObligationFiscale? obligationFiscale = null)
     {
+        // Appliquer les règles métier avant la création
+        EcheanceBusinessRules.ValidateCreateEcheance(
+            obligationFiscaleId, anneeImposition, periodeImposition, 
+            dateEcheance, montantBase, montantPenalites, statut, obligationFiscale);
+        
         return new Echeance(Guid.NewGuid(), obligationFiscaleId, anneeImposition, periodeImposition, 
                            dateEcheance, montantBase, montantPenalites, statut);
     }
@@ -111,17 +118,23 @@ public class Echeance : AuditableEntity, IAggregateRoot
         return this;
     }
 
-    public void CalculerMontant(decimal tauxBase, decimal quantite)
+    public void CalculerMontant(decimal tauxBase, decimal quantite, TypeTaxe? typeTaxe = null)
     {
+        // Appliquer les règles métier pour le calcul
+        EcheanceBusinessRules.ValidateCalculMontant(tauxBase, quantite, typeTaxe);
+        
         MontantBase = tauxBase * quantite;
         MontantTotal = MontantBase + MontantPenalites;
         QueueDomainEvent(new MontantEcheanceCalcule { Echeance = this });
     }
 
-    public void AppliquerPenalite(decimal montantPenalite)
+    public void AppliquerPenalite(decimal montantPenalite, string motif = "Pénalité appliquée")
     {
         if (montantPenalite > 0)
         {
+            // Appliquer les règles métier pour les pénalités
+            EcheanceBusinessRules.ValidateApplyPenalite(this, montantPenalite, motif);
+            
             MontantPenalites += montantPenalite;
             MontantTotal = MontantBase + MontantPenalites;
             QueueDomainEvent(new PenaliteAppliquee { Echeance = this, MontantPenalite = montantPenalite });

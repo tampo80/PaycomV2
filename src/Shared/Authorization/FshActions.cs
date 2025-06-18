@@ -21,4 +21,6 @@ public static class FshActions
     public const string Demarrer = nameof(Demarrer);
     public const string Get = nameof(Get);
     public const string All = nameof(All);
+    public const string CreateByAgent = nameof(CreateByAgent);
+    public const string SearchByAgent = nameof(SearchByAgent);
 }

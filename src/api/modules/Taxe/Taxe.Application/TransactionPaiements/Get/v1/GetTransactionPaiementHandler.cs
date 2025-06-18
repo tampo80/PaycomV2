@@ -28,6 +28,19 @@ public class GetTransactionPaiementHandler(
                     taxeItem.ModePaiement,
                     taxeItem.Frais,
                     taxeItem.Statut,
+                    taxeItem.Paiement?.Echeance?.ObligationFiscale?.ContribuableId ?? Guid.Empty,
+                    taxeItem.Paiement?.Echeance?.ObligationFiscale?.Contribuable?.Nom ?? "N/A",
+                    taxeItem.AgentCollecteurId,
+                    "N/A", // NomAgent
+                    taxeItem.DonneesTechniques,
+                    taxeItem.LieuCollecte,
+                    taxeItem.SessionCollecteId,
+                    "", // NotesSession
+                    taxeItem.Created.DateTime,
+                    taxeItem.LastModified.DateTime,
+                    taxeItem.Paiement?.Echeance?.ObligationFiscaleId,
+                    taxeItem.EstPaiementTerrain,
+                    taxeItem.FournisseurPaiement,
                     taxeItem.Paiement
                 );
             }, cancellationToken: cancellationToken);

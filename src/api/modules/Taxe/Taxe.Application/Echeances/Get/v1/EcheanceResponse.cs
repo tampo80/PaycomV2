@@ -6,6 +6,8 @@ namespace PayCom.WebApi.Taxe.Application.Echeances.Get.v1;
 public record EcheanceResponse(
     Guid Id,
     Guid ObligationFiscaleId,
+    int AnneeImposition,
+    int PeriodeImposition,
     DateTime DateEcheance,
     decimal MontantDu,
     decimal MontantPaye,

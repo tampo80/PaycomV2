@@ -85,9 +85,9 @@ public static class GetEcheanceEndPoints
             })
             .WithName(nameof(GetEcheanceEndPoints))
             .WithSummary("Obtenir une échéance")
-            .WithDescription("Récupère les détails d'une échéance spécifique")
+            .WithDescription("Récupère les détails d'une échéance spécifique - Sécurisé par vérification de propriété")
             .Produces<EcheanceResponse>()
-            .RequirePermission("Permissions.Echeances.Get")
+            .RequireAuthorization()
             .MapToApiVersion(1);
     }
 }
@@ -104,9 +104,9 @@ public static class SearchEcheanceEndPoints
             })
             .WithName(nameof(SearchEcheanceEndPoints))
             .WithSummary("Rechercher des échéances")
-            .WithDescription("Recherche et liste les échéances selon les critères spécifiés")
+            .WithDescription("Recherche et liste les échéances selon les critères spécifiés - Sécurisé par vérification de propriété")
             .Produces<PagedList<EcheanceResponse>>()
-            .RequirePermission("Permissions.Echeances.Search")
+            .RequireAuthorization()
             .MapToApiVersion(1);
     }
 }

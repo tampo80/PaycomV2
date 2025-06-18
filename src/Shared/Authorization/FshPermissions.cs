@@ -132,6 +132,31 @@ public static class FshPermissions
         new("Delete Taxes", FshActions.Delete, FshResources.Taxes),
         new("Export Taxes", FshActions.Export, FshResources.Taxes),
         
+        //Paiements
+        new("View Paiements", FshActions.View, FshResources.Paiements),
+        new("Search Paiements", FshActions.Search, FshResources.Paiements),
+        new("Get Paiements", FshActions.Get, FshResources.Paiements),
+        new("Create Paiements", FshActions.Create, FshResources.Paiements),
+        new("Update Paiements", FshActions.Update, FshResources.Paiements),
+        new("Delete Paiements", FshActions.Delete, FshResources.Paiements),
+        new("CreateByAgent Paiements", FshActions.CreateByAgent, FshResources.Paiements),
+        
+        //TransactionsPaiements
+        new("SearchByAgent TransactionsPaiements", FshActions.SearchByAgent, FshResources.TransactionsPaiements),
+        
+        //SynchronisationPaiements
+        new("Create SynchronisationPaiements", FshActions.Create, FshResources.SynchronisationPaiements),
+        new("Search SynchronisationPaiements", FshActions.Search, FshResources.SynchronisationPaiements),
+        
+        //Notifications
+        new("View Notifications", FshActions.View, FshResources.Notifications),
+        new("Search Notifications", FshActions.Search, FshResources.Notifications),
+        new("Get Notifications", FshActions.Get, FshResources.Notifications),
+        new("Create Notifications", FshActions.Create, FshResources.Notifications),
+        new("Update Notifications", FshActions.Update, FshResources.Notifications),
+        new("Delete Notifications", FshActions.Delete, FshResources.Notifications),
+        new("Read Notifications", FshActions.Read, FshResources.Notifications),
+        
         //AdministrateurFiscal
         new("View AdminFiscal", FshActions.View, FshResources.AdminFiscal),
         new("Read AdminFiscal", FshActions.Read, FshResources.AdminFiscal),
@@ -164,6 +189,7 @@ public static class FshPermissions
         p.Resource == FshResources.TypesTaxe ||
         p.Resource == FshResources.CollecteTerrainSessions ||
         p.Resource == FshResources.ZonesCollecte ||
+        p.Resource == FshResources.Notifications ||
         (p.Resource == FshResources.AgentFiscals && 
             (p.Action == FshActions.View || 
              p.Action == FshActions.Search || 
@@ -189,6 +215,17 @@ public static class FshPermissions
             (p.Action == FshActions.View || 
              p.Action == FshActions.Search ||
              p.Action == FshActions.Read)) ||
+        (p.Resource == FshResources.Paiements &&
+            (p.Action == FshActions.View ||
+             p.Action == FshActions.Search ||
+             p.Action == FshActions.Get ||
+             p.Action == FshActions.Create)) ||
+        (p.Resource == FshResources.Notifications &&
+            (p.Action == FshActions.View ||
+             p.Action == FshActions.Search ||
+             p.Action == FshActions.Get ||
+             p.Action == FshActions.Read ||
+             p.Action == FshActions.Update)) ||
         (p.Resource == FshResources.Dashboard && p.Action == FshActions.View)
     ).ToArray());
     
@@ -218,6 +255,11 @@ public static class FshPermissions
             (p.Action == FshActions.View || 
              p.Action == FshActions.Search ||
              p.Action == FshActions.Read)) ||
+        (p.Resource == FshResources.Notifications &&
+            (p.Action == FshActions.View ||
+             p.Action == FshActions.Search ||
+             p.Action == FshActions.Get ||
+             p.Action == FshActions.Create)) ||
         (p.Resource == FshResources.Dashboard && p.Action == FshActions.View)
     ).ToArray());
     

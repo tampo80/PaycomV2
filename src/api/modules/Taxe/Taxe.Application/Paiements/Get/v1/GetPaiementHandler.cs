@@ -20,10 +20,19 @@ public sealed class GetPaiementHandler(
             {
                 var paiementItem = await repository.GetByIdAsync(request.Id, cancellationToken);
                 if (paiementItem == null) throw new PaiementNotFoundException(request.Id);
-                return new PaiementResponse(paiementItem.Id, paiementItem.Date, paiementItem.Montant,
+                return new PaiementResponse(
+                    paiementItem.Id, 
+                    paiementItem.Date, 
+                    paiementItem.Montant,
                     paiementItem.ModePaiement,
-                    paiementItem.CodeTransaction, paiementItem.DateTransaction, paiementItem.FraisTransaction,
-                    paiementItem.InformationsSupplementaires, paiementItem.Statut);
+                    paiementItem.CodeTransaction, 
+                    paiementItem.DateTransaction, 
+                    paiementItem.Statut,
+                    paiementItem.FraisTransaction,
+                    paiementItem.InformationsSupplementaires, 
+                    paiementItem.ContribuableId,
+                    paiementItem.EcheanceId,
+                    paiementItem.AgentFiscalId);
             }, cancellationToken: cancellationToken);
         return item!;
     }
